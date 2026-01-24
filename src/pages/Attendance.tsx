@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "@/config";
 
 import { CalendarDays, Check, X, Clock, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ const Attendance = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/classes");
+        const response = await fetch("${API_BASE_URL}/classes");
         if (response.ok) {
           const data = await response.json();
           setClassesList(data);
@@ -81,7 +82,7 @@ const Attendance = () => {
       setLoading(true);
       try {
         // 1. Fetch Students
-        const studentsRes = await fetch("http://localhost:5000/api/students");
+        const studentsRes = await fetch("${API_BASE_URL}/students");
         if (studentsRes.ok) {
           const allStudents = await studentsRes.json();
           // Find the current class object to get the raw grade (e.g. "D.Pharm 1")
@@ -105,7 +106,7 @@ const Attendance = () => {
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
 
         // Fetch ALL timetable entries to safely filter client-side for case mismatches
-        const timetableRes = await fetch("http://localhost:5000/api/timetable");
+        const timetableRes = await fetch("${API_BASE_URL}/timetable");
 
         if (timetableRes.ok) {
           const allTimetable = await timetableRes.json();
@@ -134,7 +135,7 @@ const Attendance = () => {
     const fetchAttendance = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/attendance?date=${selectedDate}&className=${encodeURIComponent(selectedClass)}&period=${selectedPeriod}`
+          `${API_BASE_URL}/attendance?date=${selectedDate}&className=${encodeURIComponent(selectedClass)}&period=${selectedPeriod}`
         );
         if (response.ok) {
           const data = await response.json();
@@ -189,7 +190,7 @@ const Attendance = () => {
         records
       };
 
-      const response = await fetch("http://localhost:5000/api/attendance", {
+      const response = await fetch("${API_BASE_URL}/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

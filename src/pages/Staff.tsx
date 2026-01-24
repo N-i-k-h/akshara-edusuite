@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "@/config";
 
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ const Staff = () => {
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/staff');
+      const response = await fetch('${API_BASE_URL}/staff');
       if (response.ok) {
         const data = await response.json();
         setStaffList(data);
@@ -103,7 +104,7 @@ const Staff = () => {
 
       console.log("Sending payload:", payload);
 
-      const response = await fetch('http://localhost:5000/api/staff', {
+      const response = await fetch('${API_BASE_URL}/staff', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

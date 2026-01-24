@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "@/config";
 
 import { Plus, FileText, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ const Exams = () => {
 
   const fetchExams = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/exams');
+      const response = await fetch('${API_BASE_URL}/exams');
       if (response.ok) {
         const data = await response.json();
         setExamsList(data);
@@ -93,7 +94,7 @@ const Exams = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/exams', {
+      const response = await fetch('${API_BASE_URL}/exams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
