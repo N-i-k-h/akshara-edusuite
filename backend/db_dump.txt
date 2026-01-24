@@ -1,0 +1,12 @@
+Connected
+--- STUDENT CLASSES ---
+"Dhruva ": "D.Pharm 1"
+"Nikhil": "D.Pharm 2"
+"mj": "D.Pharm 2"
+
+--- TIMETABLE CLASSES ---
+"D.Pharm 1 - a" - Monday P1: biology
+
+--- DEFINED CLASSES ---
+Grade: "D.Pharm 1", Section: "a"
+Grade: "D.Pharm 2", Section: "a"
