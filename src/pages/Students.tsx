@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "@/config";
+
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Download } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,7 @@ const Students = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch('${API_BASE_URL}/students');
+      const response = await fetch('http://localhost:5000/api/students');
       if (response.ok) {
         const data = await response.json();
         setStudents(data);
@@ -69,7 +69,7 @@ const Students = () => {
       }
 
       // Fetch Classes
-      const classesRes = await fetch("${API_BASE_URL}/classes");
+      const classesRes = await fetch("http://localhost:5000/api/classes");
       if (classesRes.ok) {
         const classesData = await classesRes.json();
         setClassesList(classesData);
@@ -91,7 +91,7 @@ const Students = () => {
 
   const handleAddStudent = async () => {
     try {
-      const response = await fetch('${API_BASE_URL}/students', {
+      const response = await fetch('http://localhost:5000/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -142,7 +142,7 @@ const Students = () => {
     // Fetch Stats
     try {
       // 1. Attendance
-      const attRes = await fetch(`${API_BASE_URL}/attendance/student/${student._id}`);
+      const attRes = await fetch(`http://localhost:5000/api/attendance/student/${student._id}`);
       let attendanceVal = 0;
       if (attRes.ok) {
         const attData = await attRes.json();
@@ -151,8 +151,8 @@ const Students = () => {
 
       // 2. Fees
       const [feesRes, structRes] = await Promise.all([
-        fetch('${API_BASE_URL}/fees'),
-        fetch('${API_BASE_URL}/fee-structures')
+        fetch('http://localhost:5000/api/fees'),
+        fetch('http://localhost:5000/api/fee-structures')
       ]);
 
       let total = 0;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { API_BASE_URL } from "@/config";
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            const response = await fetch('${API_BASE_URL}/login', {
+            const response = await fetch('http://localhost:5000/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),

@@ -1,5 +1,5 @@
 import { Calendar, Plus } from "lucide-react";
-import { API_BASE_URL } from "@/config";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,7 +112,7 @@ const Timetable = () => {
     if (!selectedClass) return;
     try {
       // selectedClass format matches what we save.
-      const response = await fetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClass)}`);
+      const response = await fetch(`http://localhost:5000/api/timetable?className=${encodeURIComponent(selectedClass)}`);
       if (response.ok) {
         const data = await response.json();
         setTimetableData(data);
@@ -141,7 +141,7 @@ const Timetable = () => {
     }
 
     try {
-      const response = await fetch('${API_BASE_URL}/classes', {
+      const response = await fetch('http://localhost:5000/api/classes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClass)
@@ -178,7 +178,7 @@ const Timetable = () => {
         teacher: newEntry.teacher
       };
 
-      const response = await fetch('${API_BASE_URL}/timetable', {
+      const response = await fetch('http://localhost:5000/api/timetable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

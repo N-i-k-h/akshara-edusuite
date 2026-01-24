@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "@/config";
+
 import { Users, UserCheck, CreditCard, AlertTriangle, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('${API_BASE_URL}/dashboard/stats');
+        const response = await fetch('http://localhost:5000/api/dashboard/stats');
         if (response.ok) {
           const data = await response.json();
           setStats(data);

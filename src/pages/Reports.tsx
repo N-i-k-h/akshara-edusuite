@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { API_BASE_URL } from "@/config";
+
 import {
     Card,
     CardContent,
@@ -64,9 +64,9 @@ const Reports = () => {
     const fetchData = async () => {
         try {
             const [feesRes, studentsRes, structRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/fees?t=${Date.now()}`),
-                fetch('${API_BASE_URL}/students'),
-                fetch('${API_BASE_URL}/fee-structures')
+                fetch(`http://localhost:5000/api/fees?t=${Date.now()}`),
+                fetch('http://localhost:5000/api/students'),
+                fetch('http://localhost:5000/api/fee-structures')
             ]);
 
             if (feesRes.ok && studentsRes.ok && structRes.ok) {

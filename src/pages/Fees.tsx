@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { API_BASE_URL } from "@/config";
+
 import { Plus, CreditCard, TrendingUp, AlertCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,10 +80,10 @@ const Fees = () => {
   const fetchData = async () => {
     try {
       const [feesRes, studentsRes, structRes, classesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/fees?t=${Date.now()}`),
-        fetch('${API_BASE_URL}/students'),
-        fetch('${API_BASE_URL}/fee-structures'),
-        fetch('${API_BASE_URL}/classes')
+        fetch(`http://localhost:5000/api/fees?t=${Date.now()}`),
+        fetch('http://localhost:5000/api/students'),
+        fetch('http://localhost:5000/api/fee-structures'),
+        fetch('http://localhost:5000/api/classes')
       ]);
 
       if (feesRes.ok && studentsRes.ok && structRes.ok) {
@@ -246,8 +246,8 @@ const Fees = () => {
 
     try {
       const url = editFeeId
-        ? `${API_BASE_URL}/fees/${editFeeId}`
-        : '${API_BASE_URL}/fees';
+        ? `http://localhost:5000/api/fees/${editFeeId}`
+        : 'http://localhost:5000/api/fees';
 
       const method = editFeeId ? 'PUT' : 'POST';
 

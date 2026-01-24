@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "@/config";
+
 import { Plus, Users, MapPin, User, Calendar, BookOpen, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,7 +119,7 @@ const Classes = () => {
     }
 
     try {
-      const response = await fetch('${API_BASE_URL}/classes', {
+      const response = await fetch('http://localhost:5000/api/classes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClass)
@@ -151,7 +151,7 @@ const Classes = () => {
     setIsLoadingStudents(true);
 
     try {
-      const response = await fetch('${API_BASE_URL}/students');
+      const response = await fetch('http://localhost:5000/api/students');
       if (response.ok) {
         const allStudents = await response.json();
 
@@ -165,7 +165,7 @@ const Classes = () => {
         const studentsWithStats = await Promise.all(filtered.map(async (student: any) => {
           let attendancePercentage = 0; // Default
           try {
-            const statsRes = await fetch(`${API_BASE_URL}/attendance/student/${student._id}`);
+            const statsRes = await fetch(`http://localhost:5000/api/attendance/student/${student._id}`);
             if (statsRes.ok) {
               const stats = await statsRes.json();
               attendancePercentage = stats.attendancePercentage || 0;
@@ -202,7 +202,7 @@ const Classes = () => {
     setIsLoadingTimetable(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(classNameStr)}`);
+      const response = await fetch(`http://localhost:5000/api/timetable?className=${encodeURIComponent(classNameStr)}`);
       if (response.ok) {
         const data = await response.json();
         setSelectedClassTimetable(data);
@@ -240,7 +240,7 @@ const Classes = () => {
         teacher: slotForm.teacher
       };
 
-      const response = await fetch('${API_BASE_URL}/timetable', {
+      const response = await fetch('http://localhost:5000/api/timetable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -250,7 +250,7 @@ const Classes = () => {
         toast.success("Timetable updated");
         setEditingSlot(null);
         // Refresh timetable
-        const refreshRes = await fetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClassForTimetable)}`);
+        const refreshRes = await fetch(`http://localhost:5000/api/timetable?className=${encodeURIComponent(selectedClassForTimetable)}`);
         if (refreshRes.ok) {
           const data = await refreshRes.json();
           setSelectedClassTimetable(data);

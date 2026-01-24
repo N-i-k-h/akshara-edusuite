@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "@/config";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,21 +84,21 @@ const FeesRegistration = () => {
         const fetchData = async () => {
             try {
                 // Fetch Students
-                const studentRes = await fetch('${API_BASE_URL}/students');
+                const studentRes = await fetch('http://localhost:5000/api/students');
                 if (studentRes.ok) {
                     const data = await studentRes.json();
                     setStudents(data);
                 }
 
                 // Fetch Existing Fee Registrations
-                const feesRes = await fetch('${API_BASE_URL}/fee-structures');
+                const feesRes = await fetch('http://localhost:5000/api/fee-structures');
                 if (feesRes.ok) {
                     const data = await feesRes.json();
                     setRegisteredFees(data);
                 }
 
                 // Fetch Classes
-                const classesRes = await fetch("${API_BASE_URL}/classes");
+                const classesRes = await fetch("http://localhost:5000/api/classes");
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
                     setClassesList(classesData);
@@ -148,7 +148,7 @@ const FeesRegistration = () => {
         };
 
         try {
-            const response = await fetch('${API_BASE_URL}/fee-structures', {
+            const response = await fetch('http://localhost:5000/api/fee-structures', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
