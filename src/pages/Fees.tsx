@@ -82,9 +82,9 @@ const Fees = () => {
     try {
       const [feesRes, studentsRes, structRes, classesRes] = await Promise.all([
         fetch(`${API_BASE_URL}/fees?t=${Date.now()}`),
-        fetch('${API_BASE_URL}/students'),
-        fetch('${API_BASE_URL}/fee-structures'),
-        fetch('${API_BASE_URL}/classes')
+        fetch(`${API_BASE_URL}/students`),
+        fetch(`${API_BASE_URL}/fee-structures`),
+        fetch(`${API_BASE_URL}/classes`)
       ]);
 
       if (feesRes.ok && studentsRes.ok && structRes.ok) {

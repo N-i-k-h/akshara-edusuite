@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { API_BASE_URL } from "@/config";
 
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Download } from "lucide-react";
@@ -61,7 +62,7 @@ const Students = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch('${API_BASE_URL}/students');
+      const response = await fetch(`${API_BASE_URL}/students`);
       if (response.ok) {
         const data = await response.json();
         setStudents(data);
@@ -70,7 +71,7 @@ const Students = () => {
       }
 
       // Fetch Classes
-      const classesRes = await fetch("${API_BASE_URL}/classes");
+      const classesRes = await fetch(`${API_BASE_URL}/classes`);
       if (classesRes.ok) {
         const classesData = await classesRes.json();
         setClassesList(classesData);
@@ -92,13 +93,14 @@ const Students = () => {
 
   const handleAddStudent = async () => {
     try {
-      const response = await fetch('${API_BASE_URL}/students', {
+      const response = await fetch(`${API_BASE_URL}/students`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
+        toast.success("Student added successfully");
         fetchStudents();
         setIsAddDialogOpen(false);
         setFormData({
@@ -111,10 +113,13 @@ const Students = () => {
           parentPhone: ""
         });
       } else {
-        console.error("Failed to add student");
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to add student");
+        console.error("Failed to add student:", errorData);
       }
     } catch (error) {
       console.error("Error adding student:", error);
+      toast.error("An error occurred while adding student");
     }
   };
 
@@ -152,8 +157,8 @@ const Students = () => {
 
       // 2. Fees
       const [feesRes, structRes] = await Promise.all([
-        fetch('${API_BASE_URL}/fees'),
-        fetch('${API_BASE_URL}/fee-structures')
+        fetch(`${API_BASE_URL}/fees`),
+        fetch(`${API_BASE_URL}/fee-structures`)
       ]);
 
       let total = 0;

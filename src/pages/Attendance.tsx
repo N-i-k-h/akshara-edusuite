@@ -52,7 +52,7 @@ const Attendance = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const response = await fetch("${API_BASE_URL}/classes");
+        const response = await fetch(`${API_BASE_URL}/classes`);
         if (response.ok) {
           const data = await response.json();
           setClassesList(data);
@@ -82,7 +82,7 @@ const Attendance = () => {
       setLoading(true);
       try {
         // 1. Fetch Students
-        const studentsRes = await fetch("${API_BASE_URL}/students");
+        const studentsRes = await fetch(`${API_BASE_URL}/students`);
         if (studentsRes.ok) {
           const allStudents = await studentsRes.json();
           // Find the current class object to get the raw grade (e.g. "D.Pharm 1")
@@ -106,7 +106,7 @@ const Attendance = () => {
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
 
         // Fetch ALL timetable entries to safely filter client-side for case mismatches
-        const timetableRes = await fetch("${API_BASE_URL}/timetable");
+        const timetableRes = await fetch(`${API_BASE_URL}/timetable`);
 
         if (timetableRes.ok) {
           const allTimetable = await timetableRes.json();
@@ -190,7 +190,7 @@ const Attendance = () => {
         records
       };
 
-      const response = await fetch("${API_BASE_URL}/attendance", {
+      const response = await fetch(`${API_BASE_URL}/attendance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

@@ -69,7 +69,7 @@ const Staff = () => {
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch('${API_BASE_URL}/staff');
+      const response = await fetch(`${API_BASE_URL}/staff`);
       if (response.ok) {
         const data = await response.json();
         setStaffList(data);
@@ -104,7 +104,7 @@ const Staff = () => {
 
       console.log("Sending payload:", payload);
 
-      const response = await fetch('${API_BASE_URL}/staff', {
+      const response = await fetch(`${API_BASE_URL}/staff`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

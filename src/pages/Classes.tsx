@@ -85,8 +85,8 @@ const Classes = () => {
 
   const fetchData = async () => {
     try {
-      const classesRes = await fetch('${API_BASE_URL}/classes');
-      const staffRes = await fetch('${API_BASE_URL}/staff');
+      const classesRes = await fetch(`${API_BASE_URL}/classes`);
+      const staffRes = await fetch(`${API_BASE_URL}/staff`);
 
       if (classesRes.ok && staffRes.ok) {
         const classesData = await classesRes.json();
@@ -120,7 +120,7 @@ const Classes = () => {
     }
 
     try {
-      const response = await fetch('${API_BASE_URL}/classes', {
+      const response = await fetch(`${API_BASE_URL}/classes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClass)
@@ -152,7 +152,7 @@ const Classes = () => {
     setIsLoadingStudents(true);
 
     try {
-      const response = await fetch('${API_BASE_URL}/students');
+      const response = await fetch(`${API_BASE_URL}/students`);
       if (response.ok) {
         const allStudents = await response.json();
 
@@ -241,7 +241,7 @@ const Classes = () => {
         teacher: slotForm.teacher
       };
 
-      const response = await fetch('${API_BASE_URL}/timetable', {
+      const response = await fetch(`${API_BASE_URL}/timetable`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

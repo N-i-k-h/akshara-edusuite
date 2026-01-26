@@ -29,7 +29,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('${API_BASE_URL}/dashboard/stats');
+        const response = await fetch(`${API_BASE_URL}/dashboard/stats`);
         if (response.ok) {
           const data = await response.json();
           setStats(data);

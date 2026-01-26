@@ -85,21 +85,21 @@ const FeesRegistration = () => {
         const fetchData = async () => {
             try {
                 // Fetch Students
-                const studentRes = await fetch('${API_BASE_URL}/students');
+                const studentRes = await fetch(`${API_BASE_URL}/students`);
                 if (studentRes.ok) {
                     const data = await studentRes.json();
                     setStudents(data);
                 }
 
                 // Fetch Existing Fee Registrations
-                const feesRes = await fetch('${API_BASE_URL}/fee-structures');
+                const feesRes = await fetch(`${API_BASE_URL}/fee-structures`);
                 if (feesRes.ok) {
                     const data = await feesRes.json();
                     setRegisteredFees(data);
                 }
 
                 // Fetch Classes
-                const classesRes = await fetch("${API_BASE_URL}/classes");
+                const classesRes = await fetch(`${API_BASE_URL}/classes`);
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
                     setClassesList(classesData);
@@ -149,7 +149,7 @@ const FeesRegistration = () => {
         };
 
         try {
-            const response = await fetch('${API_BASE_URL}/fee-structures', {
+            const response = await fetch(`${API_BASE_URL}/fee-structures`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

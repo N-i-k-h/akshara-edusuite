@@ -84,8 +84,8 @@ const Timetable = () => {
   // Fetch Classes and Staff
   const fetchData = async () => {
     try {
-      const classesRes = await fetch('${API_BASE_URL}/classes');
-      const staffRes = await fetch('${API_BASE_URL}/staff');
+      const classesRes = await fetch(`${API_BASE_URL}/classes`);
+      const staffRes = await fetch(`${API_BASE_URL}/staff`);
 
       if (classesRes.ok && staffRes.ok) {
         const classesData = await classesRes.json();
@@ -142,7 +142,7 @@ const Timetable = () => {
     }
 
     try {
-      const response = await fetch('${API_BASE_URL}/classes', {
+      const response = await fetch(`${API_BASE_URL}/classes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClass)
@@ -179,7 +179,7 @@ const Timetable = () => {
         teacher: newEntry.teacher
       };
 
-      const response = await fetch('${API_BASE_URL}/timetable', {
+      const response = await fetch(`${API_BASE_URL}/timetable`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

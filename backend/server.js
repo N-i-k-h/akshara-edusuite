@@ -52,7 +52,7 @@ const seedAdmin = async () => {
 // Student Schema
 const studentSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    rollNo: { type: String, required: true },
+    rollNo: { type: String, required: true, unique: true },
     email: { type: String, required: true },
     phone: { type: String, required: true },
     class: { type: String, required: true },
@@ -104,10 +104,20 @@ app.get('/api/students/:id', async (req, res) => {
 
 app.post('/api/students', async (req, res) => {
     try {
+        const { rollNo } = req.body;
+        const existingStudent = await Student.findOne({ rollNo });
+        if (existingStudent) {
+            return res.status(400).json({ message: 'Student with this Roll Number already exists' });
+        }
+
         const newStudent = new Student(req.body);
         await newStudent.save();
         res.status(201).json(newStudent);
     } catch (error) {
+        // Handle Mongoose duplicate key error explicitly if race condition occurs
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'Duplicate key error: Roll Number must be unique' });
+        }
         res.status(400).json({ message: 'Error creating student', error: error.message });
     }
 });
