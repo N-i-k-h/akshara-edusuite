@@ -78,6 +78,7 @@ const Students = () => {
       }
     } catch (error) {
       console.error("Error fetching students:", error);
+      toast.error("Failed to connect to server. Please check your internet or server status.");
     } finally {
       setLoading(false);
     }
