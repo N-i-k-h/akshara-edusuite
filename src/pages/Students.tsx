@@ -124,6 +124,36 @@ const Students = () => {
     }
   };
 
+  const handleDeleteStudent = async (id: string) => {
+    if (!id) {
+      toast.error("Error: Invalid student ID");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this student? Use this action with caution as it deletes all related data.")) return;
+
+    try {
+      console.log("Deleting student with ID:", id);
+      const response = await fetch(`${API_BASE_URL}/students/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok || response.status === 404) {
+        toast.success("Student deleted successfully");
+        // Optimistically update UI
+        setStudents(prev => prev.filter(item => (item._id || item.id) !== id));
+        // fetchStudents(); // Removed to prevent stale data re-fetch
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Delete failed:", response.status, errorData);
+        toast.error(errorData.message || "Failed to delete student");
+      }
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      toast.error("Failed to delete student. Check console for details.");
+    }
+  };
+
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -457,11 +487,10 @@ const Students = () => {
                           <Eye className="mr-2 h-4 w-4" />
                           View Profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteStudent(student._id || student.id)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>

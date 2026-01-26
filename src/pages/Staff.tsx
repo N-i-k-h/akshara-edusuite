@@ -143,6 +143,36 @@ const Staff = () => {
     }
   };
 
+  const handleDeleteStaff = async (id: string) => {
+    if (!id) {
+      toast.error("Error: Invalid staff ID");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this staff member?")) return;
+
+    try {
+      console.log("Deleting staff with ID:", id);
+      const response = await fetch(`${API_BASE_URL}/staff/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok || response.status === 404) {
+        toast.success("Staff member deleted successfully");
+        // Optimistically update UI
+        setStaffList(prev => prev.filter(item => item._id !== id));
+        // fetchStaff(); // Removed to prevent stale data re-fetch
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Delete failed:", response.status, errorData);
+        toast.error(errorData.message || "Failed to delete staff member");
+      }
+    } catch (error) {
+      console.error("Error deleting staff:", error);
+      toast.error("Failed to delete staff member. Check console for details.");
+    }
+  };
+
   const filteredStaff = staffList.filter(
     (member) =>
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -287,15 +317,10 @@ const Staff = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteStaff(member._id)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>

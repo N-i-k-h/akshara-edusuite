@@ -126,6 +126,32 @@ app.post('/api/students', async (req, res) => {
     }
 });
 
+app.delete('/api/students/:id', async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        const deletedStudent = await Student.findByIdAndDelete(studentId);
+
+        if (!deletedStudent) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        // Cascade delete related data
+        await FeeStructure.deleteMany({ studentId });
+        await Fee.deleteMany({ studentId });
+
+        // Remove student from attendance records
+        await Attendance.updateMany(
+            { "records.studentId": studentId },
+            { $pull: { records: { studentId: studentId } } }
+        );
+
+        res.json({ message: 'Student and related data deleted successfully' });
+    } catch (error) {
+        console.error("Error deleting student:", error);
+        res.status(500).json({ message: 'Error deleting student', error: error.message });
+    }
+});
+
 // Helper to update student fee status
 const updateStudentFeeStatus = async (studentId) => {
     try {
@@ -227,6 +253,22 @@ app.post('/api/staff', async (req, res) => {
         res.status(201).json(newStaff);
     } catch (error) {
         res.status(400).json({ message: 'Error creating staff', error: error.message });
+    }
+});
+
+app.delete('/api/staff/:id', async (req, res) => {
+    console.log(`Received DELETE request for staff ID: ${req.params.id}`);
+    try {
+        const deletedStaff = await Staff.findByIdAndDelete(req.params.id);
+        if (!deletedStaff) {
+            console.log("Staff not found for deletion");
+            return res.status(404).json({ message: 'Staff member not found' });
+        }
+        console.log("Staff deleted successfully");
+        res.json({ message: 'Staff member deleted successfully' });
+    } catch (error) {
+        console.error("Error deleting staff:", error);
+        res.status(500).json({ message: 'Error deleting staff', error: error.message });
     }
 });
 
