@@ -34,6 +34,8 @@ const navigation = [
   { name: "Fees Registration", href: "/fees-registration", icon: FileText },
   { name: "Fees Payment", href: "/fees", icon: CreditCard },
   { name: "Estimation", href: "/fees-estimation", icon: Calculator },
+  { name: "Transfer Certificate", href: "/transfer-certificate", icon: FileText },
+  { name: "Study Certificate", href: "/study-certificate", icon: BookOpen },
   { name: "Library", href: "/library", icon: Library },
   { name: "Reports", href: "/reports", icon: BarChart },
 ];
@@ -59,8 +61,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           <div className="flex items-center gap-2">
             <GraduationCap className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-lg font-bold text-foreground">EduManage</h1>
-              <p className="text-xs text-muted-foreground">Akshara College</p>
+              <h1 className="text-lg font-bold text-foreground">SSSCP</h1>
+              <p className="text-xs text-muted-foreground">College of Pharmacy</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={onClose}>

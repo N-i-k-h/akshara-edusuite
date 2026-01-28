@@ -287,8 +287,11 @@ const Reports = () => {
             <div ref={printRef} className="space-y-6 bg-white p-4 rounded-lg">
                 {/* Header for PDF (visible only when printed usually, but here visible always makes sense for preview) */}
                 <div className="text-center pb-4 border-b mb-4">
-                    <h2 className="text-2xl font-bold text-blue-900">Akshara Edusuite</h2>
-                    <p className="text-gray-600">Financial Report</p>
+                    <div className="flex flex-col items-center gap-2 mb-2">
+                        <img src="/college_logo.png" alt="Logo" className="h-20 w-auto object-contain" />
+                        <h2 className="text-2xl font-bold text-[#8B0000] uppercase">Sri Subramanya Swamy College of Pharmacy</h2>
+                    </div>
+                    <p className="text-gray-600 font-medium">Financial Report</p>
                     <p className="text-sm text-gray-500">
                         {startDate && endDate
                             ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`

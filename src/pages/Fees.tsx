@@ -607,17 +607,24 @@ const Fees = () => {
       {/* HIDDEN RECEIPT TEMPLATE FOR HTML2PDF */}
       <div className="overflow-hidden h-0 w-0">
         {receiptData && (
-          <div ref={receiptRef} className="w-[210mm] p-10 bg-white text-black font-sans relative">
+          <div ref={receiptRef} className="w-[210mm] min-h-[297mm] p-8 bg-white text-black font-sans relative border-[3px] border-black">
             {/* Header/Banner from Estimation style */}
-            <div className="text-center border-b-2 border-black pb-4 mb-6">
-              <h1 className="text-3xl font-bold uppercase tracking-wide mb-1 text-[#8B0000]">Akshara Pharmacy College</h1>
-              <p className="italic text-sm text-gray-600 mb-2">Building Bridges Across Healthcare</p>
+            {/* Header/Banner from Estimation style */}
+            <div className="border-b-2 border-black pb-4 mb-6">
+              <div className="flex items-center justify-between px-4">
+                <img src="/college_logo.png" alt="Logo" className="h-24 w-auto object-contain" />
+                <div className="text-center flex-1">
+                  <h1 className="text-2xl font-bold uppercase tracking-wide mb-1 text-[#8B0000]">Sri Subramanya Swamy College of Pharmacy</h1>
+                  <p className="italic text-sm text-gray-600 mb-2">Building Bridges Across Healthcare</p>
+                </div>
+                <div className="w-24"></div> {/* Balance the logo space */}
+              </div>
               <div className="w-full h-1 bg-black mt-2 mb-1"></div>
               <div className="w-full h-0.5 bg-black"></div>
             </div>
 
             <div className="text-center mb-10">
-              <h2 className="text-xl font-bold uppercase tracking-widest border px-4 py-2 inline-block border-black">Fee Receipt</h2>
+              <h2 className="text-xl font-bold uppercase tracking-widest border-2 px-4 py-2 inline-block border-black">Fee Receipt</h2>
             </div>
 
             <div className="flex justify-between mb-8 text-sm">
@@ -630,7 +637,7 @@ const Fees = () => {
               </div>
             </div>
 
-            <div className="mb-8 border border-black p-4">
+            <div className="mb-8 border-2 border-black p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Student Name</p>
@@ -643,26 +650,26 @@ const Fees = () => {
               </div>
             </div>
 
-            <table className="w-full border-collapse border border-black mb-8">
+            <table className="w-full border-collapse border-2 border-black mb-8">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-black p-3 text-left">Description</th>
-                  <th className="border border-black p-3 text-right">Amount (INR)</th>
+                  <th className="border-2 border-black p-3 text-left">Description</th>
+                  <th className="border-2 border-black p-3 text-right">Amount (INR)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-black p-3">
+                  <td className="border-2 border-black p-3">
                     <p className="font-bold">{receiptData.feeType} Payment</p>
                     <p className="text-sm text-gray-600">Payment via {receiptData.paymentMethod}</p>
                   </td>
-                  <td className="border border-black p-3 text-right text-lg">
+                  <td className="border-2 border-black p-3 text-right text-lg">
                     {Number(receiptData.amountPaid).toLocaleString()}
                   </td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td className="border border-black p-3 font-bold text-right">Total Paid Now</td>
-                  <td className="border border-black p-3 text-right font-bold text-lg">
+                  <td className="border-2 border-black p-3 font-bold text-right">Total Paid Now</td>
+                  <td className="border-2 border-black p-3 text-right font-bold text-lg">
                     ₹ {Number(receiptData.amountPaid).toLocaleString()}
                   </td>
                 </tr>
@@ -692,7 +699,7 @@ const Fees = () => {
               <div className="text-center">
                 <div className="w-32 border-b border-black mb-2"></div>
                 <p className="text-sm">Authorized Signatory</p>
-                <p className="text-xs text-gray-500">Akshara Pharmacy College</p>
+                <p className="text-xs text-gray-500">Sri Subramanya Swamy College of Pharmacy</p>
               </div>
             </div>
 

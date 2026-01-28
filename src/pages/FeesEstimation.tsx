@@ -74,9 +74,9 @@ const FeesEstimation = () => {
         const opt = {
             margin: 0,
             filename: filename,
-            image: { type: 'jpeg', quality: 0.98 },
+            image: { type: 'jpeg' as const, quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
         };
 
         // 2. Generate Blob -> Create Link -> Force Download
@@ -234,13 +234,20 @@ const FeesEstimation = () => {
                 <div className="lg:col-span-2 overflow-auto bg-gray-500/10 p-4 rounded-xl flex justify-center items-start min-h-[800px]">
                     <div
                         ref={printRef}
-                        className="bg-white text-black p-8 w-[210mm] min-h-[297mm] shadow-2xl mx-auto flex flex-col relative"
+                        className="bg-white text-black p-8 w-[210mm] min-h-[297mm] shadow-2xl mx-auto flex flex-col relative border-[3px] border-black"
                         style={{ fontFamily: "'Times New Roman', serif" }}
                     >
                         {/* Header */}
-                        <div className="text-center border-b-2 border-black pb-4 mb-6">
-                            <h1 className="text-3xl font-bold uppercase tracking-wide mb-1 text-[#8B0000]">Akshara Pharmacy College</h1>
-                            <p className="italic text-sm text-gray-600 mb-2">Building Bridges Across Healthcare</p>
+                        {/* Header */}
+                        <div className="border-b-2 border-black pb-4 mb-6">
+                            <div className="flex items-center justify-between px-4">
+                                <img src="/college_logo.png" alt="Logo" className="h-24 w-auto object-contain" />
+                                <div className="text-center flex-1">
+                                    <h1 className="text-2xl font-bold uppercase tracking-wide mb-1 text-[#8B0000]">Sri Subramanya Swamy College of Pharmacy</h1>
+                                    <p className="italic text-sm text-gray-600 mb-2">Building Bridges Across Healthcare</p>
+                                </div>
+                                <div className="w-24"></div> {/* Balance the logo space */}
+                            </div>
                             <div className="w-full h-1 bg-black mt-2 mb-1"></div>
                             <div className="w-full h-0.5 bg-black"></div>
                         </div>
@@ -263,12 +270,12 @@ const FeesEstimation = () => {
 
                         {/* Table */}
                         <div className="px-4 mb-4 flex-grow">
-                            <table className="w-full border-collapse border border-black text-sm">
+                            <table className="w-full border-collapse border-2 border-black text-sm">
                                 <thead>
                                     <tr className="bg-gray-100">
-                                        <th className="border border-black p-2 w-16 text-center">Sl No.</th>
-                                        <th className="border border-black p-2 text-left">Particulars</th>
-                                        <th className="border border-black p-2 w-40 text-right">{formData.courseYear} ({formData.course})</th>
+                                        <th className="border-2 border-black p-2 w-16 text-center">Sl No.</th>
+                                        <th className="border-2 border-black p-2 text-left">Particulars</th>
+                                        <th className="border-2 border-black p-2 w-40 text-right">{formData.courseYear} ({formData.course})</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -287,16 +294,16 @@ const FeesEstimation = () => {
                                         { id: 12, name: "Food And Accommodation Fee", value: formData.foodAccomFee },
                                     ].map((item) => (
                                         <tr key={item.id}>
-                                            <td className="border border-black p-2 text-center">{item.id}.</td>
-                                            <td className="border border-black p-2 font-medium">{item.name}</td>
-                                            <td className="border border-black p-2 text-right tracking-wider">
+                                            <td className="border-2 border-black p-2 text-center">{item.id}.</td>
+                                            <td className="border-2 border-black p-2 font-medium">{item.name}</td>
+                                            <td className="border-2 border-black p-2 text-right tracking-wider">
                                                 {Number(item.value).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                             </td>
                                         </tr>
                                     ))}
                                     <tr className="bg-gray-200 font-bold text-lg">
-                                        <td className="border border-black p-3 text-center" colSpan={2}>Total</td>
-                                        <td className="border border-black p-3 text-right">
+                                        <td className="border-2 border-black p-3 text-center" colSpan={2}>Total</td>
+                                        <td className="border-2 border-black p-3 text-right">
                                             {calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                         </td>
                                     </tr>
@@ -317,7 +324,7 @@ const FeesEstimation = () => {
                             <div className="text-center">
                                 <div className="mb-2 italic font-fancy text-2xl">Principal</div>
                                 <p className="font-bold">Principal</p>
-                                <p className="text-sm">Akshara Pharmacy College</p>
+                                <p className="text-sm">Sri Subramanya Swamy College of Pharmacy</p>
                                 <p className="text-xs">Shivamogga - 577204</p>
                             </div>
                         </div>

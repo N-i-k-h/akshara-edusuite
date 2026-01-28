@@ -18,6 +18,8 @@ import FeesRegistration from "./pages/FeesRegistration";
 import FeesEstimation from "./pages/FeesEstimation";
 import Library from "./pages/Library";
 import Reports from "./pages/Reports";
+import TransferCertificate from "./pages/TransferCertificate";
+import StudyCertificate from "./pages/StudyCertificate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,8 @@ const App = () => (
               <Route path="/fees" element={<Fees />} />
               <Route path="/fees-registration" element={<FeesRegistration />} />
               <Route path="/fees-estimation" element={<FeesEstimation />} />
+              <Route path="/transfer-certificate" element={<TransferCertificate />} />
+              <Route path="/study-certificate" element={<StudyCertificate />} />
               <Route path="/library" element={<Library />} />
               <Route path="/reports" element={<Reports />} />
             </Route>

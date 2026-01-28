@@ -32,10 +32,10 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
         <Button variant="ghost" size="icon" className="md:hidden" onClick={onMenuClick}>
           <Menu className="h-5 w-5" />
         </Button>
-        <div className="relative w-full max-w-sm md:w-96">
+        <div className="relative hidden md:block w-full max-w-sm md:w-96">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search students, staff, classes..."
+            placeholder="Search..."
             className="pl-10"
           />
         </div>
@@ -44,13 +44,13 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
+            <Button variant="ghost" className="flex items-center gap-2 px-1 md:px-4">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground">
                   AD
                 </AvatarFallback>
               </Avatar>
-              <div className="text-left">
+              <div className="hidden md:block text-left">
                 <p className="text-sm font-medium">Admin</p>
                 <p className="text-xs text-muted-foreground">admin@akshara.com</p>
               </div>
