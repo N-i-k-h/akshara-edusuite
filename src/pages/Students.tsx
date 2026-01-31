@@ -171,10 +171,12 @@ const Students = () => {
     paidFee: 0,
     dueFee: 0
   });
+  const [studentExams, setStudentExams] = useState<any[]>([]);
 
   const handleViewProfile = async (student: any) => {
     setSelectedStudent(student);
     setIsProfileOpen(true);
+    setStudentExams([]); // Clear previous exams
 
     // Fetch Stats
     try {
@@ -214,6 +216,13 @@ const Students = () => {
         paidFee: paid,
         dueFee: total - paid
       });
+
+      // 3. Exams
+      const examsRes = await fetch(`${API_BASE_URL}/results/student/${student._id}`);
+      if (examsRes.ok) {
+        const examsData = await examsRes.json();
+        setStudentExams(examsData);
+      }
 
     } catch (error) {
       console.error("Error fetching profile stats:", error);
@@ -324,7 +333,7 @@ const Students = () => {
 
       {/* Profile Dialog */}
       <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Student Profile</DialogTitle>
           </DialogHeader>
@@ -370,7 +379,7 @@ const Students = () => {
                 </div>
 
                 {/* Performance Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                     <p className="text-sm text-gray-500 mb-1">Attendance</p>
                     <p className={`text-2xl font-bold ${studentStats.attendance < 75 ? 'text-red-600' : 'text-green-600'}`}>
@@ -387,6 +396,47 @@ const Students = () => {
                       ₹{studentStats.dueFee.toLocaleString()}
                     </p>
                   </div>
+                </div>
+
+                {/* Exam Results Table */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg">Examination Results</h3>
+                  {studentExams.length > 0 ? (
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-slate-50">
+                          <TableRow>
+                            <TableHead>Exam Name</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead className="text-right">Total Marks</TableHead>
+                            <TableHead className="text-right">Percentage</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {studentExams.map((exam: any, idx) => {
+                            const totalObtained = exam.marks.reduce((a: any, b: any) => a + (b.obtainedMarks || 0), 0);
+                            const totalMax = exam.marks.reduce((a: any, b: any) => a + (b.totalMarks || 0), 0);
+                            const percentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0;
+
+                            return (
+                              <TableRow key={idx}>
+                                <TableCell className="font-medium">{exam.examName}</TableCell>
+                                <TableCell>{exam.examDate}</TableCell>
+                                <TableCell className="text-right">
+                                  {totalObtained} / {totalMax}
+                                </TableCell>
+                                <TableCell className="text-right font-bold">
+                                  {percentage.toFixed(1)}%
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No exam records found for this student.</p>
+                  )}
                 </div>
               </div>
 

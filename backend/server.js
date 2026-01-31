@@ -449,21 +449,45 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Exam Schema
+// Exam Schema
 const examSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    type: { type: String, required: true },
-    startDate: { type: String, required: true },
-    endDate: { type: String, required: true },
-    classes: { type: [String], required: true }, // Array of class names
-    status: { type: String, default: "Scheduled" }
+    className: { type: String, required: true },
+    subjects: [{
+        name: { type: String, required: true },
+        date: { type: String, required: true },
+        time: { type: String, required: true },
+        totalMarks: { type: Number, required: true }
+    }],
+    status: { type: String, default: "Scheduled" },
+    createdAt: { type: Date, default: Date.now }
 });
 
 const Exam = mongoose.model('Exam', examSchema);
 
+// Exam Result Schema (Grades)
+const examResultSchema = new mongoose.Schema({
+    examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
+    studentId: { type: String, required: true },
+    studentName: { type: String },
+    rollNo: { type: String },
+    marks: [{
+        subjectName: { type: String, required: true },
+        obtainedMarks: { type: Number, required: true, default: 0 },
+        totalMarks: { type: Number, required: true }
+    }]
+});
+
+// Compound index to ensure one result set per student per exam
+examResultSchema.index({ examId: 1, studentId: 1 }, { unique: true });
+
+const ExamResult = mongoose.model('ExamResult', examResultSchema);
+
+// Exam Routes
 // Exam Routes
 app.get('/api/exams', async (req, res) => {
     try {
-        const exams = await Exam.find();
+        const exams = await Exam.find().sort({ createdAt: -1 });
         res.json(exams);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching exams' });
@@ -477,6 +501,99 @@ app.post('/api/exams', async (req, res) => {
         res.status(201).json(newExam);
     } catch (error) {
         res.status(400).json({ message: 'Error creating exam', error: error.message });
+    }
+});
+
+app.delete('/api/exams/:id', async (req, res) => {
+    try {
+        const examId = req.params.id;
+        const deletedExam = await Exam.findByIdAndDelete(examId);
+
+        if (!deletedExam) {
+            return res.status(404).json({ message: 'Exam not found' });
+        }
+
+        // Cascade delete all results associated with this exam
+        await ExamResult.deleteMany({ examId });
+
+        res.json({ message: 'Exam and related results deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting exam', error: error.message });
+    }
+});
+
+// Exam Results Routes
+app.get('/api/exams/:id/results', async (req, res) => {
+    try {
+        const results = await ExamResult.find({ examId: req.params.id });
+        res.json(results);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching exam results' });
+    }
+});
+
+app.post('/api/exams/:id/results', async (req, res) => {
+    try {
+        const examId = req.params.id;
+        const { studentId, studentName, rollNo, marks } = req.body;
+
+        const result = await ExamResult.findOneAndUpdate(
+            { examId, studentId },
+            { studentName, rollNo, marks },
+            { new: true, upsert: true }
+        );
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ message: 'Error saving exam result', error: error.message });
+    }
+});
+
+// Bulk Save Results (Optional but useful)
+// Bulk Save Results (Optional but useful)
+app.post('/api/exams/:id/results/bulk', async (req, res) => {
+    try {
+        const examId = req.params.id;
+        const results = req.body; // Array of { studentId, marks, ... }
+
+        const bulkOps = results.map(result => ({
+            updateOne: {
+                filter: { examId, studentId: result.studentId },
+                update: { $set: { ...result, examId } },
+                upsert: true
+            }
+        }));
+
+        if (bulkOps.length > 0) {
+            await ExamResult.bulkWrite(bulkOps);
+        }
+        res.json({ message: "Bulk save successful" });
+    } catch (error) {
+        res.status(400).json({ message: 'Error during bulk save', error: error.message });
+    }
+});
+
+// Get Student Exam Results
+app.get('/api/results/student/:studentId', async (req, res) => {
+    try {
+        const studentId = req.params.studentId;
+
+        // Find all results for this student
+        const results = await ExamResult.find({ studentId }).lean();
+
+        // Enhance with Exam Details
+        const enhancedResults = await Promise.all(results.map(async (result) => {
+            const exam = await Exam.findById(result.examId);
+            return {
+                ...result,
+                examName: exam ? exam.name : "Unknown Exam",
+                examDate: exam && exam.subjects.length > 0 ? exam.subjects[0].date : "N/A"
+            };
+        }));
+
+        res.json(enhancedResults);
+    } catch (error) {
+        console.error("Error fetching student results:", error);
+        res.status(500).json({ message: 'Error fetching student results', error: error.message });
     }
 });
 

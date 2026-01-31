@@ -30,6 +30,7 @@ const navigation = [
   { name: "Classes", href: "/classes", icon: GraduationCap },
   { name: "Timetable", href: "/timetable", icon: Calendar },
   { name: "Attendance", href: "/attendance", icon: ClipboardCheck },
+  { name: "Exams", href: "/exams", icon: FileText },
 
   { name: "Fees Registration", href: "/fees-registration", icon: FileText },
   { name: "Fees Payment", href: "/fees", icon: CreditCard },
