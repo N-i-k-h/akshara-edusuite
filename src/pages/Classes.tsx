@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "@/config";
+import { API_BASE_URL, authFetch } from "@/config";
 
 import { Plus, Users, MapPin, User, Calendar, BookOpen, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -85,17 +85,16 @@ const Classes = () => {
 
   const fetchData = async () => {
     try {
-      const classesRes = await fetch(`${API_BASE_URL}/classes`);
-      const staffRes = await fetch(`${API_BASE_URL}/staff`);
+      const classesRes = await authFetch(`${API_BASE_URL}/classes`);
+      const staffRes = await authFetch(`${API_BASE_URL}/staff`);
 
       if (classesRes.ok && staffRes.ok) {
         const classesData = await classesRes.json();
         const staffData = await staffRes.json();
 
         setClassesList(classesData);
-        // Filter only teachers
-        const teacherList = staffData.filter((s: any) => s.role === 'Teacher');
-        setTeachers(teacherList);
+        // Show all staff members (not just role='Teacher')
+        setTeachers(staffData);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -120,7 +119,7 @@ const Classes = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/classes`, {
+      const response = await authFetch(`${API_BASE_URL}/classes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClass)
@@ -152,7 +151,7 @@ const Classes = () => {
     setIsLoadingStudents(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/students`);
+      const response = await authFetch(`${API_BASE_URL}/students`);
       if (response.ok) {
         const allStudents = await response.json();
 
@@ -166,7 +165,7 @@ const Classes = () => {
         const studentsWithStats = await Promise.all(filtered.map(async (student: any) => {
           let attendancePercentage = 0; // Default
           try {
-            const statsRes = await fetch(`${API_BASE_URL}/attendance/student/${student._id}`);
+            const statsRes = await authFetch(`${API_BASE_URL}/attendance/student/${student._id}`);
             if (statsRes.ok) {
               const stats = await statsRes.json();
               attendancePercentage = stats.attendancePercentage || 0;
@@ -203,7 +202,7 @@ const Classes = () => {
     setIsLoadingTimetable(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(classNameStr)}`);
+      const response = await authFetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(classNameStr)}`);
       if (response.ok) {
         const data = await response.json();
         setSelectedClassTimetable(data);
@@ -241,7 +240,7 @@ const Classes = () => {
         teacher: slotForm.teacher
       };
 
-      const response = await fetch(`${API_BASE_URL}/timetable`, {
+      const response = await authFetch(`${API_BASE_URL}/timetable`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -251,7 +250,7 @@ const Classes = () => {
         toast.success("Timetable updated");
         setEditingSlot(null);
         // Refresh timetable
-        const refreshRes = await fetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClassForTimetable)}`);
+        const refreshRes = await authFetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClassForTimetable)}`);
         if (refreshRes.ok) {
           const data = await refreshRes.json();
           setSelectedClassTimetable(data);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "@/config";
+import { API_BASE_URL, authFetch } from "@/config";
 
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ interface StaffMember {
   salary: number;
   joiningDate: string;
   status: string;
+  password?: string; // Optional since it won't be returned from API
 }
 
 const Staff = () => {
@@ -63,13 +64,14 @@ const Staff = () => {
     salary: "",
     email: "",
     phone: "",
+    password: "",
     joiningDate: new Date().toISOString().split('T')[0],
     status: "Active"
   });
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/staff`);
+      const response = await authFetch(`${API_BASE_URL}/staff`);
       if (response.ok) {
         const data = await response.json();
         setStaffList(data);
@@ -91,8 +93,8 @@ const Staff = () => {
   };
 
   const handleSaveStaff = async () => {
-    if (!newStaff.name || !newStaff.role || !newStaff.email || !newStaff.department || !newStaff.phone || !newStaff.salary) {
-      toast.error("Please fill in all required fields");
+    if (!newStaff.name || !newStaff.role || !newStaff.email || !newStaff.department || !newStaff.phone || !newStaff.salary || !newStaff.password) {
+      toast.error("Please fill in all required fields including password");
       return;
     }
 
@@ -104,7 +106,7 @@ const Staff = () => {
 
       console.log("Sending payload:", payload);
 
-      const response = await fetch(`${API_BASE_URL}/staff`, {
+      const response = await authFetch(`${API_BASE_URL}/staff`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,6 +126,7 @@ const Staff = () => {
           salary: "",
           email: "",
           phone: "",
+          password: "",
           joiningDate: new Date().toISOString().split('T')[0],
           status: "Active"
         });
@@ -153,7 +156,7 @@ const Staff = () => {
 
     try {
       console.log("Deleting staff with ID:", id);
-      const response = await fetch(`${API_BASE_URL}/staff/${id}`, {
+      const response = await authFetch(`${API_BASE_URL}/staff/${id}`, {
         method: 'DELETE',
       });
 
@@ -235,6 +238,13 @@ const Staff = () => {
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone <span className="text-red-500">*</span></Label>
                   <Input id="phone" value={newStaff.phone} onChange={(e) => handleInputChange("phone", e.target.value)} placeholder="Enter phone" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                  <Input id="password" type="password" value={newStaff.password} onChange={(e) => handleInputChange("password", e.target.value)} placeholder="Enter login password" />
+                  <p className="text-xs text-muted-foreground">This will be used for faculty login</p>
                 </div>
               </div>
               <div className="flex justify-end gap-2">

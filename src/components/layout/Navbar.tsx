@@ -20,10 +20,34 @@ interface NavbarProps {
 const Navbar = ({ onMenuClick }: NavbarProps) => {
   const navigate = useNavigate();
 
+  // Get user info from localStorage
+  const getUserInfo = () => {
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return { name: "User", email: "user@akshara.com", role: "admin" };
+    return JSON.parse(userStr);
+  };
+
+  const user = getUserInfo();
+
+  // Get initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     navigate("/login");
+  };
+
+  const handleProfile = () => {
+    navigate("/profile");
   };
 
   return (
@@ -47,19 +71,23 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
             <Button variant="ghost" className="flex items-center gap-2 px-1 md:px-4">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  AD
+                  {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium">Admin</p>
-                <p className="text-xs text-muted-foreground">admin@akshara.com</p>
+                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-
+            <DropdownMenuItem onClick={handleProfile}>
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               Logout

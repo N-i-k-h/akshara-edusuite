@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "@/config";
+import { API_BASE_URL, authFetch } from "@/config";
 
 import { Users, UserCheck, CreditCard, AlertTriangle, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/dashboard/stats`);
+        const response = await authFetch(`${API_BASE_URL}/dashboard/stats`);
         if (response.ok) {
           const data = await response.json();
           setStats(data);
@@ -62,25 +62,21 @@ const Dashboard = () => {
           title="Total Students"
           value={stats.totalStudents.toLocaleString()}
           icon={Users}
-          trend={{ value: 12, isPositive: true }}
         />
         <StatCard
           title="Total Faculty"
           value={stats.totalFaculty.toLocaleString()}
           icon={UserCheck}
-          trend={{ value: 3, isPositive: true }}
         />
         <StatCard
           title="Total Revenue"
           value={`₹${stats.totalRevenue.toLocaleString()}`}
           icon={CreditCard}
-          trend={{ value: 8, isPositive: true }}
         />
         <StatCard
           title="Fees Due"
           value={`₹${stats.feesDue.toLocaleString()}`}
           icon={AlertTriangle}
-          trend={{ value: 5, isPositive: false }}
         />
       </div>
 

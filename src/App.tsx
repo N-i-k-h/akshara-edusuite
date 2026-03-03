@@ -20,16 +20,40 @@ import Library from "./pages/Library";
 import Reports from "./pages/Reports";
 import TransferCertificate from "./pages/TransferCertificate";
 import StudyCertificate from "./pages/StudyCertificate";
+import FacultyDashboard from "./pages/FacultyDashboard";
+import FacultyStudents from "./pages/FacultyStudents";
+import FacultyTimetable from "./pages/FacultyTimetable";
+import FacultyAttendance from "./pages/FacultyAttendance";
+import FacultyExams from "./pages/FacultyExams";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = () => {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-  if (!isAuthenticated) {
+  const hasToken = !!localStorage.getItem("token");
+  if (!isAuthenticated || !hasToken) {
+    // Clear any stale auth data
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
     return <Navigate to="/login" replace />;
   }
   return <Outlet />;
+};
+
+const RoleBasedDashboard = () => {
+  const userStr = localStorage.getItem("user");
+  if (!userStr) return <Navigate to="/login" replace />;
+
+  const user = JSON.parse(userStr);
+
+  if (user.role === "faculty") {
+    return <Navigate to="/faculty-dashboard" replace />;
+  }
+
+  return <Dashboard />;
 };
 
 const App = () => (
@@ -42,7 +66,13 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<RoleBasedDashboard />} />
+              <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
+              <Route path="/faculty/students" element={<FacultyStudents />} />
+              <Route path="/faculty/timetable" element={<FacultyTimetable />} />
+              <Route path="/faculty/attendance" element={<FacultyAttendance />} />
+              <Route path="/faculty/exams" element={<FacultyExams />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/students" element={<Students />} />
               <Route path="/staff" element={<Staff />} />
               <Route path="/classes" element={<Classes />} />

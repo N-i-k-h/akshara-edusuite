@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
-import { Printer, Download, Calculator } from "lucide-react";
+import { Printer, Download, Calculator, Plus, Trash2 } from "lucide-react";
 
 const FeesEstimation = () => {
     const printRef = useRef(null);
@@ -37,14 +37,56 @@ const FeesEstimation = () => {
         stationaryCharges: "2500",
         uniformFee: "5000",
         foodAccomFee: "60000",
+        admissionNumber: "",
     });
+
+    const [customFees, setCustomFees] = useState<{ id: number; name: string; value: string }[]>([]);
+    const [newFeeName, setNewFeeName] = useState("");
+    const [newFeeAmount, setNewFeeAmount] = useState("");
+
+    // Generate Admission Number on Mount
+    useEffect(() => {
+        const generateAdmissionNumber = () => {
+            const currentYear = new Date().getFullYear().toString().slice(-2); // e.g., '26'
+            const storedSeq = localStorage.getItem("feeEstimationSeq");
+            let seq = storedSeq ? parseInt(storedSeq) : 0;
+
+            // Increment sequence
+            seq += 1;
+            localStorage.setItem("feeEstimationSeq", seq.toString());
+
+            // Format: YY + 01 + XXX (e.g., 2601001)
+            // The user requested 'year o1' which likely means static '01' or course related. 
+            // We use '01' as static part based on request "year 26 and year o1".
+            const formattedSeq = seq.toString().padStart(3, '0');
+            const newAdmNo = `${currentYear}01${formattedSeq}`;
+
+            setFormData(prev => ({ ...prev, admissionNumber: newAdmNo }));
+        };
+
+        generateAdmissionNumber();
+    }, []);
 
     const handleInputChange = (field, value) => {
         setFormData({ ...formData, [field]: value });
     };
 
+    const addCustomFee = () => {
+        if (!newFeeName || !newFeeAmount) {
+            toast.error("Please enter both fee name and amount");
+            return;
+        }
+        setCustomFees([...customFees, { id: Date.now(), name: newFeeName, value: newFeeAmount }]);
+        setNewFeeName("");
+        setNewFeeAmount("");
+    };
+
+    const removeCustomFee = (id: number) => {
+        setCustomFees(customFees.filter(fee => fee.id !== id));
+    };
+
     const calculateTotal = () => {
-        return (
+        const standardTotal =
             Number(formData.registrationFee) +
             Number(formData.admissionFee) +
             Number(formData.laboratoryFee) +
@@ -56,8 +98,11 @@ const FeesEstimation = () => {
             Number(formData.booksRecordFee) +
             Number(formData.stationaryCharges) +
             Number(formData.uniformFee) +
-            Number(formData.foodAccomFee)
-        );
+            Number(formData.foodAccomFee);
+
+        const customTotal = customFees.reduce((sum, fee) => sum + (Number(fee.value) || 0), 0);
+
+        return standardTotal + customTotal;
     };
 
     // --- UPDATED DOWNLOAD FUNCTION (BLOB METHOD) ---
@@ -141,6 +186,10 @@ const FeesEstimation = () => {
                             <Label>Parent Name</Label>
                             <Input value={formData.parentName} onChange={(e) => handleInputChange("parentName", e.target.value)} placeholder="e.g. Rajesh Kumar" />
                         </div>
+                        <div className="space-y-2">
+                            <Label>Admission No. (Auto)</Label>
+                            <Input value={formData.admissionNumber} onChange={(e) => handleInputChange("admissionNumber", e.target.value)} placeholder="e.g. 2601001" />
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Course Year</Label>
@@ -223,7 +272,49 @@ const FeesEstimation = () => {
                             </div>
                         </div>
 
-                        <div className="bg-slate-100 p-3 rounded-md flex justify-between items-center font-bold">
+                        {/* Custom Fees Section */}
+                        <div className="border-t pt-4 space-y-3">
+                            <h3 className="font-semibold text-sm">Add Custom Fees</h3>
+                            <div className="grid grid-cols-3 gap-2 items-end">
+                                <div className="col-span-2 space-y-1">
+                                    <Label className="text-xs">Fee Name</Label>
+                                    <Input
+                                        value={newFeeName}
+                                        onChange={(e) => setNewFeeName(e.target.value)}
+                                        placeholder="e.g. Bus Fee"
+                                        className="h-8 text-xs"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs">Amount</Label>
+                                    <Input
+                                        type="number"
+                                        value={newFeeAmount}
+                                        onChange={(e) => setNewFeeAmount(e.target.value)}
+                                        placeholder="0"
+                                        className="h-8 text-xs"
+                                    />
+                                </div>
+                            </div>
+                            <Button onClick={addCustomFee} className="w-full h-8 text-xs bg-slate-800 hover:bg-slate-700">
+                                <Plus className="mr-1 h-3 w-3" /> Add Fee
+                            </Button>
+
+                            {customFees.length > 0 && (
+                                <div className="space-y-2 mt-2 bg-slate-50 p-2 rounded border border-slate-100">
+                                    {customFees.map(fee => (
+                                        <div key={fee.id} className="flex justify-between items-center text-xs p-1">
+                                            <span>{fee.name}: <span className="font-semibold">₹{fee.value}</span></span>
+                                            <Button variant="ghost" size="icon" className="h-5 w-5 text-red-500 hover:bg-red-50" onClick={() => removeCustomFee(fee.id)}>
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-slate-100 p-3 rounded-md flex justify-between items-center font-bold mt-4">
                             <span>Total:</span>
                             <span>₹ {calculateTotal().toLocaleString()}</span>
                         </div>
@@ -257,6 +348,9 @@ const FeesEstimation = () => {
                         </div>
 
                         {/* Date */}
+                        <div className="absolute top-8 left-8 text-sm font-bold hidden">
+                            Ref No: {formData.admissionNumber}
+                        </div>
                         <div className="absolute top-8 right-8 text-sm font-bold">
                             Date: {today}
                         </div>
@@ -264,7 +358,7 @@ const FeesEstimation = () => {
                         {/* Body Text */}
                         <div className="text-justify leading-7 px-4 mb-6 text-lg">
                             <p>
-                                This is to certify that <span className="font-bold">Kum/Mr. {formData.studentName || "________________"}</span> D/o, S/o <span className="font-bold">{formData.parentName || "________________"}</span> is studying in <span className="font-bold">{formData.courseYear} {formData.course}</span> in our institution for the Academic Year <span className="font-bold">{formData.academicYear}</span>. Total Duration of the program is Two academic years. Her/His fees details are as follows.
+                                This is to certify that <span className="font-bold">Kum/Mr. {formData.studentName || "________________"}</span> D/o, S/o <span className="font-bold">{formData.parentName || "________________"}</span> is studying in <span className="font-bold">{formData.courseYear} {formData.course}</span> in our institution for the Academic Year <span className="font-bold">{formData.academicYear}</span> with Admission Number <span className="font-bold">{formData.admissionNumber}</span>. Total Duration of the program is Two academic years. Her/His fees details are as follows.
                             </p>
                         </div>
 
@@ -292,6 +386,11 @@ const FeesEstimation = () => {
                                         { id: 10, name: "Stationary charges", value: formData.stationaryCharges },
                                         { id: 11, name: "Uniform Fee", value: formData.uniformFee },
                                         { id: 12, name: "Food And Accommodation Fee", value: formData.foodAccomFee },
+                                        ...customFees.map((fee, index) => ({
+                                            id: 13 + index,
+                                            name: fee.name,
+                                            value: fee.value
+                                        }))
                                     ].map((item) => (
                                         <tr key={item.id}>
                                             <td className="border-2 border-black p-2 text-center">{item.id}.</td>
@@ -322,19 +421,13 @@ const FeesEstimation = () => {
                                 {/* Empty for seal */}
                             </div>
                             <div className="text-center">
-                                <div className="mb-2 italic font-fancy text-2xl">Principal</div>
                                 <p className="font-bold">Principal</p>
                                 <p className="text-sm">Sri Subramanya Swamy College of Pharmacy</p>
                                 <p className="text-xs">Shivamogga - 577204</p>
                             </div>
                         </div>
 
-                        {/* Footer Stripe */}
-                        <div className="bg-black text-white p-2 text-xs flex justify-between px-8 absolute bottom-0 left-0 w-full print:fixed print:bottom-0">
-                            <div>Contact: 9632917880 / 9168127880</div>
-                            <div>Email: principalapc@gmail.com</div>
-                            <div>www.aksharapc.in</div>
-                        </div>
+
                     </div>
                 </div>
             </div>

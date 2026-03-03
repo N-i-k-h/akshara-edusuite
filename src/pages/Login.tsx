@@ -28,24 +28,18 @@ const Login = () => {
 
             const data = await response.json();
 
-            if (response.ok) {
+            if (response.ok && data.success) {
                 localStorage.setItem("isAuthenticated", "true");
                 localStorage.setItem("user", JSON.stringify(data.user));
+                localStorage.setItem("token", data.token);
                 toast.success(`Welcome back, ${data.user.name}!`);
                 navigate("/");
             } else {
-                toast.error(data.message || "Login failed");
+                toast.error(data.message || "Invalid email or password");
             }
         } catch (error) {
             console.error("Login error:", error);
-            // Fallback for demo purposes if backend isn't running
-            if (email === "admin@akshara.com" && password === "admin") {
-                toast.warning("Backend unavailable. Logging in with demo credentials.");
-                localStorage.setItem("isAuthenticated", "true");
-                navigate("/");
-            } else {
-                toast.error("Unable to connect to server. Please ensure backend is running.");
-            }
+            toast.error("Unable to connect to server. Please ensure the server is running.");
         } finally {
             setIsLoading(false);
         }
@@ -64,7 +58,7 @@ const Login = () => {
                     <div className="h-12 w-12 bg-gradient-to-tr from-blue-400 to-purple-400 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
                         <BookOpen className="h-6 w-6 text-white" />
                     </div>
-                    <CardTitle className="text-2xl font-bold text-white tracking-tight">Akshara EduSuite</CardTitle>
+                    <CardTitle className="text-2xl font-bold text-white tracking-tight">SSCP College EduSuite</CardTitle>
                     <CardDescription className="text-slate-300">
                         Enter your credentials to access the portal
                     </CardDescription>
@@ -78,7 +72,7 @@ const Login = () => {
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="admin@akshara.com"
+                                    placeholder="you@example.com"
                                     className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-blue-400/20"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -122,7 +116,7 @@ const Login = () => {
             </Card>
 
             <div className="absolute bottom-4 text-slate-500 text-sm">
-                © 2026 Akshara Educational Institutions
+                © 2026 SSCP College
             </div>
         </div>
     );

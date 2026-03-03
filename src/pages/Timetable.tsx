@@ -1,5 +1,5 @@
 import { Calendar, Plus } from "lucide-react";
-import { API_BASE_URL } from "@/config";
+import { API_BASE_URL, authFetch } from "@/config";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,15 +84,16 @@ const Timetable = () => {
   // Fetch Classes and Staff
   const fetchData = async () => {
     try {
-      const classesRes = await fetch(`${API_BASE_URL}/classes`);
-      const staffRes = await fetch(`${API_BASE_URL}/staff`);
+      const classesRes = await authFetch(`${API_BASE_URL}/classes`);
+      const staffRes = await authFetch(`${API_BASE_URL}/staff`);
 
       if (classesRes.ok && staffRes.ok) {
         const classesData = await classesRes.json();
         const staffData = await staffRes.json();
 
         setClassList(classesData);
-        setTeachers(staffData.filter((s: any) => s.role === 'Teacher'));
+        // Show all staff members (not just role='Teacher')
+        setTeachers(staffData);
 
         if (classesData.length > 0 && !selectedClass) {
           const firstName = `${classesData[0].grade} - ${classesData[0].section}`;
@@ -113,7 +114,7 @@ const Timetable = () => {
     if (!selectedClass) return;
     try {
       // selectedClass format matches what we save.
-      const response = await fetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClass)}`);
+      const response = await authFetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClass)}`);
       if (response.ok) {
         const data = await response.json();
         setTimetableData(data);
@@ -142,7 +143,7 @@ const Timetable = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/classes`, {
+      const response = await authFetch(`${API_BASE_URL}/classes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClass)
@@ -179,7 +180,7 @@ const Timetable = () => {
         teacher: newEntry.teacher
       };
 
-      const response = await fetch(`${API_BASE_URL}/timetable`, {
+      const response = await authFetch(`${API_BASE_URL}/timetable`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -334,7 +335,18 @@ const Timetable = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Teacher</Label>
-                  <Input value={newEntry.teacher} onChange={(e) => handleInputChange("teacher", e.target.value)} placeholder="e.g. Mr. Smith" />
+                  <Select value={newEntry.teacher} onValueChange={(val) => handleInputChange("teacher", val)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select teacher" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teachers.map((teacher) => (
+                        <SelectItem key={teacher._id} value={teacher.name}>
+                          {teacher.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>

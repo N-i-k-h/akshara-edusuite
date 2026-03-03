@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { API_BASE_URL } from "@/config";
+import { API_BASE_URL, authFetch } from "@/config";
 
 import { Plus, CreditCard, TrendingUp, AlertCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,8 @@ const Fees = () => {
     dueAmount: "0",
     paymentMethod: "",
     totalFee: "0",
-    date: ""
+    date: "",
+    admissionNumber: ""
   });
 
   const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
@@ -81,10 +82,10 @@ const Fees = () => {
   const fetchData = async () => {
     try {
       const [feesRes, studentsRes, structRes, classesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/fees?t=${Date.now()}`),
-        fetch(`${API_BASE_URL}/students`),
-        fetch(`${API_BASE_URL}/fee-structures`),
-        fetch(`${API_BASE_URL}/classes`)
+        authFetch(`${API_BASE_URL}/fees?t=${Date.now()}`),
+        authFetch(`${API_BASE_URL}/students`),
+        authFetch(`${API_BASE_URL}/fee-structures`),
+        authFetch(`${API_BASE_URL}/classes`)
       ]);
 
       if (feesRes.ok && studentsRes.ok && structRes.ok) {
@@ -192,7 +193,8 @@ const Fees = () => {
       dueAmount: fee.dueAmount.toString(),
       paymentMethod: fee.paymentMethod,
       totalFee: totalFee.toString(),
-      date: fee.date
+      date: fee.date,
+      admissionNumber: fee.admissionNumber || ""
     });
     setIsAddDialogOpen(true);
   };
@@ -248,7 +250,7 @@ const Fees = () => {
     try {
       const url = editFeeId
         ? `${API_BASE_URL}/fees/${editFeeId}`
-        : '${API_BASE_URL}/fees';
+        : `${API_BASE_URL}/fees`;
 
       const method = editFeeId ? 'PUT' : 'POST';
 
@@ -260,10 +262,11 @@ const Fees = () => {
         amountPaid: Number(formData.amountPaid),
         dueAmount: Number(formData.dueAmount),
         paymentMethod: formData.paymentMethod,
-        date: formData.date ? formData.date : new Date()
+        date: formData.date ? formData.date : new Date(),
+        admissionNumber: formData.admissionNumber
       };
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -285,7 +288,8 @@ const Fees = () => {
           dueAmount: "0",
           paymentMethod: "",
           totalFee: "0",
-          date: ""
+          date: "",
+          admissionNumber: ""
         });
         setEditFeeId(null);
       } else {
@@ -308,7 +312,8 @@ const Fees = () => {
       dueAmount: "0",
       paymentMethod: "",
       totalFee: "0",
-      date: ""
+      date: "",
+      admissionNumber: ""
     });
     setIsAddDialogOpen(true);
   }
@@ -394,6 +399,16 @@ const Fees = () => {
                     )}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="admissionNumber">Admission Number</Label>
+                <Input
+                  id="admissionNumber"
+                  value={formData.admissionNumber}
+                  onChange={(e) => setFormData({ ...formData, admissionNumber: e.target.value })}
+                  placeholder="e.g. 2601001"
+                />
               </div>
 
               {/* Fee Info Display */}
@@ -634,6 +649,7 @@ const Fees = () => {
               </div>
               <div className="text-right">
                 <p><strong>Academic Year:</strong> 2025-26</p> {/* Dynamic if available */}
+                <p><strong>Admission No:</strong> {receiptData.admissionNumber}</p>
               </div>
             </div>
 

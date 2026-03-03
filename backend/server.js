@@ -1,92 +1,421 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-app.get('/', (req, res) => {
-    res.send('Akshara Backend Running');
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET is not set in .env file. Server cannot start.');
+    process.exit(1);
+}
+
+// =============================================================================
+// SECURITY MIDDLEWARE
+// =============================================================================
+
+// Helmet — sets various HTTP security headers
+app.use(helmet());
+
+// CORS — restrict to allowed origins
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(s => s.trim());
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (server-to-server, Postman, etc.)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
+
+// Body parser with size limit to prevent payload attacks
+app.use(express.json({ limit: '1mb' }));
+
+// Rate limiting — general
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 500, // limit each IP to 500 requests per window
+    message: { message: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/', generalLimiter);
+
+// Rate limiting — strict for login
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // limit each IP to 20 login attempts per window
+    message: { message: 'Too many login attempts, please try again after 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// =============================================================================
+// DATABASE CONNECTION
+// =============================================================================
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected successfully'))
-    .catch(err => console.error('MongoDB connection error:', err));
+    .catch(err => {
+        console.error('MongoDB connection error:', err.message);
+        process.exit(1);
+    });
 
-// User Schema
-const userSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    name: { type: String, default: "Admin" },
-    role: { type: String, default: "admin" }
+// Health check
+app.get('/', (req, res) => {
+    res.json({ status: 'ok', service: 'Akshara EduSuite API' });
 });
+
+// =============================================================================
+// SCHEMAS
+// =============================================================================
+
+const userSchema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true },
+    name: { type: String, default: 'Admin', trim: true },
+    role: { type: String, enum: ['admin', 'faculty'], default: 'admin' }
+}, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 
-// Seed Admin User if not exists
+const studentSchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true },
+    rollNo: { type: String, required: true, unique: true, trim: true },
+    email: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true },
+    class: { type: String, required: true, trim: true },
+    parentName: { type: String, required: true, trim: true },
+    parentPhone: { type: String, required: true, trim: true },
+    status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+    feesPaid: { type: Boolean, default: false }
+}, { timestamps: true });
+
+const Student = mongoose.model('Student', studentSchema);
+
+const feeSchema = new mongoose.Schema({
+    studentId: { type: String, required: true },
+    studentName: { type: String, required: true, trim: true },
+    grade: { type: String, required: true, trim: true },
+    feeType: { type: String, required: true, trim: true },
+    amountPaid: { type: Number, required: true, min: 0 },
+    dueAmount: { type: Number, required: true, min: 0 },
+    paymentMethod: { type: String, enum: ['Card', 'Cash', 'UPI', 'Other'], required: true },
+    date: { type: Date, default: Date.now },
+    status: { type: String, default: 'Paid' }
+}, { timestamps: true });
+
+const Fee = mongoose.model('Fee', feeSchema);
+
+const staffSchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true },
+    role: { type: String, required: true, trim: true },
+    department: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    phone: { type: String, required: true, trim: true },
+    salary: { type: Number, required: true, min: 0 },
+    joiningDate: { type: String, required: true },
+    status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+    password: { type: String, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    assignedClasses: [{ type: String }]
+}, { timestamps: true });
+
+const Staff = mongoose.model('Staff', staffSchema);
+
+const classSchema = new mongoose.Schema({
+    grade: { type: String, required: true, trim: true },
+    section: { type: String, required: true, trim: true },
+    room: { type: String, required: true, trim: true },
+    classTeacher: { type: String, required: true, trim: true },
+    studentsCount: { type: Number, default: 0, min: 0 }
+});
+
+const Class = mongoose.model('Class', classSchema);
+
+const examSchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true },
+    className: { type: String, required: true, trim: true },
+    subjects: [{
+        name: { type: String, required: true },
+        date: { type: String, required: true },
+        time: { type: String, required: true },
+        totalMarks: { type: Number, required: true, min: 0 },
+        facultyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' }
+    }],
+    status: { type: String, default: 'Scheduled' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Exam = mongoose.model('Exam', examSchema);
+
+const examResultSchema = new mongoose.Schema({
+    examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
+    studentId: { type: String, required: true },
+    studentName: { type: String },
+    rollNo: { type: String },
+    marks: [{
+        subjectName: { type: String, required: true },
+        obtainedMarks: { type: Number, required: true, default: 0, min: 0 },
+        totalMarks: { type: Number, required: true, min: 0 }
+    }]
+});
+
+examResultSchema.index({ examId: 1, studentId: 1 }, { unique: true });
+const ExamResult = mongoose.model('ExamResult', examResultSchema);
+
+const timetableSchema = new mongoose.Schema({
+    className: { type: String, required: true, trim: true },
+    day: { type: String, required: true, trim: true },
+    period: { type: Number, required: true, min: 1, max: 10 },
+    subject: { type: String, required: true, trim: true },
+    teacher: { type: String, required: true, trim: true },
+    facultyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' }
+});
+
+timetableSchema.index({ className: 1, day: 1, period: 1 }, { unique: true });
+const Timetable = mongoose.model('Timetable', timetableSchema);
+
+const feeStructureSchema = new mongoose.Schema({
+    studentId: { type: String, required: true },
+    studentName: { type: String, required: true, trim: true },
+    rollNo: { type: String, required: true, trim: true },
+    grade: { type: String, required: true, trim: true },
+    academicYear: { type: String, required: true },
+    feeComponents: {
+        registrationFee: Number,
+        admissionFee: Number,
+        laboratoryFee: Number,
+        internalExamFee: Number,
+        libraryFee: Number,
+        sportsFee: Number,
+        tuitionFee: Number,
+        annualExamFee: Number,
+        booksRecordFee: Number,
+        stationaryCharges: Number,
+        uniformFee: Number,
+        foodAccomFee: Number,
+    },
+    totalFee: { type: Number, required: true, min: 0 },
+    registeredDate: { type: Date, default: Date.now }
+});
+
+const FeeStructure = mongoose.model('FeeStructure', feeStructureSchema);
+
+const attendanceSchema = new mongoose.Schema({
+    date: { type: String, required: true },
+    className: { type: String, required: true },
+    period: { type: Number, required: true, min: 1, max: 10 },
+    subject: { type: String },
+    records: [{
+        studentId: { type: String, required: true },
+        studentName: { type: String },
+        rollNo: { type: String },
+        status: { type: String, enum: ['Present', 'Absent', 'Late'], default: 'Present' }
+    }]
+});
+
+attendanceSchema.index({ date: 1, className: 1, period: 1 }, { unique: true });
+const Attendance = mongoose.model('Attendance', attendanceSchema);
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+// Escape regex special characters to prevent ReDoS attacks
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Validate MongoDB ObjectId format
+function isValidObjectId(id) {
+    return mongoose.Types.ObjectId.isValid(id);
+}
+
+// Seed admin user with hashed password + migrate plain-text passwords
 const seedAdmin = async () => {
     try {
-        const adminExists = await User.findOne({ email: 'admin@akshara.com' });
+        const adminEmail = (process.env.ADMIN_EMAIL || 'admin@akshara.com').toLowerCase();
+        const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+        const adminExists = await User.findOne({ email: adminEmail });
         if (!adminExists) {
+            const hashedPassword = await bcrypt.hash(adminPassword, 12);
             const admin = new User({
-                email: 'admin@akshara.com',
-                password: 'admin', // Note: In production, hash this password!
+                email: adminEmail,
+                password: hashedPassword,
                 name: 'Super Admin',
                 role: 'admin'
             });
             await admin.save();
             console.log('Admin user seeded successfully');
         } else {
-            console.log('Admin user already exists');
+            // Migrate plain-text password to bcrypt if needed
+            // bcrypt hashes always start with "$2"
+            if (!adminExists.password.startsWith('$2')) {
+                console.log('Migrating admin password to bcrypt...');
+                adminExists.password = await bcrypt.hash(adminPassword, 12);
+                await adminExists.save();
+                console.log('Admin password migrated successfully');
+            } else {
+                console.log('Admin user already exists');
+            }
+        }
+
+        // Migrate all users with plain-text passwords
+        const usersWithPlainPasswords = await User.find({
+            password: { $not: /^\$2/ }
+        });
+        for (const user of usersWithPlainPasswords) {
+            const plainPassword = user.password;
+            if (!plainPassword) continue;
+            user.password = await bcrypt.hash(plainPassword, 12);
+            await user.save();
+            console.log(`Migrated password for user: ${user.email}`);
+        }
+
+        // Migrate staff passwords too
+        const staffWithPlainPasswords = await Staff.find({
+            password: { $not: /^\$2/ }
+        });
+        for (const staff of staffWithPlainPasswords) {
+            const plainPassword = staff.password;
+            if (!plainPassword) continue;
+            staff.password = await bcrypt.hash(plainPassword, 12);
+            await staff.save();
+            console.log(`Migrated password for staff: ${staff.email}`);
+        }
+
+        // Remove old admin accounts that don't match current ADMIN_EMAIL
+        const oldAdmins = await User.find({
+            role: 'admin',
+            email: { $ne: adminEmail }
+        });
+        for (const oldAdmin of oldAdmins) {
+            await User.findByIdAndDelete(oldAdmin._id);
+            console.log(`Removed old admin account: ${oldAdmin.email}`);
         }
     } catch (error) {
-        console.error('Error seeding admin:', error);
+        console.error('Error seeding admin:', error.message);
     }
 };
 
-// Student Schema
-const studentSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    rollNo: { type: String, required: true, unique: true },
-    email: { type: String, required: true },
-    phone: { type: String, required: true },
-    class: { type: String, required: true },
-    parentName: { type: String, required: true },
-    parentPhone: { type: String, required: true },
-    status: { type: String, default: "Active" },
-    feesPaid: { type: Boolean, default: false }
+// Update student fee status
+const updateStudentFeeStatus = async (studentId) => {
+    try {
+        const fees = await Fee.find({ studentId });
+        const totalDue = fees.reduce((sum, fee) => sum + (fee.dueAmount || 0), 0);
+        const isPaid = fees.length > 0 && totalDue <= 0;
+        await Student.findByIdAndUpdate(studentId, { feesPaid: isPaid });
+    } catch (error) {
+        console.error('Error updating student fee status:', error.message);
+    }
+};
+
+// =============================================================================
+// AUTH MIDDLEWARE
+// =============================================================================
+
+const authenticate = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+};
+
+// Admin-only middleware
+const requireAdmin = (req, res, next) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    next();
+};
+
+// =============================================================================
+// AUTH ROUTES (Public)
+// =============================================================================
+
+app.post('/api/login', loginLimiter, async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    try {
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { id: user._id, email: user.email, name: user.name, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user._id,
+                email: user.email,
+                name: user.name,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error.message);
+        res.status(500).json({ message: 'Server error' });
+    }
 });
 
-const Student = mongoose.model('Student', studentSchema);
+// =============================================================================
+// PROTECTED ROUTES — All routes below require authentication
+// =============================================================================
 
-// ... (existing User schema and seedAdmin logic)
+app.use('/api/students', authenticate);
+app.use('/api/staff', authenticate);
+app.use('/api/classes', authenticate);
+app.use('/api/fees', authenticate);
+app.use('/api/fee-structures', authenticate);
+app.use('/api/exams', authenticate);
+app.use('/api/results', authenticate);
+app.use('/api/attendance', authenticate);
+app.use('/api/timetable', authenticate);
+app.use('/api/dashboard', authenticate);
+app.use('/api/faculty', authenticate);
+app.use('/api/users', authenticate);
 
-// Student Routes
-// Fee Schema
-const feeSchema = new mongoose.Schema({
-    studentId: { type: String, required: true },
-    studentName: { type: String, required: true },
-    grade: { type: String, required: true },
-    feeType: { type: String, required: true },
-    amountPaid: { type: Number, required: true },
-    dueAmount: { type: Number, required: true },
-    paymentMethod: { type: String, enum: ['Card', 'Cash', 'UPI', 'Other'], required: true },
-    date: { type: Date, default: Date.now },
-    status: { type: String, default: 'Paid' }
-});
+// =============================================================================
+// STUDENT ROUTES
+// =============================================================================
 
-const Fee = mongoose.model('Fee', feeSchema);
-
-// Student Routes
 app.get('/api/students', async (req, res) => {
     try {
         const students = await Student.find();
@@ -98,6 +427,9 @@ app.get('/api/students', async (req, res) => {
 
 app.get('/api/students/:id', async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'Invalid student ID' });
+        }
         const student = await Student.findById(req.params.id);
         if (!student) return res.status(404).json({ message: 'Student not found' });
         res.json(student);
@@ -109,7 +441,10 @@ app.get('/api/students/:id', async (req, res) => {
 app.post('/api/students', async (req, res) => {
     try {
         const { rollNo } = req.body;
-        const existingStudent = await Student.findOne({ rollNo });
+        if (!rollNo) {
+            return res.status(400).json({ message: 'Roll number is required' });
+        }
+        const existingStudent = await Student.findOne({ rollNo: rollNo.trim() });
         if (existingStudent) {
             return res.status(400).json({ message: 'Student with this Roll Number already exists' });
         }
@@ -118,7 +453,6 @@ app.post('/api/students', async (req, res) => {
         await newStudent.save();
         res.status(201).json(newStudent);
     } catch (error) {
-        // Handle Mongoose duplicate key error explicitly if race condition occurs
         if (error.code === 11000) {
             return res.status(400).json({ message: 'Duplicate key error: Roll Number must be unique' });
         }
@@ -129,8 +463,11 @@ app.post('/api/students', async (req, res) => {
 app.delete('/api/students/:id', async (req, res) => {
     try {
         const studentId = req.params.id;
-        const deletedStudent = await Student.findByIdAndDelete(studentId);
+        if (!isValidObjectId(studentId)) {
+            return res.status(400).json({ message: 'Invalid student ID' });
+        }
 
+        const deletedStudent = await Student.findByIdAndDelete(studentId);
         if (!deletedStudent) {
             return res.status(404).json({ message: 'Student not found' });
         }
@@ -138,37 +475,22 @@ app.delete('/api/students/:id', async (req, res) => {
         // Cascade delete related data
         await FeeStructure.deleteMany({ studentId });
         await Fee.deleteMany({ studentId });
-
-        // Remove student from attendance records
         await Attendance.updateMany(
-            { "records.studentId": studentId },
+            { 'records.studentId': studentId },
             { $pull: { records: { studentId: studentId } } }
         );
 
         res.json({ message: 'Student and related data deleted successfully' });
     } catch (error) {
-        console.error("Error deleting student:", error);
-        res.status(500).json({ message: 'Error deleting student', error: error.message });
+        console.error('Error deleting student:', error.message);
+        res.status(500).json({ message: 'Error deleting student' });
     }
 });
 
-// Helper to update student fee status
-const updateStudentFeeStatus = async (studentId) => {
-    try {
-        const fees = await Fee.find({ studentId });
-        // Calculate total due amount
-        const totalDue = fees.reduce((sum, fee) => sum + (fee.dueAmount || 0), 0);
+// =============================================================================
+// FEE ROUTES
+// =============================================================================
 
-        // Determine status: Paid if totalDue is 0 and there is at least one record
-        const isPaid = fees.length > 0 && totalDue <= 0;
-
-        await Student.findByIdAndUpdate(studentId, { feesPaid: isPaid });
-    } catch (error) {
-        console.error("Error updating student fee status:", error);
-    }
-};
-
-// Fee Routes
 app.get('/api/fees', async (req, res) => {
     try {
         const fees = await Fee.find().sort({ date: -1 });
@@ -182,10 +504,7 @@ app.post('/api/fees', async (req, res) => {
     try {
         const newFee = new Fee(req.body);
         await newFee.save();
-
-        // Update Student Status
         await updateStudentFeeStatus(newFee.studentId);
-
         res.status(201).json(newFee);
     } catch (error) {
         res.status(400).json({ message: 'Error creating fee record', error: error.message });
@@ -195,51 +514,27 @@ app.post('/api/fees', async (req, res) => {
 app.put('/api/fees/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedFee = await Fee.findByIdAndUpdate(id, req.body, { new: true });
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid fee ID' });
+        }
+        const updatedFee = await Fee.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
         if (!updatedFee) {
             return res.status(404).json({ message: 'Fee record not found' });
         }
-
-        // Update Student Status
         await updateStudentFeeStatus(updatedFee.studentId);
-
         res.json(updatedFee);
     } catch (error) {
         res.status(400).json({ message: 'Error updating fee record', error: error.message });
     }
 });
 
+// =============================================================================
+// STAFF ROUTES
+// =============================================================================
 
-
-// Staff Schema
-const staffSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    role: { type: String, required: true },
-    department: { type: String, required: true },
-    email: { type: String, required: true },
-    phone: { type: String, required: true },
-    salary: { type: Number, required: true },
-    joiningDate: { type: String, required: true },
-    status: { type: String, default: "Active" }
-});
-
-const Staff = mongoose.model('Staff', staffSchema);
-
-// Class Schema
-const classSchema = new mongoose.Schema({
-    grade: { type: String, required: true },
-    section: { type: String, required: true },
-    room: { type: String, required: true },
-    classTeacher: { type: String, required: true },
-    studentsCount: { type: Number, default: 0 }
-});
-
-const Class = mongoose.model('Class', classSchema);
-
-// Staff Routes
 app.get('/api/staff', async (req, res) => {
     try {
-        const staffMembers = await Staff.find();
+        const staffMembers = await Staff.find().select('-password');
         res.json(staffMembers);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching staff' });
@@ -248,31 +543,113 @@ app.get('/api/staff', async (req, res) => {
 
 app.post('/api/staff', async (req, res) => {
     try {
-        const newStaff = new Staff(req.body);
+        const { email, password, name, role, department, phone, salary, joiningDate, status, assignedClasses } = req.body;
+
+        if (!email || !password || !name) {
+            return res.status(400).json({ message: 'Email, password, and name are required' });
+        }
+
+        const existingStaff = await Staff.findOne({ email: email.toLowerCase().trim() });
+        if (existingStaff) {
+            return res.status(400).json({ message: 'Staff with this email already exists' });
+        }
+
+        // Hash password before storing
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // Create User account for faculty login
+        const newUser = new User({
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+            name,
+            role: 'faculty'
+        });
+        await newUser.save();
+
+        // Create Staff record linked to User
+        const newStaff = new Staff({
+            name, role, department,
+            email: email.toLowerCase().trim(),
+            phone, salary, joiningDate,
+            status: status || 'Active',
+            password: hashedPassword,
+            userId: newUser._id,
+            assignedClasses: assignedClasses || []
+        });
         await newStaff.save();
-        res.status(201).json(newStaff);
+
+        const staffResponse = newStaff.toObject();
+        delete staffResponse.password;
+        res.status(201).json(staffResponse);
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'Email already exists' });
+        }
         res.status(400).json({ message: 'Error creating staff', error: error.message });
     }
 });
 
-app.delete('/api/staff/:id', async (req, res) => {
-    console.log(`Received DELETE request for staff ID: ${req.params.id}`);
+app.put('/api/staff/:id', async (req, res) => {
     try {
+        const { id } = req.params;
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid staff ID' });
+        }
+        const { name, email, phone, password } = req.body;
+
+        const updateData = { name, email, phone };
+
+        if (password) {
+            const hashedPassword = await bcrypt.hash(password, 12);
+            updateData.password = hashedPassword;
+
+            const staff = await Staff.findById(id);
+            if (staff && staff.userId) {
+                await User.findByIdAndUpdate(staff.userId, {
+                    password: hashedPassword, name, email
+                });
+            }
+        }
+
+        const updatedStaff = await Staff.findByIdAndUpdate(
+            id, updateData, { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!updatedStaff) {
+            return res.status(404).json({ message: 'Staff not found' });
+        }
+
+        res.json(updatedStaff);
+    } catch (error) {
+        res.status(400).json({ message: 'Error updating staff', error: error.message });
+    }
+});
+
+app.delete('/api/staff/:id', async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'Invalid staff ID' });
+        }
         const deletedStaff = await Staff.findByIdAndDelete(req.params.id);
         if (!deletedStaff) {
-            console.log("Staff not found for deletion");
             return res.status(404).json({ message: 'Staff member not found' });
         }
-        console.log("Staff deleted successfully");
+
+        // Cascade delete the linked User account
+        if (deletedStaff.userId) {
+            await User.findByIdAndDelete(deletedStaff.userId);
+        }
+
         res.json({ message: 'Staff member deleted successfully' });
     } catch (error) {
-        console.error("Error deleting staff:", error);
         res.status(500).json({ message: 'Error deleting staff', error: error.message });
     }
 });
 
-// Class Routes
+// =============================================================================
+// CLASS ROUTES
+// =============================================================================
+
 app.get('/api/classes', async (req, res) => {
     try {
         const classes = await Class.find();
@@ -292,45 +669,39 @@ app.post('/api/classes', async (req, res) => {
     }
 });
 
-// Dashboard Stats Route
+// =============================================================================
+// DASHBOARD ROUTES
+// =============================================================================
+
 app.get('/api/dashboard/stats', async (req, res) => {
     try {
-        const totalStudents = await Student.countDocuments();
-        const totalFaculty = await Staff.countDocuments();
+        const [totalStudents, totalFaculty, feeStructures, fees, attendanceRecords] = await Promise.all([
+            Student.countDocuments(),
+            Staff.countDocuments(),
+            FeeStructure.find({}).lean(),
+            Fee.find({}).lean(),
+            Attendance.find({}).lean()
+        ]);
 
-        // Fetch all required data
-        const feeStructures = await FeeStructure.find({});
-        const fees = await Fee.find({});
-        const attendanceRecords = await Attendance.find({});
-
-        // 1. Calculate Revenue (Total Collected)
+        // Calculate Revenue
         const totalRevenue = fees.reduce((sum, fee) => sum + (fee.amountPaid || 0), 0);
 
-        // 2. Calculate Defaulters and Fees Due
-        // Map studentId -> Total Fee Expected
-        const studentDues = {}; // { studentId: { name: "", expected: 0, paid: 0, grade: "" } }
-
+        // Calculate Defaulters and Fees Due
+        const studentDues = {};
         feeStructures.forEach(fs => {
             if (!studentDues[fs.studentId]) {
                 studentDues[fs.studentId] = {
                     name: fs.studentName,
-                    expected: 0,
-                    paid: 0,
-                    grade: fs.grade || fs.class || "N/A"
+                    expected: 0, paid: 0,
+                    grade: fs.grade || fs.class || 'N/A'
                 };
             }
             studentDues[fs.studentId].expected += (fs.totalFee || 0);
         });
 
-        // Sum up payments
         fees.forEach(fee => {
-            // If we have a structure for this student, log payment. 
-            // If payment exists but no structure, we might want to track it too, but mainly we care about Dues.
             if (studentDues[fee.studentId]) {
                 studentDues[fee.studentId].paid += (fee.amountPaid || 0);
-            } else {
-                // Handle orphan payments or payments for students without structure?
-                // For now, ignore for "Due" calculation but we included them in "Revenue" above.
             }
         });
 
@@ -350,15 +721,11 @@ app.get('/api/dashboard/stats', async (req, res) => {
             }
         });
 
-        // Sort by highest due amount
         defaultersList.sort((a, b) => b.dueAmount - a.dueAmount);
         const feeDefaulters = defaultersList.slice(0, 5);
 
-
-        // 3. Calculate Low Attendance
-        // Map studentId -> { present: 0, total: 0, name: "", class: "" }
+        // Calculate Low Attendance
         const attendanceStats = {};
-
         attendanceRecords.forEach(record => {
             if (record.records && Array.isArray(record.records)) {
                 record.records.forEach(studentEntry => {
@@ -366,12 +733,10 @@ app.get('/api/dashboard/stats', async (req, res) => {
                     if (!attendanceStats[sid]) {
                         attendanceStats[sid] = {
                             name: studentEntry.studentName,
-                            className: record.className, // Take class from the record
-                            present: 0,
-                            total: 0
+                            className: record.className,
+                            present: 0, total: 0
                         };
                     }
-
                     attendanceStats[sid].total += 1;
                     if (studentEntry.status === 'Present' || studentEntry.status === 'Late') {
                         attendanceStats[sid].present += 1;
@@ -384,7 +749,6 @@ app.get('/api/dashboard/stats', async (req, res) => {
         Object.keys(attendanceStats).forEach(sid => {
             const data = attendanceStats[sid];
             const percentage = data.total > 0 ? (data.present / data.total) * 100 : 0;
-
             if (percentage < 85) {
                 lowAttendanceList.push({
                     studentName: data.name,
@@ -394,97 +758,70 @@ app.get('/api/dashboard/stats', async (req, res) => {
             }
         });
 
-        // Sort by lowest attendance
         lowAttendanceList.sort((a, b) => a.attendancePercentage - b.attendancePercentage);
         const lowAttendanceStudents = lowAttendanceList.slice(0, 5);
 
-
-        const stats = {
-            totalStudents,
-            totalFaculty,
-            totalRevenue,
-            feesCollected: totalRevenue,
-            feesDue,
-            feeDefaulters,
-            lowAttendanceStudents
-        };
-
-        res.json(stats);
+        res.json({
+            totalStudents, totalFaculty, totalRevenue,
+            feesCollected: totalRevenue, feesDue,
+            feeDefaulters, lowAttendanceStudents
+        });
     } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        console.error('Error fetching dashboard stats:', error.message);
         res.status(500).json({ message: 'Error fetching dashboard stats' });
     }
 });
 
-// User Routes
-app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
+// =============================================================================
+// USER PROFILE ROUTES
+// =============================================================================
 
+app.put('/api/users/:id', async (req, res) => {
     try {
-        // For this simple example, we are storing plain text passwords as requested. 
-        // In a real app, use bcrypt to compare hashed passwords.
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            return res.status(400).json({ message: 'User not found' });
+        const { id } = req.params;
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid user ID' });
         }
 
-        if (user.password !== password) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+        // Users can only update their own profile (admin can update anyone)
+        if (String(req.user.id) !== String(id) && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to update this profile' });
+        }
+
+        const { name, email, password } = req.body;
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (email) updateData.email = email;
+
+        if (password) {
+            updateData.password = await bcrypt.hash(password, 12);
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            id, updateData, { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
         }
 
         res.json({
             success: true,
-            user: {
-                id: user._id,
-                email: user.email,
-                name: user.name,
-                role: user.role
-            }
+            id: updatedUser._id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            role: updatedUser.role
         });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Error updating user:', error.message);
+        res.status(400).json({ message: 'Error updating user', error: error.message });
     }
 });
 
-// Exam Schema
-// Exam Schema
-const examSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    className: { type: String, required: true },
-    subjects: [{
-        name: { type: String, required: true },
-        date: { type: String, required: true },
-        time: { type: String, required: true },
-        totalMarks: { type: Number, required: true }
-    }],
-    status: { type: String, default: "Scheduled" },
-    createdAt: { type: Date, default: Date.now }
-});
+// =============================================================================
+// EXAM ROUTES
+// =============================================================================
 
-const Exam = mongoose.model('Exam', examSchema);
-
-// Exam Result Schema (Grades)
-const examResultSchema = new mongoose.Schema({
-    examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
-    studentId: { type: String, required: true },
-    studentName: { type: String },
-    rollNo: { type: String },
-    marks: [{
-        subjectName: { type: String, required: true },
-        obtainedMarks: { type: Number, required: true, default: 0 },
-        totalMarks: { type: Number, required: true }
-    }]
-});
-
-// Compound index to ensure one result set per student per exam
-examResultSchema.index({ examId: 1, studentId: 1 }, { unique: true });
-
-const ExamResult = mongoose.model('ExamResult', examResultSchema);
-
-// Exam Routes
-// Exam Routes
 app.get('/api/exams', async (req, res) => {
     try {
         const exams = await Exam.find().sort({ createdAt: -1 });
@@ -506,16 +843,14 @@ app.post('/api/exams', async (req, res) => {
 
 app.delete('/api/exams/:id', async (req, res) => {
     try {
-        const examId = req.params.id;
-        const deletedExam = await Exam.findByIdAndDelete(examId);
-
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'Invalid exam ID' });
+        }
+        const deletedExam = await Exam.findByIdAndDelete(req.params.id);
         if (!deletedExam) {
             return res.status(404).json({ message: 'Exam not found' });
         }
-
-        // Cascade delete all results associated with this exam
-        await ExamResult.deleteMany({ examId });
-
+        await ExamResult.deleteMany({ examId: req.params.id });
         res.json({ message: 'Exam and related results deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting exam', error: error.message });
@@ -525,6 +860,9 @@ app.delete('/api/exams/:id', async (req, res) => {
 // Exam Results Routes
 app.get('/api/exams/:id/results', async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'Invalid exam ID' });
+        }
         const results = await ExamResult.find({ examId: req.params.id });
         res.json(results);
     } catch (error) {
@@ -535,12 +873,14 @@ app.get('/api/exams/:id/results', async (req, res) => {
 app.post('/api/exams/:id/results', async (req, res) => {
     try {
         const examId = req.params.id;
+        if (!isValidObjectId(examId)) {
+            return res.status(400).json({ message: 'Invalid exam ID' });
+        }
         const { studentId, studentName, rollNo, marks } = req.body;
-
         const result = await ExamResult.findOneAndUpdate(
             { examId, studentId },
             { studentName, rollNo, marks },
-            { new: true, upsert: true }
+            { new: true, upsert: true, runValidators: true }
         );
         res.json(result);
     } catch (error) {
@@ -548,12 +888,16 @@ app.post('/api/exams/:id/results', async (req, res) => {
     }
 });
 
-// Bulk Save Results (Optional but useful)
-// Bulk Save Results (Optional but useful)
 app.post('/api/exams/:id/results/bulk', async (req, res) => {
     try {
         const examId = req.params.id;
-        const results = req.body; // Array of { studentId, marks, ... }
+        if (!isValidObjectId(examId)) {
+            return res.status(400).json({ message: 'Invalid exam ID' });
+        }
+        const results = req.body;
+        if (!Array.isArray(results)) {
+            return res.status(400).json({ message: 'Request body must be an array' });
+        }
 
         const bulkOps = results.map(result => ({
             updateOne: {
@@ -566,52 +910,36 @@ app.post('/api/exams/:id/results/bulk', async (req, res) => {
         if (bulkOps.length > 0) {
             await ExamResult.bulkWrite(bulkOps);
         }
-        res.json({ message: "Bulk save successful" });
+        res.json({ message: 'Bulk save successful' });
     } catch (error) {
         res.status(400).json({ message: 'Error during bulk save', error: error.message });
     }
 });
 
-// Get Student Exam Results
 app.get('/api/results/student/:studentId', async (req, res) => {
     try {
         const studentId = req.params.studentId;
-
-        // Find all results for this student
         const results = await ExamResult.find({ studentId }).lean();
 
-        // Enhance with Exam Details
         const enhancedResults = await Promise.all(results.map(async (result) => {
-            const exam = await Exam.findById(result.examId);
+            const exam = await Exam.findById(result.examId).lean();
             return {
                 ...result,
-                examName: exam ? exam.name : "Unknown Exam",
-                examDate: exam && exam.subjects.length > 0 ? exam.subjects[0].date : "N/A"
+                examName: exam ? exam.name : 'Unknown Exam',
+                examDate: exam && exam.subjects.length > 0 ? exam.subjects[0].date : 'N/A'
             };
         }));
 
         res.json(enhancedResults);
     } catch (error) {
-        console.error("Error fetching student results:", error);
-        res.status(500).json({ message: 'Error fetching student results', error: error.message });
+        res.status(500).json({ message: 'Error fetching student results' });
     }
 });
 
-// Timetable Schema
-const timetableSchema = new mongoose.Schema({
-    className: { type: String, required: true }, // e.g., "Grade 10-A"
-    day: { type: String, required: true },
-    period: { type: Number, required: true },
-    subject: { type: String, required: true },
-    teacher: { type: String, required: true }
-});
+// =============================================================================
+// TIMETABLE ROUTES
+// =============================================================================
 
-// Composite index to ensure unique slot per class
-timetableSchema.index({ className: 1, day: 1, period: 1 }, { unique: true });
-
-const Timetable = mongoose.model('Timetable', timetableSchema);
-
-// Timetable Routes
 app.get('/api/timetable', async (req, res) => {
     try {
         const { className } = req.query;
@@ -625,12 +953,24 @@ app.get('/api/timetable', async (req, res) => {
 
 app.post('/api/timetable', async (req, res) => {
     try {
-        // Upsert logic: if slot exists, update it; otherwise create new
         const { className, day, period, subject, teacher } = req.body;
+
+        let facultyId = null;
+        if (teacher) {
+            const staff = await Staff.findOne({ name: teacher });
+            if (staff) {
+                facultyId = staff._id;
+                if (className && !staff.assignedClasses.includes(className)) {
+                    staff.assignedClasses.push(className);
+                    await staff.save();
+                }
+            }
+        }
+
         const entry = await Timetable.findOneAndUpdate(
             { className, day, period },
-            { subject, teacher },
-            { new: true, upsert: true }
+            { subject, teacher, facultyId },
+            { new: true, upsert: true, runValidators: true }
         );
         res.json(entry);
     } catch (error) {
@@ -638,64 +978,39 @@ app.post('/api/timetable', async (req, res) => {
     }
 });
 
-// Fee Structure Schema (Fee Registration)
-const feeStructureSchema = new mongoose.Schema({
-    studentId: { type: String, required: true },
-    studentName: { type: String, required: true },
-    rollNo: { type: String, required: true },
-    grade: { type: String, required: true }, // Class/Course
-    academicYear: { type: String, required: true },
-    feeComponents: {
-        registrationFee: Number,
-        admissionFee: Number,
-        laboratoryFee: Number,
-        internalExamFee: Number,
-        libraryFee: Number,
-        sportsFee: Number,
-        tuitionFee: Number,
-        annualExamFee: Number,
-        booksRecordFee: Number,
-        stationaryCharges: Number,
-        uniformFee: Number,
-        foodAccomFee: Number,
-    },
-    totalFee: { type: Number, required: true },
-    registeredDate: { type: Date, default: Date.now }
+app.put('/api/timetable/:id/assign-faculty', async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid timetable ID' });
+        }
+        const { facultyId } = req.body;
+        const entry = await Timetable.findByIdAndUpdate(id, { facultyId }, { new: true });
+        if (!entry) {
+            return res.status(404).json({ message: 'Timetable entry not found' });
+        }
+        res.json(entry);
+    } catch (error) {
+        res.status(400).json({ message: 'Error assigning faculty', error: error.message });
+    }
 });
 
-const FeeStructure = mongoose.model('FeeStructure', feeStructureSchema);
+// =============================================================================
+// ATTENDANCE ROUTES
+// =============================================================================
 
-// Attendance Schema
-const attendanceSchema = new mongoose.Schema({
-    date: { type: String, required: true }, // Format YYYY-MM-DD
-    className: { type: String, required: true },
-    period: { type: Number, required: true }, // 1 to 8
-    subject: { type: String }, // Snapshot of subject at that time
-    records: [{
-        studentId: { type: String, required: true },
-        studentName: { type: String },
-        rollNo: { type: String },
-        status: { type: String, enum: ['Present', 'Absent', 'Late'], default: 'Present' }
-    }]
-});
-
-// Ensure unique record for a specific class, date, and period
-attendanceSchema.index({ date: 1, className: 1, period: 1 }, { unique: true });
-
-const Attendance = mongoose.model('Attendance', attendanceSchema);
-
-// Attendance Routes
 app.get('/api/attendance', async (req, res) => {
     try {
         const { date, className, period } = req.query;
         if (!date || !className || !period) {
-            return res.status(400).json({ message: 'Missing required query parameters' });
+            return res.status(400).json({ message: 'Missing required query parameters: date, className, period' });
         }
 
-        // Case-insensitive search for className
+        // Escape regex input to prevent ReDoS
+        const escapedClassName = escapeRegex(className);
         const attendance = await Attendance.findOne({
             date,
-            className: { $regex: new RegExp(`^${className}$`, 'i') },
+            className: { $regex: new RegExp(`^${escapedClassName}$`, 'i') },
             period
         });
         res.json(attendance || null);
@@ -707,46 +1022,37 @@ app.get('/api/attendance', async (req, res) => {
 app.post('/api/attendance', async (req, res) => {
     try {
         const { date, className, period, subject, records } = req.body;
+        if (!date || !className || !period || !records) {
+            return res.status(400).json({ message: 'Missing required fields: date, className, period, records' });
+        }
 
-        // Case-insensitive upsert logic
+        const escapedClassName = escapeRegex(className);
         let attendanceEntry = await Attendance.findOne({
             date,
-            className: { $regex: new RegExp(`^${className}$`, 'i') },
+            className: { $regex: new RegExp(`^${escapedClassName}$`, 'i') },
             period
         });
 
         if (attendanceEntry) {
             attendanceEntry.subject = subject;
             attendanceEntry.records = records;
-            // Optionally update className to standardized format if needed
-            // attendanceEntry.className = className; 
             await attendanceEntry.save();
         } else {
-            attendanceEntry = new Attendance({
-                date,
-                className,
-                period,
-                subject,
-                records
-            });
+            attendanceEntry = new Attendance({ date, className, period, subject, records });
             await attendanceEntry.save();
         }
 
-        // Return the updated document
         res.json(attendanceEntry);
     } catch (error) {
         res.status(400).json({ message: 'Error saving attendance', error: error.message });
     }
 });
 
-// Get Student Attendance Stats
 app.get('/api/attendance/student/:studentId', async (req, res) => {
     try {
         const { studentId } = req.params;
-        // Find all attendance documents where this student appears in records
-        const allAttendance = await Attendance.find({ "records.studentId": studentId });
+        const allAttendance = await Attendance.find({ 'records.studentId': studentId });
 
-        // Calculate stats
         let totalClasses = 0;
         let presentCount = 0;
 
@@ -761,19 +1067,72 @@ app.get('/api/attendance/student/:studentId', async (req, res) => {
         });
 
         const percentage = totalClasses === 0 ? 0 : Math.round((presentCount / totalClasses) * 100);
-
-        res.json({
-            totalClasses,
-            presentCount,
-            attendancePercentage: percentage
-        });
-
+        res.json({ totalClasses, presentCount, attendancePercentage: percentage });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching student attendance stats' });
     }
 });
 
-// Fee Structure Routes
+// Subject-wise attendance breakdown for a student
+app.get('/api/attendance/student/:studentId/subjects', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const allAttendance = await Attendance.find({ 'records.studentId': studentId }).lean();
+
+        // Group by subject
+        const subjectMap = {};
+
+        allAttendance.forEach(doc => {
+            const record = doc.records.find(r => r.studentId === studentId);
+            if (!record) return;
+
+            const subject = doc.subject || 'Unknown';
+
+            if (!subjectMap[subject]) {
+                subjectMap[subject] = {
+                    subject,
+                    totalClasses: 0,
+                    attended: 0
+                };
+            }
+
+            subjectMap[subject].totalClasses += 1;
+            if (record.status === 'Present' || record.status === 'Late') {
+                subjectMap[subject].attended += 1;
+            }
+        });
+
+        // Convert to array and calculate percentages
+        const subjects = Object.values(subjectMap).map(s => ({
+            ...s,
+            percentage: s.totalClasses === 0 ? 0 : Math.round((s.attended / s.totalClasses) * 100)
+        }));
+
+        // Sort by subject name
+        subjects.sort((a, b) => a.subject.localeCompare(b.subject));
+
+        // Calculate overall totals
+        const totalClasses = subjects.reduce((sum, s) => sum + s.totalClasses, 0);
+        const totalAttended = subjects.reduce((sum, s) => sum + s.attended, 0);
+        const overallPercentage = totalClasses === 0 ? 0 : Math.round((totalAttended / totalClasses) * 100);
+
+        res.json({
+            subjects,
+            overall: {
+                totalClasses,
+                totalAttended,
+                percentage: overallPercentage
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching subject-wise attendance' });
+    }
+});
+
+// =============================================================================
+// FEE STRUCTURE ROUTES
+// =============================================================================
+
 app.get('/api/fee-structures', async (req, res) => {
     try {
         const structures = await FeeStructure.find().sort({ registeredDate: -1 });
@@ -793,9 +1152,176 @@ app.post('/api/fee-structures', async (req, res) => {
     }
 });
 
+// =============================================================================
+// FACULTY-SPECIFIC ROUTES
+// =============================================================================
 
-// Start Server
-app.listen(PORT, async () => {
+app.get('/api/faculty/profile/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!isValidObjectId(userId)) {
+            return res.status(400).json({ message: 'Invalid user ID' });
+        }
+
+        let staff = await Staff.findOne({ userId }).select('-password');
+
+        if (!staff) {
+            const user = await User.findById(userId);
+            if (user) {
+                staff = await Staff.findOne({ email: user.email }).select('-password');
+                if (staff) {
+                    staff.userId = userId;
+                    await staff.save();
+                }
+            }
+        }
+
+        if (!staff) {
+            return res.status(404).json({ message: 'Staff profile not found' });
+        }
+
+        res.json(staff);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching faculty profile' });
+    }
+});
+
+app.get('/api/faculty/:facultyId/periods', async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.facultyId)) {
+            return res.status(400).json({ message: 'Invalid faculty ID' });
+        }
+        const periods = await Timetable.find({ facultyId: req.params.facultyId });
+        res.json(periods);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching assigned periods' });
+    }
+});
+
+app.get('/api/faculty/:facultyId/exams', async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.facultyId)) {
+            return res.status(400).json({ message: 'Invalid faculty ID' });
+        }
+        const exams = await Exam.find({ 'subjects.facultyId': req.params.facultyId });
+        res.json(exams);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching assigned exams' });
+    }
+});
+
+app.get('/api/faculty/:facultyId/students', async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.facultyId)) {
+            return res.status(400).json({ message: 'Invalid faculty ID' });
+        }
+        const faculty = await Staff.findById(req.params.facultyId);
+        if (!faculty) {
+            return res.status(404).json({ message: 'Faculty not found' });
+        }
+        if (!faculty.assignedClasses || faculty.assignedClasses.length === 0) {
+            return res.json([]);
+        }
+        const students = await Student.find({ class: { $in: faculty.assignedClasses } });
+        res.json(students);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching students' });
+    }
+});
+
+app.get('/api/faculty/:facultyId/attendance', async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.facultyId)) {
+            return res.status(400).json({ message: 'Invalid faculty ID' });
+        }
+        const { date } = req.query;
+        const faculty = await Staff.findById(req.params.facultyId);
+        if (!faculty) {
+            return res.status(404).json({ message: 'Faculty not found' });
+        }
+        if (!faculty.assignedClasses || faculty.assignedClasses.length === 0) {
+            return res.json([]);
+        }
+
+        const query = { className: { $in: faculty.assignedClasses } };
+        if (date) query.date = date;
+
+        const attendanceRecords = await Attendance.find(query);
+        res.json(attendanceRecords);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching attendance' });
+    }
+});
+
+app.put('/api/staff/:id/assign-classes', async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid staff ID' });
+        }
+        const { assignedClasses } = req.body;
+        if (!Array.isArray(assignedClasses)) {
+            return res.status(400).json({ message: 'assignedClasses must be an array' });
+        }
+
+        const staff = await Staff.findByIdAndUpdate(
+            id, { assignedClasses }, { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!staff) {
+            return res.status(404).json({ message: 'Staff not found' });
+        }
+
+        res.json(staff);
+    } catch (error) {
+        res.status(400).json({ message: 'Error updating assigned classes', error: error.message });
+    }
+});
+
+// =============================================================================
+// GLOBAL ERROR HANDLER
+// =============================================================================
+
+app.use((err, req, res, next) => {
+    // Handle CORS errors
+    if (err.message === 'Not allowed by CORS') {
+        return res.status(403).json({ message: 'CORS: Origin not allowed' });
+    }
+    console.error('Unhandled error:', err.message);
+    res.status(500).json({ message: 'Internal server error' });
+});
+
+// =============================================================================
+// SERVER STARTUP
+// =============================================================================
+
+const server = app.listen(PORT, async () => {
     console.log(`Server running on port ${PORT}`);
     await seedAdmin();
 });
+
+// Graceful shutdown
+const gracefulShutdown = async (signal) => {
+    console.log(`\n${signal} received. Shutting down gracefully...`);
+
+    // Force close after 10 seconds
+    const forceTimeout = setTimeout(() => {
+        console.error('Could not close connections in time. Forcefully shutting down.');
+        process.exit(1);
+    }, 10000);
+
+    try {
+        await new Promise((resolve) => server.close(resolve));
+        await mongoose.connection.close();
+        console.log('MongoDB connection closed.');
+        clearTimeout(forceTimeout);
+        process.exit(0);
+    } catch (err) {
+        console.error('Error during shutdown:', err.message);
+        clearTimeout(forceTimeout);
+        process.exit(1);
+    }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

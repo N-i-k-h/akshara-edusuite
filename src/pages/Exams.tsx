@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { API_BASE_URL } from "@/config";
+import { API_BASE_URL, authFetch } from "@/config";
 import { Plus, ArrowLeft, Save, Trash2, Calendar, Clock, BookOpen, FileText, Download, Trophy, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -96,7 +96,7 @@ const Exams = () => {
 
   const fetchExams = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/exams`);
+      const response = await authFetch(`${API_BASE_URL}/exams`);
       if (response.ok) {
         const data = await response.json();
         setExamsList(data);
@@ -110,7 +110,7 @@ const Exams = () => {
 
   const fetchClasses = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/classes`);
+      const response = await authFetch(`${API_BASE_URL}/classes`);
       if (response.ok) {
         const data = await response.json();
         setClassesList(data);
@@ -156,7 +156,7 @@ const Exams = () => {
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/exams`, {
+      const response = await authFetch(`${API_BASE_URL}/exams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -185,7 +185,7 @@ const Exams = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+      const response = await authFetch(`${API_BASE_URL}/exams/${examId}`, {
         method: 'DELETE'
       });
 
@@ -213,7 +213,7 @@ const Exams = () => {
 
   const loadExamData = async (exam: Exam) => {
     // 1. Fetch Students
-    const studentsRes = await fetch(`${API_BASE_URL}/students`);
+    const studentsRes = await authFetch(`${API_BASE_URL}/students`);
     let allStudents: Student[] = [];
     if (studentsRes.ok) {
       allStudents = await studentsRes.json();
@@ -232,7 +232,7 @@ const Exams = () => {
     setStudentsList(classStudents);
 
     // 2. Fetch Results
-    const resultsRes = await fetch(`${API_BASE_URL}/exams/${exam._id}/results`);
+    const resultsRes = await authFetch(`${API_BASE_URL}/exams/${exam._id}/results`);
     const marksMap: Record<string, Record<string, number>> = {};
 
     if (resultsRes.ok) {
@@ -294,7 +294,7 @@ const Exams = () => {
     });
 
     try {
-      const response = await fetch(`${API_BASE_URL}/exams/${selectedExam._id}/results/bulk`, {
+      const response = await authFetch(`${API_BASE_URL}/exams/${selectedExam._id}/results/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bulkPayload)

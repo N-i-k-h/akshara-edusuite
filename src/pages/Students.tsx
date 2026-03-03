@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { API_BASE_URL } from "@/config";
+import { API_BASE_URL, authFetch } from "@/config";
 
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Download } from "lucide-react";
 import html2pdf from "html2pdf.js";
@@ -62,7 +62,7 @@ const Students = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/students`);
+      const response = await authFetch(`${API_BASE_URL}/students`);
       if (response.ok) {
         const data = await response.json();
         setStudents(data);
@@ -71,7 +71,7 @@ const Students = () => {
       }
 
       // Fetch Classes
-      const classesRes = await fetch(`${API_BASE_URL}/classes`);
+      const classesRes = await authFetch(`${API_BASE_URL}/classes`);
       if (classesRes.ok) {
         const classesData = await classesRes.json();
         setClassesList(classesData);
@@ -94,7 +94,7 @@ const Students = () => {
 
   const handleAddStudent = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/students`, {
+      const response = await authFetch(`${API_BASE_URL}/students`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -134,7 +134,7 @@ const Students = () => {
 
     try {
       console.log("Deleting student with ID:", id);
-      const response = await fetch(`${API_BASE_URL}/students/${id}`, {
+      const response = await authFetch(`${API_BASE_URL}/students/${id}`, {
         method: 'DELETE',
       });
 
@@ -172,16 +172,18 @@ const Students = () => {
     dueFee: 0
   });
   const [studentExams, setStudentExams] = useState<any[]>([]);
+  const [subjectAttendance, setSubjectAttendance] = useState<any>(null);
 
   const handleViewProfile = async (student: any) => {
     setSelectedStudent(student);
     setIsProfileOpen(true);
     setStudentExams([]); // Clear previous exams
+    setSubjectAttendance(null); // Clear previous attendance
 
     // Fetch Stats
     try {
       // 1. Attendance
-      const attRes = await fetch(`${API_BASE_URL}/attendance/student/${student._id}`);
+      const attRes = await authFetch(`${API_BASE_URL}/attendance/student/${student._id}`);
       let attendanceVal = 0;
       if (attRes.ok) {
         const attData = await attRes.json();
@@ -190,8 +192,8 @@ const Students = () => {
 
       // 2. Fees
       const [feesRes, structRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/fees`),
-        fetch(`${API_BASE_URL}/fee-structures`)
+        authFetch(`${API_BASE_URL}/fees`),
+        authFetch(`${API_BASE_URL}/fee-structures`)
       ]);
 
       let total = 0;
@@ -218,10 +220,17 @@ const Students = () => {
       });
 
       // 3. Exams
-      const examsRes = await fetch(`${API_BASE_URL}/results/student/${student._id}`);
+      const examsRes = await authFetch(`${API_BASE_URL}/results/student/${student._id}`);
       if (examsRes.ok) {
         const examsData = await examsRes.json();
         setStudentExams(examsData);
+      }
+
+      // 4. Subject-wise Attendance
+      const subAttRes = await authFetch(`${API_BASE_URL}/attendance/student/${student._id}/subjects`);
+      if (subAttRes.ok) {
+        const subAttData = await subAttRes.json();
+        setSubjectAttendance(subAttData);
       }
 
     } catch (error) {
@@ -243,6 +252,8 @@ const Students = () => {
 
     html2pdf().set(opt).from(element).save();
   };
+
+
 
   return (
     <div className="space-y-6">
@@ -398,6 +409,55 @@ const Students = () => {
                   </div>
                 </div>
 
+                {/* Subject-wise Attendance Table */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg">Subject-wise Attendance</h3>
+                  {subjectAttendance && subjectAttendance.subjects && subjectAttendance.subjects.length > 0 ? (
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-slate-50">
+                          <TableRow>
+                            <TableHead>Subject</TableHead>
+                            <TableHead className="text-center">Total Classes</TableHead>
+                            <TableHead className="text-center">Attended</TableHead>
+                            <TableHead className="text-center">Absent</TableHead>
+                            <TableHead className="text-right">Attendance %</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {subjectAttendance.subjects.map((sub: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{sub.subject}</TableCell>
+                              <TableCell className="text-center">{sub.totalClasses}</TableCell>
+                              <TableCell className="text-center text-green-600">{sub.attended}</TableCell>
+                              <TableCell className="text-center text-red-600">{sub.totalClasses - sub.attended}</TableCell>
+                              <TableCell className="text-right">
+                                <span className={`font-bold ${sub.percentage < 75 ? 'text-red-600' : 'text-green-600'}`}>
+                                  {sub.percentage}%
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {/* Overall Row */}
+                          <TableRow className="bg-blue-50 font-semibold">
+                            <TableCell className="font-bold">Overall</TableCell>
+                            <TableCell className="text-center font-bold">{subjectAttendance.overall.totalClasses}</TableCell>
+                            <TableCell className="text-center font-bold text-green-700">{subjectAttendance.overall.totalAttended}</TableCell>
+                            <TableCell className="text-center font-bold text-red-700">{subjectAttendance.overall.totalClasses - subjectAttendance.overall.totalAttended}</TableCell>
+                            <TableCell className="text-right">
+                              <span className={`font-bold text-lg ${subjectAttendance.overall.percentage < 75 ? 'text-red-700' : 'text-green-700'}`}>
+                                {subjectAttendance.overall.percentage}%
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No attendance records found for this student.</p>
+                  )}
+                </div>
+
                 {/* Exam Results Table */}
                 <div className="space-y-3">
                   <h3 className="font-semibold text-lg">Examination Results</h3>
@@ -444,6 +504,7 @@ const Students = () => {
                 <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
                   Close
                 </Button>
+
                 <Button onClick={downloadProfilePDF}>
                   <Download className="mr-2 h-4 w-4" />
                   Download Report

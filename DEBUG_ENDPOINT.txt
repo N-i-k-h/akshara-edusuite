@@ -1,0 +1,29 @@
+// Add this endpoint to server.js to debug the issue
+
+// Debug endpoint to check timetable and staff data
+app.get('/api/debug-faculty', async (req, res) => {
+    try {
+        const timetableEntries = await Timetable.find();
+        const staffMembers = await Staff.find().select('-password');
+        
+        res.json({
+            timetableEntries: timetableEntries.map(t => ({
+                className: t.className,
+                day: t.day,
+                period: t.period,
+                subject: t.subject,
+                teacher: t.teacher,
+                facultyId: t.facultyId
+            })),
+            staffMembers: staffMembers.map(s => ({
+                _id: s._id,
+                name: s.name,
+                role: s.role,
+                assignedClasses: s.assignedClasses,
+                userId: s.userId
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
