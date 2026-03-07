@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
@@ -70,7 +72,7 @@ const Exams = () => {
   // Views: 'list', 'grading', 'report'
   const [view, setView] = useState<'list' | 'grading' | 'report'>('list');
   const [examsList, setExamsList] = useState<Exam[]>([]);
-  const [classesList, setClassesList] = useState<any[]>([]);
+  const [classesList, setClassesList] = useState<{ _id: string; grade: string; section: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // State for Grading / Reporting
@@ -125,10 +127,10 @@ const Exams = () => {
     setSubjects([...subjects, { name: "", date: "", time: "", totalMarks: 100 }]);
   };
 
-  const handleSubjectChange = (index: number, field: keyof Subject, value: any) => {
+  const handleSubjectChange = (index: number, field: keyof Subject, value: string | number) => {
     const updated = [...subjects];
     if (field === 'totalMarks') value = Number(value);
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], [field]: value } as unknown as Subject;
     setSubjects(updated);
   };
 
@@ -318,9 +320,9 @@ const Exams = () => {
     const opt = {
       margin: 10,
       filename: `${selectedExam.name}_Report.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      jsPDF: { unit: 'mm' as const, format: 'a4', orientation: 'landscape' as const }
     };
     html2pdf().set(opt).from(element).save();
   };
@@ -566,6 +568,7 @@ const Exams = () => {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Exam</DialogTitle>
+              <DialogDescription className="sr-only">Fill out this form to create a new exam session.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -584,7 +587,7 @@ const Exams = () => {
                       <SelectValue placeholder="Select Class" />
                     </SelectTrigger>
                     <SelectContent>
-                      {classesList.map((cls: any) => (
+                      {classesList.map((cls) => (
                         <SelectItem key={cls._id} value={`${cls.grade} ${cls.section}`.trim()}>
                           {cls.grade} {cls.section}
                         </SelectItem>
