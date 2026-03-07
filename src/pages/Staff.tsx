@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -65,8 +65,8 @@ const Staff = () => {
     email: "",
     phone: "",
     password: "",
-    joiningDate: new Date().toISOString().split('T')[0],
-    status: "Active"
+    joiningDate: new Date().toISOString().split("T")[0],
+    status: "Active",
   });
 
   const fetchStaff = async () => {
@@ -93,7 +93,15 @@ const Staff = () => {
   };
 
   const handleSaveStaff = async () => {
-    if (!newStaff.name || !newStaff.role || !newStaff.email || !newStaff.department || !newStaff.phone || !newStaff.salary || !newStaff.password) {
+    if (
+      !newStaff.name ||
+      !newStaff.role ||
+      !newStaff.email ||
+      !newStaff.department ||
+      !newStaff.phone ||
+      !newStaff.salary ||
+      !newStaff.password
+    ) {
       toast.error("Please fill in all required fields including password");
       return;
     }
@@ -101,15 +109,15 @@ const Staff = () => {
     try {
       const payload = {
         ...newStaff,
-        salary: Number(newStaff.salary)
+        salary: Number(newStaff.salary),
       };
 
       console.log("Sending payload:", payload);
 
       const response = await authFetch(`${API_BASE_URL}/staff`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
@@ -127,17 +135,25 @@ const Staff = () => {
           email: "",
           phone: "",
           password: "",
-          joiningDate: new Date().toISOString().split('T')[0],
-          status: "Active"
+          joiningDate: new Date().toISOString().split("T")[0],
+          status: "Active",
         });
       } else {
         let errorData;
         try {
           errorData = await response.json();
-          toast.error(`Failed: ${errorData.message} ${errorData.error ? '- ' + errorData.error : ''}`);
+          toast.error(
+            `Failed: ${errorData.message} ${errorData.error ? "- " + errorData.error : ""}`,
+          );
         } catch (e) {
-          console.error("Non-JSON response:", response.status, response.statusText);
-          toast.error(`Failed: Server returned ${response.status} ${response.statusText}`);
+          console.error(
+            "Non-JSON response:",
+            response.status,
+            response.statusText,
+          );
+          toast.error(
+            `Failed: Server returned ${response.status} ${response.statusText}`,
+          );
         }
       }
     } catch (error) {
@@ -152,18 +168,19 @@ const Staff = () => {
       return;
     }
 
-    if (!window.confirm("Are you sure you want to delete this staff member?")) return;
+    if (!window.confirm("Are you sure you want to delete this staff member?"))
+      return;
 
     try {
       console.log("Deleting staff with ID:", id);
       const response = await authFetch(`${API_BASE_URL}/staff/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok || response.status === 404) {
         toast.success("Staff member deleted successfully");
         // Optimistically update UI
-        setStaffList(prev => prev.filter(item => item._id !== id));
+        setStaffList((prev) => prev.filter((item) => item._id !== id));
         // fetchStaff(); // Removed to prevent stale data re-fetch
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -179,7 +196,7 @@ const Staff = () => {
   const filteredStaff = staffList.filter(
     (member) =>
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.department.toLowerCase().includes(searchQuery.toLowerCase())
+      member.department.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -187,7 +204,9 @@ const Staff = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Staff & HR</h1>
-          <p className="text-muted-foreground">Manage teachers and staff members</p>
+          <p className="text-muted-foreground">
+            Manage teachers and staff members
+          </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -203,12 +222,24 @@ const Staff = () => {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
-                  <Input id="name" value={newStaff.name} onChange={(e) => handleInputChange("name", e.target.value)} placeholder="Enter name" />
+                  <Label htmlFor="name">
+                    Full Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    value={newStaff.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="Enter name"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
-                  <Select value={newStaff.role} onValueChange={(val) => handleInputChange("role", val)}>
+                  <Label htmlFor="role">
+                    Role <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={newStaff.role}
+                    onValueChange={(val) => handleInputChange("role", val)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -222,33 +253,82 @@ const Staff = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="department">Department <span className="text-red-500">*</span></Label>
-                  <Input id="department" value={newStaff.department} onChange={(e) => handleInputChange("department", e.target.value)} placeholder="Enter department" />
+                  <Label htmlFor="department">
+                    Department <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="department"
+                    value={newStaff.department}
+                    onChange={(e) =>
+                      handleInputChange("department", e.target.value)
+                    }
+                    placeholder="Enter department"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="salary">Salary <span className="text-red-500">*</span></Label>
-                  <Input id="salary" type="number" value={newStaff.salary} onChange={(e) => handleInputChange("salary", e.target.value)} placeholder="Enter salary" />
+                  <Label htmlFor="salary">
+                    Salary <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="salary"
+                    type="number"
+                    value={newStaff.salary}
+                    onChange={(e) =>
+                      handleInputChange("salary", e.target.value)
+                    }
+                    placeholder="Enter salary"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-                  <Input id="email" type="email" value={newStaff.email} onChange={(e) => handleInputChange("email", e.target.value)} placeholder="Enter email" />
+                  <Label htmlFor="email">
+                    Email <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newStaff.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="Enter email"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone <span className="text-red-500">*</span></Label>
-                  <Input id="phone" value={newStaff.phone} onChange={(e) => handleInputChange("phone", e.target.value)} placeholder="Enter phone" />
+                  <Label htmlFor="phone">
+                    Phone <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={newStaff.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    placeholder="Enter phone"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
-                  <Input id="password" type="password" value={newStaff.password} onChange={(e) => handleInputChange("password", e.target.value)} placeholder="Enter login password" />
-                  <p className="text-xs text-muted-foreground">This will be used for faculty login</p>
+                  <Label htmlFor="password">
+                    Password <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newStaff.password}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
+                    placeholder="Enter login password"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This will be used for faculty login
+                  </p>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleSaveStaff}>Save Staff</Button>
@@ -287,15 +367,19 @@ const Staff = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-4">Loading staff data...</TableCell>
+                <TableCell colSpan={8} className="text-center py-4">
+                  Loading staff data...
+                </TableCell>
               </TableRow>
             ) : filteredStaff.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-4">No staff found</TableCell>
+                <TableCell colSpan={8} className="text-center py-4">
+                  No staff found
+                </TableCell>
               </TableRow>
             ) : (
               filteredStaff.map((member) => (
-                <TableRow key={member._id || (Math.random() + "")}>
+                <TableRow key={member._id || Math.random() + ""}>
                   <TableCell className="font-medium">{member.name}</TableCell>
                   <TableCell>
                     <Badge
@@ -315,7 +399,9 @@ const Staff = () => {
                   <TableCell>₹{member.salary?.toLocaleString()}</TableCell>
                   <TableCell>{member.joiningDate}</TableCell>
                   <TableCell>
-                    <Badge className="bg-green-100 text-green-800">{member.status}</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      {member.status}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

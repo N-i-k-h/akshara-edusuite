@@ -30,7 +30,14 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const days = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 const periods = [
   { period: 1, time: "8:00 - 8:45" },
   { period: 2, time: "8:45 - 9:30" },
@@ -71,14 +78,14 @@ const Timetable = () => {
     day: "Monday",
     period: "1",
     subject: "",
-    teacher: ""
+    teacher: "",
   });
 
   const [newClass, setNewClass] = useState({
     grade: "",
     section: "",
     room: "",
-    classTeacher: ""
+    classTeacher: "",
   });
 
   // Fetch Classes and Staff
@@ -114,7 +121,9 @@ const Timetable = () => {
     if (!selectedClass) return;
     try {
       // selectedClass format matches what we save.
-      const response = await authFetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClass)}`);
+      const response = await authFetch(
+        `${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClass)}`,
+      );
       if (response.ok) {
         const data = await response.json();
         setTimetableData(data);
@@ -137,16 +146,21 @@ const Timetable = () => {
   };
 
   const handleSaveClass = async () => {
-    if (!newClass.grade || !newClass.section || !newClass.room || !newClass.classTeacher) {
+    if (
+      !newClass.grade ||
+      !newClass.section ||
+      !newClass.room ||
+      !newClass.classTeacher
+    ) {
       toast.error("Please fill in all class details");
       return;
     }
 
     try {
       const response = await authFetch(`${API_BASE_URL}/classes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newClass)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newClass),
       });
 
       if (response.ok) {
@@ -177,13 +191,13 @@ const Timetable = () => {
         day: newEntry.day,
         period: parseInt(newEntry.period),
         subject: newEntry.subject,
-        teacher: newEntry.teacher
+        teacher: newEntry.teacher,
       };
 
       const response = await authFetch(`${API_BASE_URL}/timetable`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -202,8 +216,7 @@ const Timetable = () => {
 
   const getSlot = (day: string, period: number) => {
     return timetableData.find(
-      (slot) =>
-        slot.day === day && slot.period === period
+      (slot) => slot.day === day && slot.period === period,
     );
   };
 
@@ -219,11 +232,16 @@ const Timetable = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Timetable</h1>
-          <p className="text-muted-foreground">View and manage class schedules</p>
+          <p className="text-muted-foreground">
+            View and manage class schedules
+          </p>
         </div>
 
         <div className="flex gap-4">
-          <Dialog open={isAddClassDialogOpen} onOpenChange={setIsAddClassDialogOpen}>
+          <Dialog
+            open={isAddClassDialogOpen}
+            onOpenChange={setIsAddClassDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Plus className="mr-2 h-4 w-4" />
@@ -237,27 +255,55 @@ const Timetable = () => {
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="grade">Grade</Label>
-                  <Select value={newClass.grade} onValueChange={(val) => handleClassInputChange("grade", val)}>
+                  <Select
+                    value={newClass.grade}
+                    onValueChange={(val) =>
+                      handleClassInputChange("grade", val)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select Year" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="D.Pharm 1">D.Pharm 1st Year</SelectItem>
-                      <SelectItem value="D.Pharm 2">D.Pharm 2nd Year</SelectItem>
+                      <SelectItem value="D.Pharm 1">
+                        D.Pharm 1st Year
+                      </SelectItem>
+                      <SelectItem value="D.Pharm 2">
+                        D.Pharm 2nd Year
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="section">Section</Label>
-                  <Input id="section" value={newClass.section} onChange={(e) => handleClassInputChange("section", e.target.value)} placeholder="e.g., A, B, C" />
+                  <Input
+                    id="section"
+                    value={newClass.section}
+                    onChange={(e) =>
+                      handleClassInputChange("section", e.target.value)
+                    }
+                    placeholder="e.g., A, B, C"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="room">Room Number</Label>
-                  <Input id="room" value={newClass.room} onChange={(e) => handleClassInputChange("room", e.target.value)} placeholder="e.g., Room 101" />
+                  <Input
+                    id="room"
+                    value={newClass.room}
+                    onChange={(e) =>
+                      handleClassInputChange("room", e.target.value)
+                    }
+                    placeholder="e.g., Room 101"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="teacher">Class Teacher</Label>
-                  <Select value={newClass.classTeacher} onValueChange={(val) => handleClassInputChange("classTeacher", val)}>
+                  <Select
+                    value={newClass.classTeacher}
+                    onValueChange={(val) =>
+                      handleClassInputChange("classTeacher", val)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select teacher" />
                     </SelectTrigger>
@@ -271,7 +317,10 @@ const Timetable = () => {
                   </Select>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddClassDialogOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddClassDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button onClick={handleSaveClass}>Save Class</Button>
@@ -297,7 +346,10 @@ const Timetable = () => {
             </SelectContent>
           </Select>
 
-          <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+          <Dialog
+            open={isAssignDialogOpen}
+            onOpenChange={setIsAssignDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -312,30 +364,57 @@ const Timetable = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Day</Label>
-                    <Select value={newEntry.day} onValueChange={(val) => handleInputChange("day", val)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select
+                      value={newEntry.day}
+                      onValueChange={(val) => handleInputChange("day", val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
-                        {days.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                        {days.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            {d}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Period</Label>
-                    <Select value={newEntry.period} onValueChange={(val) => handleInputChange("period", val)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select
+                      value={newEntry.period}
+                      onValueChange={(val) => handleInputChange("period", val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
-                        {periods.map(p => <SelectItem key={p.period} value={String(p.period)}>Period {p.period}</SelectItem>)}
+                        {periods.map((p) => (
+                          <SelectItem key={p.period} value={String(p.period)}>
+                            Period {p.period}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Subject</Label>
-                  <Input value={newEntry.subject} onChange={(e) => handleInputChange("subject", e.target.value)} placeholder="e.g. Mathematics" />
+                  <Input
+                    value={newEntry.subject}
+                    onChange={(e) =>
+                      handleInputChange("subject", e.target.value)
+                    }
+                    placeholder="e.g. Mathematics"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Teacher</Label>
-                  <Select value={newEntry.teacher} onValueChange={(val) => handleInputChange("teacher", val)}>
+                  <Select
+                    value={newEntry.teacher}
+                    onValueChange={(val) => handleInputChange("teacher", val)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select teacher" />
                     </SelectTrigger>
@@ -349,7 +428,10 @@ const Timetable = () => {
                   </Select>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAssignDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button onClick={handleSaveEntry}>Save</Button>
@@ -369,7 +451,9 @@ const Timetable = () => {
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {!selectedClass ? (
-            <div className="text-center py-8 text-muted-foreground">Please select a class to view its timetable.</div>
+            <div className="text-center py-8 text-muted-foreground">
+              Please select a class to view its timetable.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -386,7 +470,9 @@ const Timetable = () => {
               <TableBody>
                 {periods.map((p) => (
                   <TableRow key={p.period}>
-                    <TableCell className="font-medium">Period {p.period}</TableCell>
+                    <TableCell className="font-medium">
+                      Period {p.period}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {p.time}
                     </TableCell>

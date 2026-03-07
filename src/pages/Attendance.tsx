@@ -40,11 +40,13 @@ const Attendance = () => {
   const [studentsList, setStudentsList] = useState<Student[]>([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [selectedPeriod, setSelectedPeriod] = useState<string>("1");
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
-  const [attendanceData, setAttendanceData] = useState<Record<string, string>>({});
+  const [attendanceData, setAttendanceData] = useState<Record<string, string>>(
+    {},
+  );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -86,7 +88,7 @@ const Attendance = () => {
         if (studentsRes.ok) {
           const allStudents = await studentsRes.json();
           // Find the current class object to get the raw grade (e.g. "D.Pharm 1")
-          const currentClassObject = classesList.find(c => {
+          const currentClassObject = classesList.find((c) => {
             const name = c.grade.startsWith("D.")
               ? `${c.grade} - ${c.section}`
               : `Grade ${c.grade} - ${c.section}`;
@@ -95,15 +97,18 @@ const Attendance = () => {
           const rawGrade = currentClassObject ? currentClassObject.grade : "";
 
           // Filter students: Match Exact string OR Raw Grade
-          const filtered = allStudents.filter((s: Student) =>
-            s.class === selectedClass || (rawGrade && s.class === rawGrade)
+          const filtered = allStudents.filter(
+            (s: Student) =>
+              s.class === selectedClass || (rawGrade && s.class === rawGrade),
           );
           setStudentsList(filtered);
         }
 
         // 2. Fetch Timetable for the day
         const dateObj = new Date(selectedDate);
-        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+        const dayName = dateObj.toLocaleDateString("en-US", {
+          weekday: "long",
+        });
 
         // Fetch ALL timetable entries to safely filter client-side for case mismatches
         const timetableRes = await authFetch(`${API_BASE_URL}/timetable`);
@@ -112,12 +117,13 @@ const Attendance = () => {
           const allTimetable = await timetableRes.json();
           // Filter matching class name (case insensitive) AND day name
           // The DB has "D.Pharm 1 - a" but selectedClass might be "D.Pharm 1 - A"
-          const dayTimetable = allTimetable.filter((t: any) =>
-            t.className.toLowerCase() === selectedClass.toLowerCase() && t.day === dayName
+          const dayTimetable = allTimetable.filter(
+            (t: any) =>
+              t.className.toLowerCase() === selectedClass.toLowerCase() &&
+              t.day === dayName,
           );
           setTimetable(dayTimetable);
         }
-
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -135,7 +141,7 @@ const Attendance = () => {
     const fetchAttendance = async () => {
       try {
         const response = await authFetch(
-          `${API_BASE_URL}/attendance?date=${selectedDate}&className=${encodeURIComponent(selectedClass)}&period=${selectedPeriod}`
+          `${API_BASE_URL}/attendance?date=${selectedDate}&className=${encodeURIComponent(selectedClass)}&period=${selectedPeriod}`,
         );
         if (response.ok) {
           const data = await response.json();
@@ -158,7 +164,6 @@ const Attendance = () => {
     fetchAttendance();
   }, [selectedClass, selectedDate, selectedPeriod]);
 
-
   const handleAttendanceChange = (studentId: string, status: string) => {
     setAttendanceData((prev) => ({ ...prev, [studentId]: status }));
   };
@@ -172,14 +177,18 @@ const Attendance = () => {
     setSaving(true);
     try {
       // Find subject from timetable
-      const currentSlot = timetable.find(t => t.period === parseInt(selectedPeriod));
+      const currentSlot = timetable.find(
+        (t) => t.period === parseInt(selectedPeriod),
+      );
       const subject = currentSlot ? currentSlot.subject : "Unknown";
 
-      const records = studentsList.map(student => ({
+      const records = studentsList.map((student) => ({
         studentId: student._id,
         studentName: student.name,
         rollNo: student.rollNo,
-        status: (attendanceData[student._id] || "present").charAt(0).toUpperCase() + (attendanceData[student._id] || "present").slice(1) // Capitalize
+        status:
+          (attendanceData[student._id] || "present").charAt(0).toUpperCase() +
+          (attendanceData[student._id] || "present").slice(1), // Capitalize
       }));
 
       const payload = {
@@ -187,13 +196,13 @@ const Attendance = () => {
         className: selectedClass,
         period: parseInt(selectedPeriod),
         subject,
-        records
+        records,
       };
 
       const response = await authFetch(`${API_BASE_URL}/attendance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -211,10 +220,14 @@ const Attendance = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "present": return "text-green-600";
-      case "absent": return "text-destructive";
-      case "late": return "text-amber-600";
-      default: return "";
+      case "present":
+        return "text-green-600";
+      case "absent":
+        return "text-destructive";
+      case "late":
+        return "text-amber-600";
+      default:
+        return "";
     }
   };
 
@@ -226,10 +239,16 @@ const Attendance = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Attendance</h1>
-          <p className="text-muted-foreground">Mark daily attendance for students</p>
+          <p className="text-muted-foreground">
+            Mark daily attendance for students
+          </p>
         </div>
         <Button onClick={handleSubmit} disabled={saving}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          {saving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
           Save Attendance
         </Button>
       </div>
@@ -275,10 +294,11 @@ const Attendance = () => {
             </SelectTrigger>
             <SelectContent>
               {periods.map((p) => {
-                const slot = timetable.find(t => t.period === p);
+                const slot = timetable.find((t) => t.period === p);
                 return (
                   <SelectItem key={p} value={p.toString()}>
-                    Period {p} {slot ? `- ${slot.subject} (${slot.teacher})` : "- Free"}
+                    Period {p}{" "}
+                    {slot ? `- ${slot.subject} (${slot.teacher})` : "- Free"}
                   </SelectItem>
                 );
               })}
@@ -303,7 +323,10 @@ const Attendance = () => {
             <div>
               <p className="text-sm text-muted-foreground">Present</p>
               <p className="text-2xl font-bold text-green-600">
-                {Object.values(attendanceData).filter((s) => s === "present").length}
+                {
+                  Object.values(attendanceData).filter((s) => s === "present")
+                    .length
+                }
               </p>
             </div>
             <Check className="h-8 w-8 text-green-600" />
@@ -314,7 +337,10 @@ const Attendance = () => {
             <div>
               <p className="text-sm text-muted-foreground">Absent</p>
               <p className="text-2xl font-bold text-destructive">
-                {Object.values(attendanceData).filter((s) => s === "absent").length}
+                {
+                  Object.values(attendanceData).filter((s) => s === "absent")
+                    .length
+                }
               </p>
             </div>
             <X className="h-8 w-8 text-destructive" />
@@ -325,7 +351,10 @@ const Attendance = () => {
             <div>
               <p className="text-sm text-muted-foreground">Late</p>
               <p className="text-2xl font-bold text-amber-600">
-                {Object.values(attendanceData).filter((s) => s === "late").length}
+                {
+                  Object.values(attendanceData).filter((s) => s === "late")
+                    .length
+                }
               </p>
             </div>
             <Clock className="h-8 w-8 text-amber-600" />
@@ -337,7 +366,8 @@ const Attendance = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            {selectedClass} - Period {selectedPeriod} - {new Date(selectedDate).toLocaleDateString("en-IN", {
+            {selectedClass} - Period {selectedPeriod} -{" "}
+            {new Date(selectedDate).toLocaleDateString("en-IN", {
               weekday: "long",
               year: "numeric",
               month: "long",
@@ -347,9 +377,13 @@ const Attendance = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
           ) : studentsList.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No students found for this class.</div>
+            <div className="text-center py-8 text-muted-foreground">
+              No students found for this class.
+            </div>
           ) : (
             <div className="space-y-4">
               {studentsList.map((student) => (
@@ -365,11 +399,16 @@ const Attendance = () => {
                   </div>
                   <RadioGroup
                     value={attendanceData[student._id] || "present"} // Default to present visually if not set
-                    onValueChange={(value) => handleAttendanceChange(student._id, value)}
+                    onValueChange={(value) =>
+                      handleAttendanceChange(student._id, value)
+                    }
                     className="flex gap-4"
                   >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="present" id={`${student._id}-present`} />
+                      <RadioGroupItem
+                        value="present"
+                        id={`${student._id}-present`}
+                      />
                       <Label
                         htmlFor={`${student._id}-present`}
                         className={getStatusColor("present")}
@@ -378,7 +417,10 @@ const Attendance = () => {
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="absent" id={`${student._id}-absent`} />
+                      <RadioGroupItem
+                        value="absent"
+                        id={`${student._id}-absent`}
+                      />
                       <Label
                         htmlFor={`${student._id}-absent`}
                         className={getStatusColor("absent")}

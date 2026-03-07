@@ -2,7 +2,16 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { API_BASE_URL, authFetch } from "@/config";
 
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Download } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  Download,
+} from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +62,7 @@ const Students = () => {
     phone: "",
     class: "",
     parentName: "",
-    parentPhone: ""
+    parentPhone: "",
   });
 
   useEffect(() => {
@@ -78,7 +87,9 @@ const Students = () => {
       }
     } catch (error) {
       console.error("Error fetching students:", error);
-      toast.error("Failed to connect to server. Please check your internet or server status.");
+      toast.error(
+        "Failed to connect to server. Please check your internet or server status.",
+      );
     } finally {
       setLoading(false);
     }
@@ -95,8 +106,8 @@ const Students = () => {
   const handleAddStudent = async () => {
     try {
       const response = await authFetch(`${API_BASE_URL}/students`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
@@ -111,7 +122,7 @@ const Students = () => {
           phone: "",
           class: "",
           parentName: "",
-          parentPhone: ""
+          parentPhone: "",
         });
       } else {
         const errorData = await response.json();
@@ -130,18 +141,25 @@ const Students = () => {
       return;
     }
 
-    if (!window.confirm("Are you sure you want to delete this student? Use this action with caution as it deletes all related data.")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this student? Use this action with caution as it deletes all related data.",
+      )
+    )
+      return;
 
     try {
       console.log("Deleting student with ID:", id);
       const response = await authFetch(`${API_BASE_URL}/students/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok || response.status === 404) {
         toast.success("Student deleted successfully");
         // Optimistically update UI
-        setStudents(prev => prev.filter(item => (item._id || item.id) !== id));
+        setStudents((prev) =>
+          prev.filter((item) => (item._id || item.id) !== id),
+        );
         // fetchStudents(); // Removed to prevent stale data re-fetch
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -158,7 +176,8 @@ const Students = () => {
     const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.rollNo.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || student.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || student.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -169,7 +188,7 @@ const Students = () => {
     attendance: 0,
     totalFee: 0,
     paidFee: 0,
-    dueFee: 0
+    dueFee: 0,
   });
   const [studentExams, setStudentExams] = useState<any[]>([]);
   const [subjectAttendance, setSubjectAttendance] = useState<any>(null);
@@ -183,7 +202,9 @@ const Students = () => {
     // Fetch Stats
     try {
       // 1. Attendance
-      const attRes = await authFetch(`${API_BASE_URL}/attendance/student/${student._id}`);
+      const attRes = await authFetch(
+        `${API_BASE_URL}/attendance/student/${student._id}`,
+      );
       let attendanceVal = 0;
       if (attRes.ok) {
         const attData = await attRes.json();
@@ -193,7 +214,7 @@ const Students = () => {
       // 2. Fees
       const [feesRes, structRes] = await Promise.all([
         authFetch(`${API_BASE_URL}/fees`),
-        authFetch(`${API_BASE_URL}/fee-structures`)
+        authFetch(`${API_BASE_URL}/fee-structures`),
       ]);
 
       let total = 0;
@@ -204,63 +225,77 @@ const Students = () => {
         const structData = await structRes.json();
 
         // Calculate expected total from structures
-        const studentStructs = structData.filter((s: any) => s.studentId === student._id || s.rollNo === student.rollNo);
-        total = studentStructs.reduce((sum: number, s: any) => sum + (Number(s.totalFee) || 0), 0);
+        const studentStructs = structData.filter(
+          (s: any) =>
+            s.studentId === student._id || s.rollNo === student.rollNo,
+        );
+        total = studentStructs.reduce(
+          (sum: number, s: any) => sum + (Number(s.totalFee) || 0),
+          0,
+        );
 
         // Calculate paid from transactions
-        const studentTrans = feesData.filter((f: any) => f.studentId === student._id);
-        paid = studentTrans.reduce((sum: number, f: any) => sum + (Number(f.amountPaid) || 0), 0);
+        const studentTrans = feesData.filter(
+          (f: any) => f.studentId === student._id,
+        );
+        paid = studentTrans.reduce(
+          (sum: number, f: any) => sum + (Number(f.amountPaid) || 0),
+          0,
+        );
       }
 
       setStudentStats({
         attendance: attendanceVal,
         totalFee: total,
         paidFee: paid,
-        dueFee: total - paid
+        dueFee: total - paid,
       });
 
       // 3. Exams
-      const examsRes = await authFetch(`${API_BASE_URL}/results/student/${student._id}`);
+      const examsRes = await authFetch(
+        `${API_BASE_URL}/results/student/${student._id}`,
+      );
       if (examsRes.ok) {
         const examsData = await examsRes.json();
         setStudentExams(examsData);
       }
 
       // 4. Subject-wise Attendance
-      const subAttRes = await authFetch(`${API_BASE_URL}/attendance/student/${student._id}/subjects`);
+      const subAttRes = await authFetch(
+        `${API_BASE_URL}/attendance/student/${student._id}/subjects`,
+      );
       if (subAttRes.ok) {
         const subAttData = await subAttRes.json();
         setSubjectAttendance(subAttData);
       }
-
     } catch (error) {
       console.error("Error fetching profile stats:", error);
     }
   };
 
   const downloadProfilePDF = () => {
-    const element = document.getElementById('student-profile-content');
+    const element = document.getElementById("student-profile-content");
     if (!element) return;
 
     const opt = {
       margin: 0.5,
       filename: `${selectedStudent?.name}_Profile.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
+      image: { type: "jpeg" as const, quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const }
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" as const },
     };
 
     html2pdf().set(opt).from(element).save();
   };
-
-
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Students</h1>
-          <p className="text-muted-foreground">Manage student records and information</p>
+          <p className="text-muted-foreground">
+            Manage student records and information
+          </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -277,27 +312,51 @@ const Students = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" placeholder="Enter student name" value={formData.name} onChange={handleInputChange} />
+                  <Input
+                    id="name"
+                    placeholder="Enter student name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="rollNo">Roll Number</Label>
-                  <Input id="rollNo" placeholder="Enter roll number" value={formData.rollNo} onChange={handleInputChange} />
+                  <Input
+                    id="rollNo"
+                    placeholder="Enter roll number"
+                    value={formData.rollNo}
+                    onChange={handleInputChange}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="Enter email" value={formData.email} onChange={handleInputChange} />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" placeholder="Enter phone number" value={formData.phone} onChange={handleInputChange} />
+                  <Input
+                    id="phone"
+                    placeholder="Enter phone number"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="class">Class</Label>
-                  <Select onValueChange={handleSelectChange} value={formData.class}>
+                  <Select
+                    onValueChange={handleSelectChange}
+                    value={formData.class}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select class" />
                     </SelectTrigger>
@@ -324,15 +383,28 @@ const Students = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="parentName">Parent Name</Label>
-                  <Input id="parentName" placeholder="Enter parent name" value={formData.parentName} onChange={handleInputChange} />
+                  <Input
+                    id="parentName"
+                    placeholder="Enter parent name"
+                    value={formData.parentName}
+                    onChange={handleInputChange}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="parentPhone">Parent Phone</Label>
-                <Input id="parentPhone" placeholder="Enter parent phone" value={formData.parentPhone} onChange={handleInputChange} />
+                <Input
+                  id="parentPhone"
+                  placeholder="Enter parent phone"
+                  value={formData.parentPhone}
+                  onChange={handleInputChange}
+                />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleAddStudent}>Save Student</Button>
@@ -351,16 +423,22 @@ const Students = () => {
 
           {selectedStudent && (
             <div className="space-y-6">
-              <div id="student-profile-content" className="p-6 bg-white rounded-lg border shadow-sm">
-
+              <div
+                id="student-profile-content"
+                className="p-6 bg-white rounded-lg border shadow-sm"
+              >
                 {/* Header */}
                 <div className="flex items-center gap-4 border-b pb-6 mb-6">
                   <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
                     {selectedStudent.name.charAt(0)}
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{selectedStudent.name}</h2>
-                    <p className="text-gray-500">{selectedStudent.class} | Roll: {selectedStudent.rollNo}</p>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {selectedStudent.name}
+                    </h2>
+                    <p className="text-gray-500">
+                      {selectedStudent.class} | Roll: {selectedStudent.rollNo}
+                    </p>
                   </div>
                   <div className="ml-auto text-right">
                     <div className="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
@@ -372,20 +450,30 @@ const Students = () => {
                 {/* Details Grid */}
                 <div className="grid grid-cols-2 gap-6 mb-8">
                   <div className="space-y-1">
-                    <p className="text-sm text-gray-500">Father's / Parent Name</p>
-                    <p className="font-medium text-gray-900">{selectedStudent.parentName}</p>
+                    <p className="text-sm text-gray-500">
+                      Father's / Parent Name
+                    </p>
+                    <p className="font-medium text-gray-900">
+                      {selectedStudent.parentName}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">Contact Number</p>
-                    <p className="font-medium text-gray-900">{selectedStudent.phone}</p>
+                    <p className="font-medium text-gray-900">
+                      {selectedStudent.phone}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">Email Address</p>
-                    <p className="font-medium text-gray-900">{selectedStudent.email}</p>
+                    <p className="font-medium text-gray-900">
+                      {selectedStudent.email}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">Parent Contact</p>
-                    <p className="font-medium text-gray-900">{selectedStudent.parentPhone}</p>
+                    <p className="font-medium text-gray-900">
+                      {selectedStudent.parentPhone}
+                    </p>
                   </div>
                 </div>
 
@@ -393,17 +481,25 @@ const Students = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                     <p className="text-sm text-gray-500 mb-1">Attendance</p>
-                    <p className={`text-2xl font-bold ${studentStats.attendance < 75 ? 'text-red-600' : 'text-green-600'}`}>
+                    <p
+                      className={`text-2xl font-bold ${studentStats.attendance < 75 ? "text-red-600" : "text-green-600"}`}
+                    >
                       {studentStats.attendance}%
                     </p>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <p className="text-sm text-gray-500 mb-1">Total Fees Paid</p>
-                    <p className="text-2xl font-bold text-blue-600">₹{studentStats.paidFee.toLocaleString()}</p>
+                    <p className="text-sm text-gray-500 mb-1">
+                      Total Fees Paid
+                    </p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      ₹{studentStats.paidFee.toLocaleString()}
+                    </p>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                     <p className="text-sm text-gray-500 mb-1">Pending Dues</p>
-                    <p className={`text-2xl font-bold ${studentStats.dueFee > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    <p
+                      className={`text-2xl font-bold ${studentStats.dueFee > 0 ? "text-red-600" : "text-green-600"}`}
+                    >
                       ₹{studentStats.dueFee.toLocaleString()}
                     </p>
                   </div>
@@ -411,41 +507,74 @@ const Students = () => {
 
                 {/* Subject-wise Attendance Table */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-lg">Subject-wise Attendance</h3>
-                  {subjectAttendance && subjectAttendance.subjects && subjectAttendance.subjects.length > 0 ? (
+                  <h3 className="font-semibold text-lg">
+                    Subject-wise Attendance
+                  </h3>
+                  {subjectAttendance &&
+                  subjectAttendance.subjects &&
+                  subjectAttendance.subjects.length > 0 ? (
                     <div className="border rounded-md overflow-hidden">
                       <Table>
                         <TableHeader className="bg-slate-50">
                           <TableRow>
                             <TableHead>Subject</TableHead>
-                            <TableHead className="text-center">Total Classes</TableHead>
-                            <TableHead className="text-center">Attended</TableHead>
-                            <TableHead className="text-center">Absent</TableHead>
-                            <TableHead className="text-right">Attendance %</TableHead>
+                            <TableHead className="text-center">
+                              Total Classes
+                            </TableHead>
+                            <TableHead className="text-center">
+                              Attended
+                            </TableHead>
+                            <TableHead className="text-center">
+                              Absent
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Attendance %
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {subjectAttendance.subjects.map((sub: any, idx: number) => (
-                            <TableRow key={idx}>
-                              <TableCell className="font-medium">{sub.subject}</TableCell>
-                              <TableCell className="text-center">{sub.totalClasses}</TableCell>
-                              <TableCell className="text-center text-green-600">{sub.attended}</TableCell>
-                              <TableCell className="text-center text-red-600">{sub.totalClasses - sub.attended}</TableCell>
-                              <TableCell className="text-right">
-                                <span className={`font-bold ${sub.percentage < 75 ? 'text-red-600' : 'text-green-600'}`}>
-                                  {sub.percentage}%
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {subjectAttendance.subjects.map(
+                            (sub: any, idx: number) => (
+                              <TableRow key={idx}>
+                                <TableCell className="font-medium">
+                                  {sub.subject}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {sub.totalClasses}
+                                </TableCell>
+                                <TableCell className="text-center text-green-600">
+                                  {sub.attended}
+                                </TableCell>
+                                <TableCell className="text-center text-red-600">
+                                  {sub.totalClasses - sub.attended}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span
+                                    className={`font-bold ${sub.percentage < 75 ? "text-red-600" : "text-green-600"}`}
+                                  >
+                                    {sub.percentage}%
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ),
+                          )}
                           {/* Overall Row */}
                           <TableRow className="bg-blue-50 font-semibold">
                             <TableCell className="font-bold">Overall</TableCell>
-                            <TableCell className="text-center font-bold">{subjectAttendance.overall.totalClasses}</TableCell>
-                            <TableCell className="text-center font-bold text-green-700">{subjectAttendance.overall.totalAttended}</TableCell>
-                            <TableCell className="text-center font-bold text-red-700">{subjectAttendance.overall.totalClasses - subjectAttendance.overall.totalAttended}</TableCell>
+                            <TableCell className="text-center font-bold">
+                              {subjectAttendance.overall.totalClasses}
+                            </TableCell>
+                            <TableCell className="text-center font-bold text-green-700">
+                              {subjectAttendance.overall.totalAttended}
+                            </TableCell>
+                            <TableCell className="text-center font-bold text-red-700">
+                              {subjectAttendance.overall.totalClasses -
+                                subjectAttendance.overall.totalAttended}
+                            </TableCell>
                             <TableCell className="text-right">
-                              <span className={`font-bold text-lg ${subjectAttendance.overall.percentage < 75 ? 'text-red-700' : 'text-green-700'}`}>
+                              <span
+                                className={`font-bold text-lg ${subjectAttendance.overall.percentage < 75 ? "text-red-700" : "text-green-700"}`}
+                              >
                                 {subjectAttendance.overall.percentage}%
                               </span>
                             </TableCell>
@@ -454,7 +583,9 @@ const Students = () => {
                       </Table>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">No attendance records found for this student.</p>
+                    <p className="text-sm text-muted-foreground italic">
+                      No attendance records found for this student.
+                    </p>
                   )}
                 </div>
 
@@ -468,19 +599,34 @@ const Students = () => {
                           <TableRow>
                             <TableHead>Exam Name</TableHead>
                             <TableHead>Date</TableHead>
-                            <TableHead className="text-right">Total Marks</TableHead>
-                            <TableHead className="text-right">Percentage</TableHead>
+                            <TableHead className="text-right">
+                              Total Marks
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Percentage
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {studentExams.map((exam: any, idx) => {
-                            const totalObtained = exam.marks.reduce((a: any, b: any) => a + (b.obtainedMarks || 0), 0);
-                            const totalMax = exam.marks.reduce((a: any, b: any) => a + (b.totalMarks || 0), 0);
-                            const percentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0;
+                            const totalObtained = exam.marks.reduce(
+                              (a: any, b: any) => a + (b.obtainedMarks || 0),
+                              0,
+                            );
+                            const totalMax = exam.marks.reduce(
+                              (a: any, b: any) => a + (b.totalMarks || 0),
+                              0,
+                            );
+                            const percentage =
+                              totalMax > 0
+                                ? (totalObtained / totalMax) * 100
+                                : 0;
 
                             return (
                               <TableRow key={idx}>
-                                <TableCell className="font-medium">{exam.examName}</TableCell>
+                                <TableCell className="font-medium">
+                                  {exam.examName}
+                                </TableCell>
                                 <TableCell>{exam.examDate}</TableCell>
                                 <TableCell className="text-right">
                                   {totalObtained} / {totalMax}
@@ -495,13 +641,18 @@ const Students = () => {
                       </Table>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">No exam records found for this student.</p>
+                    <p className="text-sm text-muted-foreground italic">
+                      No exam records found for this student.
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsProfileOpen(false)}
+                >
                   Close
                 </Button>
 
@@ -557,23 +708,31 @@ const Students = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">Loading students...</TableCell>
+                <TableCell colSpan={8} className="text-center py-8">
+                  Loading students...
+                </TableCell>
               </TableRow>
             ) : filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">No students found</TableCell>
+                <TableCell colSpan={8} className="text-center py-8">
+                  No students found
+                </TableCell>
               </TableRow>
             ) : (
               filteredStudents.map((student) => (
                 <TableRow key={student._id || student.id}>
-                  <TableCell className="font-medium">{student.rollNo}</TableCell>
+                  <TableCell className="font-medium">
+                    {student.rollNo}
+                  </TableCell>
                   <TableCell>{student.name}</TableCell>
                   <TableCell>{student.class}</TableCell>
                   <TableCell>{student.email}</TableCell>
                   <TableCell>{student.phone}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={student.status === "Active" ? "default" : "secondary"}
+                      variant={
+                        student.status === "Active" ? "default" : "secondary"
+                      }
                     >
                       {student.status}
                     </Badge>
@@ -581,7 +740,9 @@ const Students = () => {
                   <TableCell>
                     <Badge
                       variant={student.feesPaid ? "default" : "destructive"}
-                      className={student.feesPaid ? "bg-green-100 text-green-800" : ""}
+                      className={
+                        student.feesPaid ? "bg-green-100 text-green-800" : ""
+                      }
                     >
                       {student.feesPaid ? "Paid" : "Pending"}
                     </Badge>
@@ -594,13 +755,17 @@ const Students = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewProfile(student)}>
+                        <DropdownMenuItem
+                          onClick={() => handleViewProfile(student)}
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View Profile
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => handleDeleteStudent(student._id || student.id)}
+                          onClick={() =>
+                            handleDeleteStudent(student._id || student.id)
+                          }
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete

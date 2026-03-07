@@ -35,7 +35,7 @@ All colors MUST be HSL.
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221 83% 53%;
-    
+
     --chart-1: 221 83% 53%;
     --chart-2: 142 76% 36%;
 
@@ -121,7 +121,9 @@ All colors MUST be HSL.
   }
 
   /* Ensure the report container uses full width */
-  main, .container, div {
+  main,
+  .container,
+  div {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
@@ -133,9 +135,9 @@ All colors MUST be HSL.
   #root > div {
     display: block !important;
   }
-  
+
   /* Restore simplified header for context if we want, but usually better to let the user see the content */
-  
+
   /* Make sure background colors print (useful for badges/stripes) */
   * {
     -webkit-print-color-adjust: exact !important;

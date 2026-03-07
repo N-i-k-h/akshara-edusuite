@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { API_BASE_URL, authFetch } from "@/config";
 
-import { Users, UserCheck, CreditCard, AlertTriangle, Clock } from "lucide-react";
+import {
+  Users,
+  UserCheck,
+  CreditCard,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/dashboard/StatCard";
@@ -23,7 +29,7 @@ const Dashboard = () => {
     feesCollected: 0,
     feesDue: 0,
     feeDefaulters: [],
-    lowAttendanceStudents: []
+    lowAttendanceStudents: [],
   });
 
   useEffect(() => {
@@ -43,17 +49,19 @@ const Dashboard = () => {
   }, []);
 
   const pieData = [
-    { name: 'Collected', value: stats.feesCollected },
-    { name: 'Due', value: stats.feesDue },
+    { name: "Collected", value: stats.feesCollected },
+    { name: "Due", value: stats.feesDue },
   ];
 
-  const COLORS = ['#0088FE', '#FF8042'];
+  const COLORS = ["#0088FE", "#FF8042"];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back to Akshara College EduManage</p>
+        <p className="text-muted-foreground">
+          Welcome back to Akshara College EduManage
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -91,19 +99,30 @@ const Dashboard = () => {
             <div className="space-y-4">
               {stats.feeDefaulters && stats.feeDefaulters.length > 0 ? (
                 stats.feeDefaulters.map((defaulter: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-sm">
                         {defaulter.studentName.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{defaulter.studentName}</p>
-                        <p className="text-xs text-muted-foreground">{defaulter.grade}</p>
+                        <p className="font-medium text-sm">
+                          {defaulter.studentName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {defaulter.grade}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-red-600">₹{defaulter.dueAmount.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">Due Amount</p>
+                      <p className="font-bold text-red-600">
+                        ₹{defaulter.dueAmount.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Due Amount
+                      </p>
                     </div>
                   </div>
                 ))
@@ -139,15 +158,25 @@ const Dashboard = () => {
                       dataKey="value"
                     >
                       {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                    <Tooltip
+                      formatter={(value: number) =>
+                        `₹${value.toLocaleString()}`
+                      }
+                    />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="text-center mt-2">
-                  <p className="text-xs text-muted-foreground">Total: ₹{(stats.feesCollected + stats.feesDue).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Total: ₹
+                    {(stats.feesCollected + stats.feesDue).toLocaleString()}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -163,25 +192,38 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="py-2">
               <div className="space-y-3">
-                {stats.lowAttendanceStudents && stats.lowAttendanceStudents.length > 0 ? (
-                  stats.lowAttendanceStudents.map((student: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
-                      <div>
-                        <p className="text-sm font-medium">{student.studentName}</p>
-                        <p className="text-xs text-muted-foreground">{student.className}</p>
+                {stats.lowAttendanceStudents &&
+                stats.lowAttendanceStudents.length > 0 ? (
+                  stats.lowAttendanceStudents.map(
+                    (student: any, index: number) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">
+                            {student.studentName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {student.className}
+                          </p>
+                        </div>
+                        <Badge variant="destructive">
+                          {student.attendancePercentage?.toFixed(1)}%
+                        </Badge>
                       </div>
-                      <Badge variant="destructive">{student.attendancePercentage?.toFixed(1)}%</Badge>
-                    </div>
-                  ))
+                    ),
+                  )
                 ) : (
-                  <p className="text-sm text-muted-foreground py-2 text-center">All students have good attendance.</p>
+                  <p className="text-sm text-muted-foreground py-2 text-center">
+                    All students have good attendance.
+                  </p>
                 )}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
-
     </div>
   );
 };

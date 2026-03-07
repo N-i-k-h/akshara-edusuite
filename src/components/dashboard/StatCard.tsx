@@ -13,7 +13,13 @@ interface StatCardProps {
   className?: string;
 }
 
-const StatCard = ({ title, value, icon: Icon, trend, className }: StatCardProps) => {
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  trend,
+  className,
+}: StatCardProps) => {
   return (
     <Card className={cn("", className)}>
       <CardContent className="flex items-center justify-between p-6">
@@ -24,10 +30,11 @@ const StatCard = ({ title, value, icon: Icon, trend, className }: StatCardProps)
             <p
               className={cn(
                 "mt-1 text-xs font-medium",
-                trend.isPositive ? "text-green-600" : "text-destructive"
+                trend.isPositive ? "text-green-600" : "text-destructive",
               )}
             >
-              {trend.isPositive ? "+" : "-"}{trend.value}% from last month
+              {trend.isPositive ? "+" : "-"}
+              {trend.value}% from last month
             </p>
           )}
         </div>

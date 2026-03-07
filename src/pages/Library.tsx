@@ -31,7 +31,7 @@ const Library = () => {
     (book) =>
       book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.isbn.includes(searchQuery)
+      book.isbn.includes(searchQuery),
   );
 
   const totalBooks = books.reduce((sum, b) => sum + b.quantity, 0);
@@ -43,7 +43,9 @@ const Library = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Library</h1>
-          <p className="text-muted-foreground">Manage books and issue/return tracking</p>
+          <p className="text-muted-foreground">
+            Manage books and issue/return tracking
+          </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -84,10 +86,15 @@ const Library = () => {
                 <Input id="location" placeholder="e.g., Shelf A-1" />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={() => setIsAddDialogOpen(false)}>Add Book</Button>
+                <Button onClick={() => setIsAddDialogOpen(false)}>
+                  Add Book
+                </Button>
               </div>
             </div>
           </DialogContent>
@@ -99,8 +106,12 @@ const Library = () => {
         <Card>
           <CardContent className="flex items-center justify-between p-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Books</p>
-              <p className="mt-1 text-2xl font-bold text-foreground">{totalBooks}</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Books
+              </p>
+              <p className="mt-1 text-2xl font-bold text-foreground">
+                {totalBooks}
+              </p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <BookOpen className="h-6 w-6 text-primary" />
@@ -110,8 +121,12 @@ const Library = () => {
         <Card>
           <CardContent className="flex items-center justify-between p-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Available</p>
-              <p className="mt-1 text-2xl font-bold text-green-600">{availableBooks}</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Available
+              </p>
+              <p className="mt-1 text-2xl font-bold text-green-600">
+                {availableBooks}
+              </p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
               <BookOpen className="h-6 w-6 text-green-600" />
@@ -121,8 +136,12 @@ const Library = () => {
         <Card>
           <CardContent className="flex items-center justify-between p-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Issued</p>
-              <p className="mt-1 text-2xl font-bold text-amber-600">{issuedBooks}</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Issued
+              </p>
+              <p className="mt-1 text-2xl font-bold text-amber-600">
+                {issuedBooks}
+              </p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
               <RotateCcw className="h-6 w-6 text-amber-600" />

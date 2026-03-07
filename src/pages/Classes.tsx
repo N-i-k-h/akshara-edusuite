@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import { API_BASE_URL, authFetch } from "@/config";
 
-import { Plus, Users, MapPin, User, Calendar, BookOpen, Clock } from "lucide-react";
+import {
+  Plus,
+  Users,
+  MapPin,
+  User,
+  Calendar,
+  BookOpen,
+  Clock,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +53,14 @@ interface Teacher {
   name: string;
 }
 
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const days = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 const periods = [
   { period: 1, time: "8:00 - 8:45" },
   { period: 2, time: "8:45 - 9:30" },
@@ -66,15 +81,18 @@ const Classes = () => {
   // View Students Dialog State
   const [isViewStudentsOpen, setIsViewStudentsOpen] = useState(false);
   const [selectedClassStudents, setSelectedClassStudents] = useState<any[]>([]);
-  const [selectedClassForStudents, setSelectedClassForStudents] = useState<string>("");
+  const [selectedClassForStudents, setSelectedClassForStudents] =
+    useState<string>("");
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
   // View Timetable Dialog State
   const [isViewTimetableOpen, setIsViewTimetableOpen] = useState(false);
-  const [selectedClassTimetable, setSelectedClassTimetable] = useState<any[]>([]);
-  const [selectedClassForTimetable, setSelectedClassForTimetable] = useState<string>("");
+  const [selectedClassTimetable, setSelectedClassTimetable] = useState<any[]>(
+    [],
+  );
+  const [selectedClassForTimetable, setSelectedClassForTimetable] =
+    useState<string>("");
   const [isLoadingTimetable, setIsLoadingTimetable] = useState(false);
-
 
   const [newClass, setNewClass] = useState({
     grade: "",
@@ -113,16 +131,21 @@ const Classes = () => {
   };
 
   const handleSaveClass = async () => {
-    if (!newClass.grade || !newClass.section || !newClass.room || !newClass.classTeacher) {
+    if (
+      !newClass.grade ||
+      !newClass.section ||
+      !newClass.room ||
+      !newClass.classTeacher
+    ) {
       toast.error("Please fill in all details");
       return;
     }
 
     try {
       const response = await authFetch(`${API_BASE_URL}/classes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newClass)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newClass),
       });
 
       if (response.ok) {
@@ -157,28 +180,35 @@ const Classes = () => {
 
         // Filter students belonging to this class
         // Match exact class string OR match grade if loose matching needed (but prefer exact)
-        const filtered = allStudents.filter((s: any) =>
-          s.class === classNameFull || s.class === cls.grade
+        const filtered = allStudents.filter(
+          (s: any) => s.class === classNameFull || s.class === cls.grade,
         );
 
         // Fetch real attendance stats for each student
-        const studentsWithStats = await Promise.all(filtered.map(async (student: any) => {
-          let attendancePercentage = 0; // Default
-          try {
-            const statsRes = await authFetch(`${API_BASE_URL}/attendance/student/${student._id}`);
-            if (statsRes.ok) {
-              const stats = await statsRes.json();
-              attendancePercentage = stats.attendancePercentage || 0;
+        const studentsWithStats = await Promise.all(
+          filtered.map(async (student: any) => {
+            let attendancePercentage = 0; // Default
+            try {
+              const statsRes = await authFetch(
+                `${API_BASE_URL}/attendance/student/${student._id}`,
+              );
+              if (statsRes.ok) {
+                const stats = await statsRes.json();
+                attendancePercentage = stats.attendancePercentage || 0;
+              }
+            } catch (e) {
+              console.error(
+                `Error fetching stats for student ${student._id}`,
+                e,
+              );
             }
-          } catch (e) {
-            console.error(`Error fetching stats for student ${student._id}`, e);
-          }
 
-          return {
-            ...student,
-            attendancePercentage
-          };
-        }));
+            return {
+              ...student,
+              attendancePercentage,
+            };
+          }),
+        );
 
         setSelectedClassStudents(studentsWithStats);
       }
@@ -202,7 +232,9 @@ const Classes = () => {
     setIsLoadingTimetable(true);
 
     try {
-      const response = await authFetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(classNameStr)}`);
+      const response = await authFetch(
+        `${API_BASE_URL}/timetable?className=${encodeURIComponent(classNameStr)}`,
+      );
       if (response.ok) {
         const data = await response.json();
         setSelectedClassTimetable(data);
@@ -216,14 +248,17 @@ const Classes = () => {
   };
 
   // --- Edit Timetable Logic ---
-  const [editingSlot, setEditingSlot] = useState<{ day: string, period: number } | null>(null);
+  const [editingSlot, setEditingSlot] = useState<{
+    day: string;
+    period: number;
+  } | null>(null);
   const [slotForm, setSlotForm] = useState({ subject: "", teacher: "" });
 
   const handleSlotClick = (day: string, period: number) => {
     const slot = getTimetableSlot(day, period);
     setSlotForm({
       subject: slot?.subject || "",
-      teacher: slot?.teacher || ""
+      teacher: slot?.teacher || "",
     });
     setEditingSlot({ day, period });
   };
@@ -237,20 +272,22 @@ const Classes = () => {
         day: editingSlot.day,
         period: editingSlot.period,
         subject: slotForm.subject,
-        teacher: slotForm.teacher
+        teacher: slotForm.teacher,
       };
 
       const response = await authFetch(`${API_BASE_URL}/timetable`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         toast.success("Timetable updated");
         setEditingSlot(null);
         // Refresh timetable
-        const refreshRes = await authFetch(`${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClassForTimetable)}`);
+        const refreshRes = await authFetch(
+          `${API_BASE_URL}/timetable?className=${encodeURIComponent(selectedClassForTimetable)}`,
+        );
         if (refreshRes.ok) {
           const data = await refreshRes.json();
           setSelectedClassTimetable(data);
@@ -265,7 +302,9 @@ const Classes = () => {
   };
 
   const getTimetableSlot = (day: string, period: number) => {
-    return selectedClassTimetable.find(slot => slot.day === day && slot.period === period);
+    return selectedClassTimetable.find(
+      (slot) => slot.day === day && slot.period === period,
+    );
   };
 
   return (
@@ -290,7 +329,10 @@ const Classes = () => {
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="grade">Grade</Label>
-                <Select value={newClass.grade} onValueChange={(val) => handleInputChange("grade", val)}>
+                <Select
+                  value={newClass.grade}
+                  onValueChange={(val) => handleInputChange("grade", val)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Year" />
                   </SelectTrigger>
@@ -302,15 +344,30 @@ const Classes = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="section">Section</Label>
-                <Input id="section" value={newClass.section} onChange={(e) => handleInputChange("section", e.target.value)} placeholder="e.g., A, B, C" />
+                <Input
+                  id="section"
+                  value={newClass.section}
+                  onChange={(e) => handleInputChange("section", e.target.value)}
+                  placeholder="e.g., A, B, C"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="room">Room Number</Label>
-                <Input id="room" value={newClass.room} onChange={(e) => handleInputChange("room", e.target.value)} placeholder="e.g., Room 101" />
+                <Input
+                  id="room"
+                  value={newClass.room}
+                  onChange={(e) => handleInputChange("room", e.target.value)}
+                  placeholder="e.g., Room 101"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="teacher">Class Teacher</Label>
-                <Select value={newClass.classTeacher} onValueChange={(val) => handleInputChange("classTeacher", val)}>
+                <Select
+                  value={newClass.classTeacher}
+                  onValueChange={(val) =>
+                    handleInputChange("classTeacher", val)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select teacher" />
                   </SelectTrigger>
@@ -324,7 +381,10 @@ const Classes = () => {
                 </Select>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleSaveClass}>Save Class</Button>
@@ -337,16 +397,26 @@ const Classes = () => {
       {/* Class Cards Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
-          <div className="col-span-full text-center text-muted-foreground">Loading classes...</div>
+          <div className="col-span-full text-center text-muted-foreground">
+            Loading classes...
+          </div>
         ) : classesList.length === 0 ? (
-          <div className="col-span-full text-center text-muted-foreground">No classes found. Add one to get started.</div>
+          <div className="col-span-full text-center text-muted-foreground">
+            No classes found. Add one to get started.
+          </div>
         ) : (
           classesList.map((cls) => (
-            <Card key={cls._id || (Math.random() + "")} className="cursor-pointer transition-shadow hover:shadow-md">
+            <Card
+              key={cls._id || Math.random() + ""}
+              className="cursor-pointer transition-shadow hover:shadow-md"
+            >
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between">
                   <span className="text-lg">
-                    {cls.grade.startsWith("D.") ? cls.grade : `Grade ${cls.grade}`} - {cls.section}
+                    {cls.grade.startsWith("D.")
+                      ? cls.grade
+                      : `Grade ${cls.grade}`}{" "}
+                    - {cls.section}
                   </span>
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
                     {cls.room}
@@ -367,10 +437,20 @@ const Classes = () => {
                   <span>{cls.room}</span>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewStudents(cls)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleViewStudents(cls)}
+                  >
                     View Students
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewTimetable(cls)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleViewTimetable(cls)}
+                  >
                     Timetable
                   </Button>
                 </div>
@@ -390,7 +470,9 @@ const Classes = () => {
             {isLoadingStudents ? (
               <div className="py-8 text-center">Loading students...</div>
             ) : selectedClassStudents.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">No students found for this class.</div>
+              <div className="py-8 text-center text-muted-foreground">
+                No students found for this class.
+              </div>
             ) : (
               <Table>
                 <TableHeader>
@@ -403,24 +485,40 @@ const Classes = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedClassStudents.map(student => (
+                  {selectedClassStudents.map((student) => (
                     <TableRow key={student._id}>
-                      <TableCell className="font-medium">{student.rollNo}</TableCell>
+                      <TableCell className="font-medium">
+                        {student.rollNo}
+                      </TableCell>
                       <TableCell>{student.name}</TableCell>
                       <TableCell>{student.parentName}</TableCell>
                       <TableCell>
-                        <Badge variant={student.feesPaid ? "outline" : "destructive"} className={student.feesPaid ? "text-green-600 border-green-200 bg-green-50" : ""}>
+                        <Badge
+                          variant={student.feesPaid ? "outline" : "destructive"}
+                          className={
+                            student.feesPaid
+                              ? "text-green-600 border-green-200 bg-green-50"
+                              : ""
+                          }
+                        >
                           {student.feesPaid ? "Paid" : "Due"}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className={`font-bold ${student.attendancePercentage < 75 ? 'text-red-500' : 'text-green-600'}`}>
+                          <span
+                            className={`font-bold ${student.attendancePercentage < 75 ? "text-red-500" : "text-green-600"}`}
+                          >
                             {student.attendancePercentage}%
                           </span>
                           {/* Simple Progress Bar Visual */}
                           <div className="h-2 w-16 bg-gray-100 rounded-full overflow-hidden">
-                            <div className={`h-full ${student.attendancePercentage < 75 ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${student.attendancePercentage}%` }}></div>
+                            <div
+                              className={`h-full ${student.attendancePercentage < 75 ? "bg-red-500" : "bg-green-500"}`}
+                              style={{
+                                width: `${student.attendancePercentage}%`,
+                              }}
+                            ></div>
                           </div>
                         </div>
                       </TableCell>
@@ -437,7 +535,9 @@ const Classes = () => {
       <Dialog open={isViewTimetableOpen} onOpenChange={setIsViewTimetableOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Weekly Schedule - {selectedClassForTimetable}</DialogTitle>
+            <DialogTitle>
+              Weekly Schedule - {selectedClassForTimetable}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-x-auto max-h-[70vh]">
             {isLoadingTimetable ? (
@@ -447,19 +547,26 @@ const Classes = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-20 bg-muted">Period</TableHead>
-                    {days.map(day => (
-                      <TableHead key={day} className="text-center bg-muted font-bold min-w-[120px]">{day}</TableHead>
+                    {days.map((day) => (
+                      <TableHead
+                        key={day}
+                        className="text-center bg-muted font-bold min-w-[120px]"
+                      >
+                        {day}
+                      </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {periods.map(p => (
+                  {periods.map((p) => (
                     <TableRow key={p.period}>
                       <TableCell className="font-medium bg-muted/50">
                         <div className="text-sm">Period {p.period}</div>
-                        <div className="text-xs text-muted-foreground mt-1">{p.time}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {p.time}
+                        </div>
                       </TableCell>
-                      {days.map(day => {
+                      {days.map((day) => {
                         const slot = getTimetableSlot(day, p.period);
                         return (
                           <TableCell
@@ -469,17 +576,23 @@ const Classes = () => {
                           >
                             {slot ? (
                               <div className="bg-blue-50 p-2 rounded border border-blue-100 text-center relative">
-                                <div className="font-semibold text-blue-900 text-sm">{slot.subject}</div>
-                                <div className="text-xs text-blue-600 mt-1">{slot.teacher}</div>
+                                <div className="font-semibold text-blue-900 text-sm">
+                                  {slot.subject}
+                                </div>
+                                <div className="text-xs text-blue-600 mt-1">
+                                  {slot.teacher}
+                                </div>
                               </div>
                             ) : (
                               <div className="text-center text-muted-foreground text-xs h-12 flex items-center justify-center group-hover:block">
-                                <span className="hidden group-hover:inline text-xs text-primary">+ Assign</span>
+                                <span className="hidden group-hover:inline text-xs text-primary">
+                                  + Assign
+                                </span>
                                 <span className="group-hover:hidden">-</span>
                               </div>
                             )}
                           </TableCell>
-                        )
+                        );
                       })}
                     </TableRow>
                   ))}
@@ -491,10 +604,15 @@ const Classes = () => {
       </Dialog>
 
       {/* DIALOG: EDIT SLOT */}
-      <Dialog open={!!editingSlot} onOpenChange={(open) => !open && setEditingSlot(null)}>
+      <Dialog
+        open={!!editingSlot}
+        onOpenChange={(open) => !open && setEditingSlot(null)}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Edit Slot: {editingSlot?.day} - Period {editingSlot?.period}</DialogTitle>
+            <DialogTitle>
+              Edit Slot: {editingSlot?.day} - Period {editingSlot?.period}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
@@ -502,31 +620,41 @@ const Classes = () => {
               <Input
                 id="slotSubject"
                 value={slotForm.subject}
-                onChange={(e) => setSlotForm({ ...slotForm, subject: e.target.value })}
+                onChange={(e) =>
+                  setSlotForm({ ...slotForm, subject: e.target.value })
+                }
                 placeholder="Subject Name"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="slotTeacher">Teacher</Label>
-              <Select value={slotForm.teacher} onValueChange={(val) => setSlotForm({ ...slotForm, teacher: val })}>
+              <Select
+                value={slotForm.teacher}
+                onValueChange={(val) =>
+                  setSlotForm({ ...slotForm, teacher: val })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Teacher" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teachers.map(t => (
-                    <SelectItem key={t._id} value={t.name}>{t.name}</SelectItem>
+                  {teachers.map((t) => (
+                    <SelectItem key={t._id} value={t.name}>
+                      {t.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditingSlot(null)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setEditingSlot(null)}>
+                Cancel
+              </Button>
               <Button onClick={handleSaveSlot}>Save Slot</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };

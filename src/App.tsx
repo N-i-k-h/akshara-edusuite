@@ -2,7 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -70,7 +76,10 @@ const App = () => (
               <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
               <Route path="/faculty/students" element={<FacultyStudents />} />
               <Route path="/faculty/timetable" element={<FacultyTimetable />} />
-              <Route path="/faculty/attendance" element={<FacultyAttendance />} />
+              <Route
+                path="/faculty/attendance"
+                element={<FacultyAttendance />}
+              />
               <Route path="/faculty/exams" element={<FacultyExams />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/students" element={<Students />} />
@@ -83,7 +92,10 @@ const App = () => (
               <Route path="/fees" element={<Fees />} />
               <Route path="/fees-registration" element={<FeesRegistration />} />
               <Route path="/fees-estimation" element={<FeesEstimation />} />
-              <Route path="/transfer-certificate" element={<TransferCertificate />} />
+              <Route
+                path="/transfer-certificate"
+                element={<TransferCertificate />}
+              />
               <Route path="/study-certificate" element={<StudyCertificate />} />
               <Route path="/library" element={<Library />} />
               <Route path="/reports" element={<Reports />} />

@@ -31,7 +31,9 @@ const Assignments = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Assignments</h1>
-          <p className="text-muted-foreground">Create and track student assignments</p>
+          <p className="text-muted-foreground">
+            Create and track student assignments
+          </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -51,7 +53,10 @@ const Assignments = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" placeholder="Assignment description..." />
+                <Textarea
+                  id="description"
+                  placeholder="Assignment description..."
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -88,10 +93,15 @@ const Assignments = () => {
                 <Input id="dueDate" type="date" />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={() => setIsAddDialogOpen(false)}>Create</Button>
+                <Button onClick={() => setIsAddDialogOpen(false)}>
+                  Create
+                </Button>
               </div>
             </div>
           </DialogContent>
@@ -107,8 +117,12 @@ const Assignments = () => {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{assignment.subject}</p>
+                    <CardTitle className="text-lg">
+                      {assignment.title}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {assignment.subject}
+                    </p>
                   </div>
                   <Badge
                     className={
