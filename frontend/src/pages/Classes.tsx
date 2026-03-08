@@ -309,7 +309,7 @@ const Classes = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Classes</h1>
           <p className="text-muted-foreground">Manage classes and sections</p>
@@ -411,7 +411,7 @@ const Classes = () => {
               className="cursor-pointer transition-shadow hover:shadow-md"
             >
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <span className="text-lg">
                     {cls.grade.startsWith("D.")
                       ? cls.grade

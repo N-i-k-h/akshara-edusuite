@@ -162,6 +162,7 @@ const Fees = () => {
       dueAmount: currentBalance.toString(),
       amountPaid: "",
       date: "",
+      admissionNumber: student.admissionNumber || "",
     });
   };
 
@@ -230,11 +231,11 @@ const Fees = () => {
 
     const filename = `Receipt_${receiptData?.studentName || "Student"}_${Date.now()}.pdf`;
     const opt = {
-      margin: 0.5,
+      margin: 0,
       filename: filename,
-      image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "in", format: "a4", orientation: "portrait" as const },
+      image: { type: "jpeg" as const, quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowWidth: 794 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
     };
 
     // Force download via Blob
@@ -363,7 +364,7 @@ const Fees = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Fees Payment</h1>
           <p className="text-muted-foreground">
@@ -532,7 +533,7 @@ const Fees = () => {
                 </div>
               ) : (
                 // --- STANDARD MODE (For New) ---
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="amount">Amount Paying (₹)</Label>
                     <Input
@@ -739,11 +740,12 @@ const Fees = () => {
       </Card>
 
       {/* HIDDEN RECEIPT TEMPLATE FOR HTML2PDF */}
-      <div className="overflow-hidden h-0 w-0">
+      <div style={{ position: "absolute", top: "-9999px", left: "-9999px" }}>
         {receiptData && (
           <div
             ref={receiptRef}
-            className="w-[210mm] min-h-[297mm] p-8 bg-white text-black font-sans relative border-[3px] border-black"
+            className="w-[794px] h-[1123px] px-10 py-10 bg-white text-black font-sans relative border-4 border-black shrink-0"
+            style={{ boxSizing: "border-box" }}
           >
             {/* Header/Banner from Estimation style */}
             {/* Header/Banner from Estimation style */}
@@ -795,7 +797,7 @@ const Fees = () => {
             </div>
 
             <div className="mb-8 border-2 border-black p-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Student Name</p>
                   <p className="font-bold text-lg">{receiptData.studentName}</p>
@@ -846,7 +848,7 @@ const Fees = () => {
                 <h3 className="font-bold border-b border-black inline-block mb-2">
                   Payment Status
                 </h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                   <span className="text-gray-600">Total Agreed Fee:</span>
                   <span className="font-medium">
                     ₹ {Number(receiptData.totalFee).toLocaleString()}

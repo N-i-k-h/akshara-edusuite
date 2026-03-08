@@ -661,7 +661,7 @@ const Exams = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Exams & Grades</h1>
           <p className="text-muted-foreground">Create and manage exams</p>
@@ -681,7 +681,7 @@ const Exams = () => {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Exam Name</Label>
                   <Input
@@ -716,7 +716,7 @@ const Exams = () => {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <Label className="text-base">Subjects</Label>
                   <Button
                     variant="outline"
@@ -741,7 +741,7 @@ const Exams = () => {
                       <Trash2 className="h-3 w-3" />
                     </Button>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-xs">Subject Name</Label>
                         <Input
@@ -769,7 +769,7 @@ const Exams = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-xs">Date</Label>
                         <Input
@@ -858,7 +858,7 @@ const Exams = () => {
                     </div>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
                   <Button
                     variant="outline"
                     onClick={() => handleOpenGrading(exam)}

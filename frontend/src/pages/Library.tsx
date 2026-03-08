@@ -40,7 +40,7 @@ const Library = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Library</h1>
           <p className="text-muted-foreground">
@@ -71,7 +71,7 @@ const Library = () => {
                 <Label htmlFor="isbn">ISBN</Label>
                 <Input id="isbn" placeholder="Enter ISBN" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre</Label>
                   <Input id="genre" placeholder="e.g., Science" />

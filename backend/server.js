@@ -110,9 +110,10 @@ const User = mongoose.model("User", userSchema);
 const studentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    rollNo: { type: String, required: true, unique: true, trim: true },
-    email: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, trim: true },
+    admissionNumber: { type: String, required: true, unique: true, trim: true },
+    rollNo: { type: String, trim: true },
+    email: { type: String, trim: true },
+    phone: { type: String, trim: true },
     class: { type: String, required: true, trim: true },
     parentName: { type: String, required: true, trim: true },
     parentPhone: { type: String, required: true, trim: true },
@@ -128,6 +129,7 @@ const feeSchema = new mongoose.Schema(
   {
     studentId: { type: String, required: true },
     studentName: { type: String, required: true, trim: true },
+    admissionNumber: { type: String, trim: true },
     grade: { type: String, required: true, trim: true },
     feeType: { type: String, required: true, trim: true },
     amountPaid: { type: Number, required: true, min: 0 },
@@ -230,7 +232,8 @@ const Timetable = mongoose.model("Timetable", timetableSchema);
 const feeStructureSchema = new mongoose.Schema({
   studentId: { type: String, required: true },
   studentName: { type: String, required: true, trim: true },
-  rollNo: { type: String, required: true, trim: true },
+  admissionNumber: { type: String, required: true, trim: true },
+  rollNo: { type: String, trim: true },
   grade: { type: String, required: true, trim: true },
   academicYear: { type: String, required: true },
   feeComponents: {
@@ -318,6 +321,13 @@ const seedAdmin = async () => {
       } else {
         console.log("Admin user already exists");
       }
+    }
+
+    try {
+      await Student.collection.dropIndex("rollNo_1");
+      console.log("Dropped old rollNo unique index");
+    } catch (e) {
+      // Ignored if index does not exist
     }
 
     // Migrate all users with plain-text passwords
@@ -489,15 +499,15 @@ app.get("/api/students/:id", async (req, res) => {
 
 app.post("/api/students", async (req, res) => {
   try {
-    const { rollNo } = req.body;
-    if (!rollNo) {
-      return res.status(400).json({ message: "Roll number is required" });
+    const { admissionNumber } = req.body;
+    if (!admissionNumber) {
+      return res.status(400).json({ message: "Admission number is required" });
     }
-    const existingStudent = await Student.findOne({ rollNo: rollNo.trim() });
+    const existingStudent = await Student.findOne({ admissionNumber: admissionNumber.trim() });
     if (existingStudent) {
       return res
         .status(400)
-        .json({ message: "Student with this Roll Number already exists" });
+        .json({ message: "Student with this Admission Number already exists" });
     }
 
     const newStudent = new Student(req.body);
@@ -507,11 +517,54 @@ app.post("/api/students", async (req, res) => {
     if (error.code === 11000) {
       return res
         .status(400)
-        .json({ message: "Duplicate key error: Roll Number must be unique" });
+        .json({ message: "Duplicate key error: Admission Number must be unique" });
     }
     res
       .status(400)
       .json({ message: "Error creating student", error: error.message });
+  }
+});
+
+app.put("/api/students/:id", async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    if (!isValidObjectId(studentId)) {
+      return res.status(400).json({ message: "Invalid student ID" });
+    }
+
+    // Check admission number uniqueness if it's being updated
+    if (req.body.admissionNumber) {
+      const existingStudent = await Student.findOne({
+        admissionNumber: req.body.admissionNumber.trim(),
+        _id: { $ne: studentId },
+      });
+      if (existingStudent) {
+        return res
+          .status(400)
+          .json({ message: "Student with this Admission Number already exists" });
+      }
+    }
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      studentId,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    res.json(updatedStudent);
+  } catch (error) {
+    if (error.code === 11000) {
+      return res
+        .status(400)
+        .json({ message: "Duplicate key error: Admission Number must be unique" });
+    }
+    res
+      .status(400)
+      .json({ message: "Error updating student", error: error.message });
   }
 });
 
@@ -680,9 +733,14 @@ app.put("/api/staff/:id", async (req, res) => {
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: "Invalid staff ID" });
     }
-    const { name, email, phone, password } = req.body;
 
-    const updateData = { name, email, phone };
+    const updateData = { ...req.body };
+    const { password, name, email } = updateData;
+
+    // Remove password from simple update if it's empty
+    if (!password) {
+      delete updateData.password;
+    }
 
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 12);
@@ -692,8 +750,17 @@ app.put("/api/staff/:id", async (req, res) => {
       if (staff && staff.userId) {
         await User.findByIdAndUpdate(staff.userId, {
           password: hashedPassword,
-          name,
-          email,
+          name: name || staff.name,
+          email: email || staff.email,
+        });
+      }
+    } else {
+      // If we are updating name or email, sync it with the linked User account as well
+      const staff = await Staff.findById(id);
+      if (staff && staff.userId && (name || email)) {
+        await User.findByIdAndUpdate(staff.userId, {
+          name: name || staff.name,
+          email: email || staff.email,
         });
       }
     }

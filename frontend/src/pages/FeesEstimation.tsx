@@ -48,25 +48,7 @@ const FeesEstimation = () => {
 
   // Generate Admission Number on Mount
   useEffect(() => {
-    const generateAdmissionNumber = () => {
-      const currentYear = new Date().getFullYear().toString().slice(-2); // e.g., '26'
-      const storedSeq = localStorage.getItem("feeEstimationSeq");
-      let seq = storedSeq ? parseInt(storedSeq) : 0;
-
-      // Increment sequence
-      seq += 1;
-      localStorage.setItem("feeEstimationSeq", seq.toString());
-
-      // Format: YY + 01 + XXX (e.g., 2601001)
-      // The user requested 'year o1' which likely means static '01' or course related.
-      // We use '01' as static part based on request "year 26 and year o1".
-      const formattedSeq = seq.toString().padStart(3, "0");
-      const newAdmNo = `${currentYear}01${formattedSeq}`;
-
-      setFormData((prev) => ({ ...prev, admissionNumber: newAdmNo }));
-    };
-
-    generateAdmissionNumber();
+    // Admission Number logic removed as per request
   }, []);
 
   const handleInputChange = (field, value) => {
@@ -127,8 +109,8 @@ const FeesEstimation = () => {
     const opt = {
       margin: 0,
       filename: filename,
-      image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      image: { type: "jpeg" as const, quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowWidth: 794 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
     };
 
@@ -210,17 +192,7 @@ const FeesEstimation = () => {
                 placeholder="e.g. Rajesh Kumar"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Admission No. (Auto)</Label>
-              <Input
-                value={formData.admissionNumber}
-                onChange={(e) =>
-                  handleInputChange("admissionNumber", e.target.value)
-                }
-                placeholder="e.g. 2601001"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Course Year</Label>
                 <Select
@@ -260,7 +232,7 @@ const FeesEstimation = () => {
             <div className="border-t pt-4 space-y-3">
               <h3 className="font-semibold text-sm">Fee Particulars (₹)</h3>
 
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Registration Fee</Label>
                 <Input
                   type="number"
@@ -271,7 +243,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Admission Fee</Label>
                 <Input
                   type="number"
@@ -282,7 +254,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Laboratory Fee</Label>
                 <Input
                   type="number"
@@ -293,7 +265,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Internal Exam Fee</Label>
                 <Input
                   type="number"
@@ -304,7 +276,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Library Fee</Label>
                 <Input
                   type="number"
@@ -315,7 +287,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Sports/Welfare</Label>
                 <Input
                   type="number"
@@ -326,7 +298,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Tuition Fee</Label>
                 <Input
                   type="number"
@@ -337,7 +309,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Annual Exam Fee</Label>
                 <Input
                   type="number"
@@ -348,7 +320,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Books & Record</Label>
                 <Input
                   type="number"
@@ -359,7 +331,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Stationary</Label>
                 <Input
                   type="number"
@@ -370,7 +342,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Uniform Fee</Label>
                 <Input
                   type="number"
@@ -381,7 +353,7 @@ const FeesEstimation = () => {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
                 <Label className="text-xs">Food & Accom.</Label>
                 <Input
                   type="number"
@@ -397,7 +369,7 @@ const FeesEstimation = () => {
             {/* Custom Fees Section */}
             <div className="border-t pt-4 space-y-3">
               <h3 className="font-semibold text-sm">Add Custom Fees</h3>
-              <div className="grid grid-cols-3 gap-2 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
                 <div className="col-span-2 space-y-1">
                   <Label className="text-xs">Fee Name</Label>
                   <Input
@@ -461,8 +433,8 @@ const FeesEstimation = () => {
         <div className="lg:col-span-2 overflow-auto bg-gray-500/10 p-4 rounded-xl flex justify-center items-start min-h-[800px]">
           <div
             ref={printRef}
-            className="bg-white text-black p-8 w-[210mm] min-h-[297mm] shadow-2xl mx-auto flex flex-col relative border-[3px] border-black"
-            style={{ fontFamily: "'Times New Roman', serif" }}
+            className="bg-white text-black px-10 py-10 w-[794px] h-[1123px] shadow-2xl mx-auto flex flex-col relative border-4 border-black shrink-0"
+            style={{ fontFamily: "'Times New Roman', serif", boxSizing: "border-box" }}
           >
             {/* Header */}
             {/* Header */}
@@ -489,14 +461,11 @@ const FeesEstimation = () => {
 
             <div className="text-center mb-6">
               <h2 className="text-lg font-bold uppercase underline underline-offset-4">
-                Bonafide Student Certificate and Fees Estimate
+                Fee Estimation
               </h2>
             </div>
 
             {/* Date */}
-            <div className="absolute top-8 left-8 text-sm font-bold hidden">
-              Ref No: {formData.admissionNumber}
-            </div>
             <div className="absolute top-8 right-8 text-sm font-bold">
               Date: {today}
             </div>
@@ -517,10 +486,8 @@ const FeesEstimation = () => {
                   {formData.courseYear} {formData.course}
                 </span>{" "}
                 in our institution for the Academic Year{" "}
-                <span className="font-bold">{formData.academicYear}</span> with
-                Admission Number{" "}
-                <span className="font-bold">{formData.admissionNumber}</span>.
-                Total Duration of the program is Two academic years. Her/His
+                <span className="font-bold">{formData.academicYear}</span>. Total
+                Duration of the program is Two academic years. Her/His
                 fees details are as follows.
               </p>
             </div>

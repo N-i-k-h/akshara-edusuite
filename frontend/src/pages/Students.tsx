@@ -51,6 +51,7 @@ const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [classesList, setClassesList] = useState<any[]>([]);
 
@@ -58,11 +59,13 @@ const Students = () => {
   const [formData, setFormData] = useState({
     name: "",
     rollNo: "",
+    admissionNumber: "",
     email: "",
     phone: "",
     class: "",
     parentName: "",
     parentPhone: "",
+    status: "Active",
   });
 
   useEffect(() => {
@@ -103,35 +106,74 @@ const Students = () => {
     setFormData({ ...formData, class: value });
   };
 
+  const handleEditClick = (student: any) => {
+    setEditingStudentId(student._id || student.id);
+    setFormData({
+      name: student.name || "",
+      rollNo: student.rollNo || "",
+      admissionNumber: student.admissionNumber || "",
+      email: student.email || "",
+      phone: student.phone || "",
+      class: student.class || "",
+      parentName: student.parentName || "",
+      parentPhone: student.parentPhone || "",
+      status: student.status || "Active",
+    });
+    setIsAddDialogOpen(true);
+  };
+
+  const handleOpenAddNew = () => {
+    setEditingStudentId(null);
+    setFormData({
+      name: "",
+      rollNo: "",
+      admissionNumber: "",
+      email: "",
+      phone: "",
+      class: "",
+      parentName: "",
+      parentPhone: "",
+      status: "Active",
+    });
+    setIsAddDialogOpen(true);
+  };
+
   const handleAddStudent = async () => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/students`, {
-        method: "POST",
+      const url = editingStudentId
+        ? `${API_BASE_URL}/students/${editingStudentId}`
+        : `${API_BASE_URL}/students`;
+
+      const response = await authFetch(url, {
+        method: editingStudentId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        toast.success("Student added successfully");
+        toast.success(editingStudentId ? "Student updated successfully" : "Student added successfully");
         fetchStudents();
         setIsAddDialogOpen(false);
+        setEditingStudentId(null);
         setFormData({
           name: "",
           rollNo: "",
+          admissionNumber: "",
           email: "",
           phone: "",
           class: "",
           parentName: "",
           parentPhone: "",
+          status: "Active",
         });
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || "Failed to add student");
-        console.error("Failed to add student:", errorData);
+        toast.error(errorData.message || (editingStudentId ? "Failed to update student" : "Failed to add student"));
+        console.error("Failed to save student:", errorData);
       }
     } catch (error) {
-      console.error("Error adding student:", error);
-      toast.error("An error occurred while adding student");
+      console.error("Error saving student:", error);
+      toast.error("An error occurred while saving student");
     }
   };
 
@@ -290,7 +332,7 @@ const Students = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Students</h1>
           <p className="text-muted-foreground">
@@ -298,18 +340,12 @@ const Students = () => {
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Student
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Add New Student</DialogTitle>
+              <DialogTitle>{editingStudentId ? "Edit Student Details" : "Add New Student"}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
                   <Input
@@ -320,7 +356,7 @@ const Students = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="rollNo">Roll Number</Label>
+                  <Label htmlFor="rollNo">Roll Number (Optional)</Label>
                   <Input
                     id="rollNo"
                     placeholder="Enter roll number"
@@ -329,7 +365,16 @@ const Students = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="admissionNumber">Admission Number</Label>
+                  <Input
+                    id="admissionNumber"
+                    placeholder="Enter admission number"
+                    value={formData.admissionNumber}
+                    onChange={handleInputChange}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -340,6 +385,8 @@ const Students = () => {
                     onChange={handleInputChange}
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
                   <Input
@@ -349,8 +396,6 @@ const Students = () => {
                     onChange={handleInputChange}
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="class">Class</Label>
                   <Select
@@ -381,6 +426,8 @@ const Students = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="parentName">Parent Name</Label>
                   <Input
@@ -390,15 +437,33 @@ const Students = () => {
                     onChange={handleInputChange}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="parentPhone">Parent Phone</Label>
+                  <Input
+                    id="parentPhone"
+                    placeholder="Enter parent phone"
+                    value={formData.parentPhone}
+                    onChange={handleInputChange}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="parentPhone">Parent Phone</Label>
-                <Input
-                  id="parentPhone"
-                  placeholder="Enter parent phone"
-                  value={formData.parentPhone}
-                  onChange={handleInputChange}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    onValueChange={(val) => setFormData({ ...formData, status: val })}
+                    value={formData.status}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="Graduated">Graduated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button
@@ -407,7 +472,7 @@ const Students = () => {
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleAddStudent}>Save Student</Button>
+                <Button onClick={handleAddStudent}>{editingStudentId ? "Update Student" : "Save Student"}</Button>
               </div>
             </div>
           </DialogContent>
@@ -448,7 +513,7 @@ const Students = () => {
                 </div>
 
                 {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">
                       Father's / Parent Name
@@ -511,9 +576,9 @@ const Students = () => {
                     Subject-wise Attendance
                   </h3>
                   {subjectAttendance &&
-                  subjectAttendance.subjects &&
-                  subjectAttendance.subjects.length > 0 ? (
-                    <div className="border rounded-md overflow-hidden">
+                    subjectAttendance.subjects &&
+                    subjectAttendance.subjects.length > 0 ? (
+                    <div className="border rounded-md overflow-x-auto">
                       <Table>
                         <TableHeader className="bg-slate-50">
                           <TableRow>
@@ -593,7 +658,7 @@ const Students = () => {
                 <div className="space-y-3">
                   <h3 className="font-semibold text-lg">Examination Results</h3>
                   {studentExams.length > 0 ? (
-                    <div className="border rounded-md overflow-hidden">
+                    <div className="border rounded-md overflow-x-auto">
                       <Table>
                         <TableHeader className="bg-slate-50">
                           <TableRow>
@@ -691,11 +756,12 @@ const Students = () => {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border bg-card">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Roll No</TableHead>
+              <TableHead>Admission No</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Class</TableHead>
               <TableHead>Email</TableHead>
@@ -708,13 +774,13 @@ const Students = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   Loading students...
                 </TableCell>
               </TableRow>
             ) : filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   No students found
                 </TableCell>
               </TableRow>
@@ -724,6 +790,7 @@ const Students = () => {
                   <TableCell className="font-medium">
                     {student.rollNo}
                   </TableCell>
+                  <TableCell>{student.admissionNumber}</TableCell>
                   <TableCell>{student.name}</TableCell>
                   <TableCell>{student.class}</TableCell>
                   <TableCell>{student.email}</TableCell>
@@ -760,6 +827,10 @@ const Students = () => {
                         >
                           <Eye className="mr-2 h-4 w-4" />
                           View Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClick(student)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"

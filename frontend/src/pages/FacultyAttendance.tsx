@@ -361,7 +361,7 @@ const FacultyAttendance = () => {
                   onClick={() => handleClassClick(classInfo.className)}
                 >
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
+                    <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <span>{classInfo.className}</span>
                       <Badge variant="secondary">
                         {classInfo.periods.length} periods

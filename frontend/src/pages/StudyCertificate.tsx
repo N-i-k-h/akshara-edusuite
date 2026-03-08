@@ -393,7 +393,7 @@ const StudyCertificate = () => {
                   <Label className="font-bold text-blue-600">
                     Princ. Qualifications
                   </Label>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs">
                     <label>
                       <input
                         type="checkbox"
@@ -695,7 +695,7 @@ const StudyCertificate = () => {
                   </table>
 
                   {/* Principal Details Section */}
-                  <div className="grid grid-cols-2 border border-black mb-16">
+                  <div className="grid grid-cols-1 md:grid-cols-2 border border-black mb-16">
                     {/* Left: Registration Details */}
                     <div className="border-r border-black">
                       <div className="bg-gray-100 font-bold text-center p-1 border-b border-black text-sm">
@@ -754,7 +754,7 @@ const StudyCertificate = () => {
                       <div className="bg-gray-100 font-bold text-center p-1 border-b border-black text-sm">
                         Educational Qualifications of the Principal
                       </div>
-                      <div className="grid grid-cols-2 text-xs">
+                      <div className="grid grid-cols-1 md:grid-cols-2 text-xs">
                         <div className="border-r border-black">
                           <div className="text-center font-semibold border-b border-black bg-gray-50 p-1">
                             Degree/s Obtained

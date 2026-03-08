@@ -60,7 +60,7 @@ const FacultySidebar = ({ isOpen, onClose }: FacultySidebarProps) => {
             <X className="h-5 w-5" />
           </Button>
         </div>
-        <nav className="flex flex-col gap-1 p-4">
+        <nav className="flex flex-col gap-1 p-4 overflow-y-auto max-h-[calc(100vh-4rem)] pb-20">
           {facultyNavigation.map((item) => (
             <NavLink
               key={item.name}

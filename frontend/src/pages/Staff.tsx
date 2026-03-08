@@ -54,6 +54,7 @@ interface StaffMember {
 const Staff = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -92,6 +93,38 @@ const Staff = () => {
     setNewStaff({ ...newStaff, [field]: value });
   };
 
+  const handleAddStaffClick = () => {
+    setEditingStaffId(null);
+    setNewStaff({
+      name: "",
+      role: "",
+      department: "",
+      salary: "",
+      email: "",
+      phone: "",
+      password: "",
+      joiningDate: new Date().toISOString().split("T")[0],
+      status: "Active",
+    });
+    setIsAddDialogOpen(true);
+  };
+
+  const handleEditStaffClick = (member: StaffMember) => {
+    setEditingStaffId(member._id);
+    setNewStaff({
+      name: member.name || "",
+      role: member.role || "",
+      department: member.department || "",
+      salary: member.salary ? member.salary.toString() : "",
+      email: member.email || "",
+      phone: member.phone || "",
+      password: "", // User leaves empty to not change password
+      joiningDate: member.joiningDate || new Date().toISOString().split("T")[0],
+      status: member.status || "Active",
+    });
+    setIsAddDialogOpen(true);
+  };
+
   const handleSaveStaff = async () => {
     if (
       !newStaff.name ||
@@ -100,9 +133,9 @@ const Staff = () => {
       !newStaff.department ||
       !newStaff.phone ||
       !newStaff.salary ||
-      !newStaff.password
+      (!editingStaffId && !newStaff.password) // require password only on create
     ) {
-      toast.error("Please fill in all required fields including password");
+      toast.error("Please fill in all required fields" + (!editingStaffId ? " including password" : ""));
       return;
     }
 
@@ -112,10 +145,12 @@ const Staff = () => {
         salary: Number(newStaff.salary),
       };
 
-      console.log("Sending payload:", payload);
+      const url = editingStaffId
+        ? `${API_BASE_URL}/staff/${editingStaffId}`
+        : `${API_BASE_URL}/staff`;
 
-      const response = await authFetch(`${API_BASE_URL}/staff`, {
-        method: "POST",
+      const response = await authFetch(url, {
+        method: editingStaffId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -123,8 +158,9 @@ const Staff = () => {
       });
 
       if (response.ok) {
-        toast.success("Staff member added successfully");
+        toast.success(editingStaffId ? "Staff member updated successfully" : "Staff member added successfully");
         setIsAddDialogOpen(false);
+        setEditingStaffId(null);
         fetchStaff(); // Refresh list
         // Reset form
         setNewStaff({
@@ -146,19 +182,14 @@ const Staff = () => {
             `Failed: ${errorData.message} ${errorData.error ? "- " + errorData.error : ""}`,
           );
         } catch (e) {
-          console.error(
-            "Non-JSON response:",
-            response.status,
-            response.statusText,
-          );
           toast.error(
             `Failed: Server returned ${response.status} ${response.statusText}`,
           );
         }
       }
     } catch (error) {
-      console.error("Error adding staff:", error);
-      toast.error("Failed to add staff: Network or server error");
+      console.error("Error saving staff:", error);
+      toast.error("Failed to save staff: Network or server error");
     }
   };
 
@@ -201,7 +232,7 @@ const Staff = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Staff & HR</h1>
           <p className="text-muted-foreground">
@@ -210,17 +241,17 @@ const Staff = () => {
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={handleAddStaffClick}>
               <Plus className="mr-2 h-4 w-4" />
               Add Staff
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Add New Staff Member</DialogTitle>
+              <DialogTitle>{editingStaffId ? "Edit Staff Details" : "Add New Staff Member"}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">
                     Full Name <span className="text-red-500">*</span>
@@ -251,7 +282,7 @@ const Staff = () => {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="department">
                     Department <span className="text-red-500">*</span>
@@ -280,7 +311,7 @@ const Staff = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">
                     Email <span className="text-red-500">*</span>
@@ -305,10 +336,10 @@ const Staff = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="password">
-                    Password <span className="text-red-500">*</span>
+                    Password {editingStaffId ? "(Optional)" : <span className="text-red-500">*</span>}
                   </Label>
                   <Input
                     id="password"
@@ -317,7 +348,7 @@ const Staff = () => {
                     onChange={(e) =>
                       handleInputChange("password", e.target.value)
                     }
-                    placeholder="Enter login password"
+                    placeholder={editingStaffId ? "Leave blank to keep same" : "Enter login password"}
                   />
                   <p className="text-xs text-muted-foreground">
                     This will be used for faculty login
@@ -331,7 +362,7 @@ const Staff = () => {
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleSaveStaff}>Save Staff</Button>
+                <Button onClick={handleSaveStaff}>{editingStaffId ? "Update Staff" : "Save Staff"}</Button>
               </div>
             </div>
           </DialogContent>
@@ -350,7 +381,7 @@ const Staff = () => {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border bg-card">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -413,6 +444,10 @@ const Staff = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleEditStaffClick(member)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => handleDeleteStaff(member._id)}
