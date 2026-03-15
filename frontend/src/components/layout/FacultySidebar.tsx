@@ -20,7 +20,7 @@ const facultyNavigation = [
   { name: "Dashboard", href: "/faculty-dashboard", icon: LayoutDashboard },
   { name: "My Students", href: "/faculty/students", icon: Users },
   { name: "My Timetable", href: "/faculty/timetable", icon: Calendar },
-  { name: "Attendance", href: "/faculty/attendance", icon: ClipboardCheck },
+
   { name: "Exams & Grades", href: "/faculty/exams", icon: FileText },
 ];
 

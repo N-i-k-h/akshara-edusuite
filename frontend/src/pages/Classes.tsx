@@ -184,33 +184,7 @@ const Classes = () => {
           (s: any) => s.class === classNameFull || s.class === cls.grade,
         );
 
-        // Fetch real attendance stats for each student
-        const studentsWithStats = await Promise.all(
-          filtered.map(async (student: any) => {
-            let attendancePercentage = 0; // Default
-            try {
-              const statsRes = await authFetch(
-                `${API_BASE_URL}/attendance/student/${student._id}`,
-              );
-              if (statsRes.ok) {
-                const stats = await statsRes.json();
-                attendancePercentage = stats.attendancePercentage || 0;
-              }
-            } catch (e) {
-              console.error(
-                `Error fetching stats for student ${student._id}`,
-                e,
-              );
-            }
-
-            return {
-              ...student,
-              attendancePercentage,
-            };
-          }),
-        );
-
-        setSelectedClassStudents(studentsWithStats);
+        setSelectedClassStudents(filtered);
       }
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -481,7 +455,7 @@ const Classes = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Parent Name</TableHead>
                     <TableHead>Fees Status</TableHead>
-                    <TableHead>Attendance</TableHead>
+
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -504,24 +478,7 @@ const Classes = () => {
                           {student.feesPaid ? "Paid" : "Due"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`font-bold ${student.attendancePercentage < 75 ? "text-red-500" : "text-green-600"}`}
-                          >
-                            {student.attendancePercentage}%
-                          </span>
-                          {/* Simple Progress Bar Visual */}
-                          <div className="h-2 w-16 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full ${student.attendancePercentage < 75 ? "bg-red-500" : "bg-green-500"}`}
-                              style={{
-                                width: `${student.attendancePercentage}%`,
-                              }}
-                            ></div>
-                          </div>
-                        </div>
-                      </TableCell>
+
                     </TableRow>
                   ))}
                 </TableBody>

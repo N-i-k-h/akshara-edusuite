@@ -227,31 +227,21 @@ const Students = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [studentStats, setStudentStats] = useState({
-    attendance: 0,
     totalFee: 0,
     paidFee: 0,
     dueFee: 0,
   });
   const [studentExams, setStudentExams] = useState<any[]>([]);
-  const [subjectAttendance, setSubjectAttendance] = useState<any>(null);
+
 
   const handleViewProfile = async (student: any) => {
     setSelectedStudent(student);
     setIsProfileOpen(true);
     setStudentExams([]); // Clear previous exams
-    setSubjectAttendance(null); // Clear previous attendance
 
     // Fetch Stats
     try {
-      // 1. Attendance
-      const attRes = await authFetch(
-        `${API_BASE_URL}/attendance/student/${student._id}`,
-      );
-      let attendanceVal = 0;
-      if (attRes.ok) {
-        const attData = await attRes.json();
-        attendanceVal = attData.attendancePercentage || 0;
-      }
+
 
       // 2. Fees
       const [feesRes, structRes] = await Promise.all([
@@ -287,7 +277,6 @@ const Students = () => {
       }
 
       setStudentStats({
-        attendance: attendanceVal,
         totalFee: total,
         paidFee: paid,
         dueFee: total - paid,
@@ -302,14 +291,7 @@ const Students = () => {
         setStudentExams(examsData);
       }
 
-      // 4. Subject-wise Attendance
-      const subAttRes = await authFetch(
-        `${API_BASE_URL}/attendance/student/${student._id}/subjects`,
-      );
-      if (subAttRes.ok) {
-        const subAttData = await subAttRes.json();
-        setSubjectAttendance(subAttData);
-      }
+
     } catch (error) {
       console.error("Error fetching profile stats:", error);
     }
@@ -545,14 +527,6 @@ const Students = () => {
                 {/* Performance Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <p className="text-sm text-gray-500 mb-1">Attendance</p>
-                    <p
-                      className={`text-2xl font-bold ${studentStats.attendance < 75 ? "text-red-600" : "text-green-600"}`}
-                    >
-                      {studentStats.attendance}%
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                     <p className="text-sm text-gray-500 mb-1">
                       Total Fees Paid
                     </p>
@@ -570,89 +544,7 @@ const Students = () => {
                   </div>
                 </div>
 
-                {/* Subject-wise Attendance Table */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-lg">
-                    Subject-wise Attendance
-                  </h3>
-                  {subjectAttendance &&
-                    subjectAttendance.subjects &&
-                    subjectAttendance.subjects.length > 0 ? (
-                    <div className="border rounded-md overflow-x-auto">
-                      <Table>
-                        <TableHeader className="bg-slate-50">
-                          <TableRow>
-                            <TableHead>Subject</TableHead>
-                            <TableHead className="text-center">
-                              Total Classes
-                            </TableHead>
-                            <TableHead className="text-center">
-                              Attended
-                            </TableHead>
-                            <TableHead className="text-center">
-                              Absent
-                            </TableHead>
-                            <TableHead className="text-right">
-                              Attendance %
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {subjectAttendance.subjects.map(
-                            (sub: any, idx: number) => (
-                              <TableRow key={idx}>
-                                <TableCell className="font-medium">
-                                  {sub.subject}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  {sub.totalClasses}
-                                </TableCell>
-                                <TableCell className="text-center text-green-600">
-                                  {sub.attended}
-                                </TableCell>
-                                <TableCell className="text-center text-red-600">
-                                  {sub.totalClasses - sub.attended}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <span
-                                    className={`font-bold ${sub.percentage < 75 ? "text-red-600" : "text-green-600"}`}
-                                  >
-                                    {sub.percentage}%
-                                  </span>
-                                </TableCell>
-                              </TableRow>
-                            ),
-                          )}
-                          {/* Overall Row */}
-                          <TableRow className="bg-blue-50 font-semibold">
-                            <TableCell className="font-bold">Overall</TableCell>
-                            <TableCell className="text-center font-bold">
-                              {subjectAttendance.overall.totalClasses}
-                            </TableCell>
-                            <TableCell className="text-center font-bold text-green-700">
-                              {subjectAttendance.overall.totalAttended}
-                            </TableCell>
-                            <TableCell className="text-center font-bold text-red-700">
-                              {subjectAttendance.overall.totalClasses -
-                                subjectAttendance.overall.totalAttended}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span
-                                className={`font-bold text-lg ${subjectAttendance.overall.percentage < 75 ? "text-red-700" : "text-green-700"}`}
-                              >
-                                {subjectAttendance.overall.percentage}%
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      No attendance records found for this student.
-                    </p>
-                  )}
-                </div>
+
 
                 {/* Exam Results Table */}
                 <div className="space-y-3">

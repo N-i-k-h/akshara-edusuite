@@ -220,14 +220,7 @@ const FacultyDashboard = () => {
                         </p>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        (window.location.href = `/attendance?class=${period.className}&period=${period.period}`)
-                      }
-                    >
-                      Mark Attendance
-                    </Button>
+
                   </div>
                 ))}
             </div>

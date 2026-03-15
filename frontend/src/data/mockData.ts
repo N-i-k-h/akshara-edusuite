@@ -4,7 +4,7 @@ export const dashboardStats = {
   totalStudents: 1247,
   activeTeachers: 68,
   feesCollected: 2450000,
-  todayAttendance: 92.5,
+
 };
 
 export const students = [];
@@ -15,7 +15,7 @@ export const classes = [];
 
 export const timetable = [];
 
-export const attendance = [];
+
 
 export const exams = [];
 

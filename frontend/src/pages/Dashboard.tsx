@@ -7,6 +7,8 @@ import {
   CreditCard,
   AlertTriangle,
   Clock,
+  Wallet,
+  TrendingUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +30,10 @@ const Dashboard = () => {
     totalRevenue: 0,
     feesCollected: 0,
     feesDue: 0,
+    totalExpenditure: 0,
+    netRevenue: 0,
     feeDefaulters: [],
-    lowAttendanceStudents: [],
+
   });
 
   useEffect(() => {
@@ -68,22 +72,32 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Students"
-          value={stats.totalStudents.toLocaleString()}
+          value={(stats.totalStudents || 0).toLocaleString()}
           icon={Users}
         />
         <StatCard
           title="Total Faculty"
-          value={stats.totalFaculty.toLocaleString()}
+          value={(stats.totalFaculty || 0).toLocaleString()}
           icon={UserCheck}
         />
         <StatCard
           title="Total Revenue"
-          value={`₹${stats.totalRevenue.toLocaleString()}`}
+          value={`₹${(stats.totalRevenue || 0).toLocaleString()}`}
           icon={CreditCard}
         />
         <StatCard
+          title="Total Expenditure"
+          value={`₹${(stats.totalExpenditure || 0).toLocaleString()}`}
+          icon={Wallet}
+        />
+        <StatCard
+          title="Net Balance"
+          value={`₹${(stats.netRevenue || 0).toLocaleString()}`}
+          icon={TrendingUp}
+        />
+        <StatCard
           title="Fees Due"
-          value={`₹${stats.feesDue.toLocaleString()}`}
+          value={`₹${(stats.feesDue || 0).toLocaleString()}`}
           icon={AlertTriangle}
         />
       </div>
@@ -182,46 +196,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Low Attendance List */}
-          <Card>
-            <CardHeader className="py-4">
-              <CardTitle className="text-base flex items-center gap-2 text-destructive">
-                <Clock className="h-4 w-4" />
-                Low Attendance (&lt;85%)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              <div className="space-y-3">
-                {stats.lowAttendanceStudents &&
-                stats.lowAttendanceStudents.length > 0 ? (
-                  stats.lowAttendanceStudents.map(
-                    (student: any, index: number) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">
-                            {student.studentName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {student.className}
-                          </p>
-                        </div>
-                        <Badge variant="destructive">
-                          {student.attendancePercentage?.toFixed(1)}%
-                        </Badge>
-                      </div>
-                    ),
-                  )
-                ) : (
-                  <p className="text-sm text-muted-foreground py-2 text-center">
-                    All students have good attendance.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+
         </div>
       </div>
     </div>

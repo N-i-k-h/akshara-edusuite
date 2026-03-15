@@ -42,6 +42,7 @@ const Reports = () => {
   const [feeStructures, setFeeStructures] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [students, setStudents] = useState<any[]>([]);
+  const [allExpenditures, setAllExpenditures] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -54,9 +55,12 @@ const Reports = () => {
     totalDueAmount: 0,
     studentsWithDue: 0,
     totalExpectedFee: 0,
+    totalExpenditure: 0,
+    netProfit: 0,
   });
 
   const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
+  const [filteredExpenditures, setFilteredExpenditures] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -64,23 +68,26 @@ const Reports = () => {
 
   const fetchData = async () => {
     try {
-      const [feesRes, studentsRes, structRes] = await Promise.all([
+      const [feesRes, studentsRes, structRes, expRes] = await Promise.all([
         authFetch(`${API_BASE_URL}/fees?t=${Date.now()}`),
         authFetch(`${API_BASE_URL}/students`),
         authFetch(`${API_BASE_URL}/fee-structures`),
+        authFetch(`${API_BASE_URL}/expenditures`),
       ]);
 
-      if (feesRes.ok && studentsRes.ok && structRes.ok) {
+      if (feesRes.ok && studentsRes.ok && structRes.ok && expRes.ok) {
         const feesData = await feesRes.json();
         const studentsData = await studentsRes.json();
         const structData = await structRes.json();
+        const expData = await expRes.json();
 
         setAllFees(feesData);
         setStudents(studentsData);
         setFeeStructures(structData);
+        setAllExpenditures(expData);
 
         calculateGlobalDues(feesData, structData);
-        filterByDate(feesData, "", "");
+        filterByDate(feesData, expData, "", "");
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -120,8 +127,9 @@ const Reports = () => {
     }));
   };
 
-  const filterByDate = (fees: any[], start: string, end: string) => {
-    let filtered = fees;
+  const filterByDate = (fees: any[], expenditures: any[], start: string, end: string) => {
+    let filteredFees = fees;
+    let filteredExp = expenditures;
 
     if (start && end) {
       const s = new Date(start);
@@ -129,34 +137,47 @@ const Reports = () => {
       const e = new Date(end);
       e.setHours(23, 59, 59, 999);
 
-      filtered = fees.filter((f) => {
+      filteredFees = fees.filter((f) => {
         const d = new Date(f.date);
+        return d >= s && d <= e;
+      });
+
+      filteredExp = expenditures.filter((exp) => {
+        const d = new Date(exp.date || exp.createdAt);
         return d >= s && d <= e;
       });
     }
 
-    const collected = filtered.reduce(
+    const collected = filteredFees.reduce(
       (sum: number, f: any) => sum + (Number(f.amountPaid) || 0),
       0,
     );
 
-    setFilteredTransactions(filtered);
+    const totalExp = filteredExp.reduce(
+      (sum: number, exp: any) => sum + (Number(exp.amount) || 0),
+      0,
+    );
+
+    setFilteredTransactions(filteredFees);
+    setFilteredExpenditures(filteredExp);
     setReportData((prev) => ({
       ...prev,
       collectedAmount: collected,
-      collectedCount: filtered.length,
+      collectedCount: filteredFees.length,
+      totalExpenditure: totalExp,
+      netProfit: collected - totalExp,
     }));
   };
 
   const handleApplyFilter = () => {
-    filterByDate(allFees, startDate, endDate);
+    filterByDate(allFees, allExpenditures, startDate, endDate);
     toast.success("Report updated");
   };
 
   const handleReset = () => {
     setStartDate("");
     setEndDate("");
-    filterByDate(allFees, "", "");
+    filterByDate(allFees, allExpenditures, "", "");
     toast.info("Filters reset");
   };
 
@@ -341,7 +362,7 @@ const Reports = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card className="bg-green-50 border-green-200 shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-green-900">
@@ -362,47 +383,30 @@ const Reports = () => {
           <Card className="bg-red-50 border-red-200 shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-red-900">
-                Total Due Amount
+                Total Expenses
               </CardTitle>
               <CreditCard className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-700">
-                ₹{reportData.totalDueAmount.toLocaleString()}
+                ₹{reportData.totalExpenditure.toLocaleString()}
               </div>
-              <p className="text-xs text-red-600">Outstanding balance</p>
+              <p className="text-xs text-red-600">Total outgoings</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-50 border-orange-200 shadow-none">
+          <Card className={`border shadow-none ${reportData.netProfit >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200'}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-900">
-                Students with Dues
+              <CardTitle className={`text-sm font-medium ${reportData.netProfit >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
+                Net Balance / Profit
               </CardTitle>
-              <Users className="h-4 w-4 text-orange-600" />
+              <DollarSign className={`h-4 w-4 ${reportData.netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-700">
-                {reportData.studentsWithDue}
+              <div className={`text-2xl font-bold ${reportData.netProfit >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                ₹{reportData.netProfit.toLocaleString()}
               </div>
-              <p className="text-xs text-orange-600">Pending payments</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-50 border-slate-200 shadow-none">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Expected
-              </CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ₹{reportData.totalExpectedFee.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Based on structures
-              </p>
+              <p className={`text-xs ${reportData.netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>Revenue - Expenses</p>
             </CardContent>
           </Card>
         </div>
@@ -463,6 +467,67 @@ const Reports = () => {
                   </TableCell>
                   <TableCell className="text-right text-green-700 text-lg">
                     ₹{reportData.collectedAmount.toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Detailed Expenditures List */}
+        <Card className="shadow-none border mt-6">
+          <CardHeader>
+            <CardTitle>Expenditure History</CardTitle>
+            <CardDescription>
+              Detailed list of all college expenses in this period
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredExpenditures.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="text-center py-4 text-muted-foreground"
+                    >
+                      No expenditures found for this period.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredExpenditures.map((exp) => (
+                    <TableRow key={exp._id}>
+                      <TableCell>
+                        {new Date(exp.date || exp.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {exp.title}
+                      </TableCell>
+                      <TableCell>{exp.category}</TableCell>
+                      <TableCell>{exp.paymentMethod || "Cash"}</TableCell>
+                      <TableCell className="text-right font-bold text-red-600">
+                        ₹{Number(exp.amount).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+              <TableFooter>
+                <TableRow className="bg-muted/50 font-bold">
+                  <TableCell colSpan={4} className="text-right">
+                    Total Expenditure
+                  </TableCell>
+                  <TableCell className="text-right text-red-700 text-lg">
+                    ₹{reportData.totalExpenditure.toLocaleString()}
                   </TableCell>
                 </TableRow>
               </TableFooter>
