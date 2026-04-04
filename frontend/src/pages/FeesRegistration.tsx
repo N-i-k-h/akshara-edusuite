@@ -12,8 +12,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
-import { Printer, Download, Calculator, Plus, Trash2, Save } from "lucide-react";
+import { Printer, Download, Calculator, Plus, Trash2, Save, CreditCard } from "lucide-react";
 import { API_BASE_URL, authFetch } from "@/config";
+import { ToWords } from 'to-words';
+
+const toWords = new ToWords();
 
 const FeesRegistration = () => {
   const printRef = useRef(null);
@@ -21,34 +24,40 @@ const FeesRegistration = () => {
   const [classesList, setClassesList] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
+    receiptNo: "623",
+    date: new Date().toLocaleDateString("en-GB"),
     studentName: "",
-    email: "",
-    rollNo: "",
+    genderPrefix: "Sri /Miss",
     parentName: "",
-    parentPhone: "",
     class: "",
+    course: "D. Pharma",
     academicYear: "2025-26",
-    course: "D.Pharmacy",
-
-    // Fee Components
-    registrationFee: "100",
-    admissionFee: "1000",
-    laboratoryFee: "2500",
-    internalExamFee: "2500",
-    libraryFee: "2500",
-    sportsFee: "2500",
-    tuitionFee: "45000",
-    annualExamFee: "2500",
-    booksRecordFee: "3900",
-    stationaryCharges: "2500",
-    uniformFee: "5000",
-    foodAccomFee: "60000",
+    yearPrefix: "I / II",
+    rollNo: "",
     admissionNumber: "",
+    email: "",
+    parentPhone: "",
+    paymentMethod: "Cash",
+    chequeNo: "",
   });
 
-  const [customFees, setCustomFees] = useState<
-    { id: number; name: string; value: string }[]
-  >([]);
+  const [feeItems, setFeeItems] = useState([
+    { id: 1, name: "Application Fee", value: "0" },
+    { id: 2, name: "Admission Fee", value: "0" },
+    { id: 3, name: "Eligibility Fee", value: "0" },
+    { id: 4, name: "Tuition Fee", value: "0" },
+    { id: 5, name: "Library & R.R. Fee", value: "0" },
+    { id: 6, name: "Identity Card Fee", value: "0" },
+    { id: 7, name: "Laboratory Fee", value: "0" },
+    { id: 8, name: "Sports Fee", value: "0" },
+    { id: 9, name: "Cultural Fee", value: "0" },
+    { id: 10, name: "Annual Day Fee", value: "0" },
+    { id: 11, name: "Digital Library Fee", value: "0" },
+    { id: 12, name: "Internal Examination Fee", value: "0" },
+    { id: 13, name: "Breakage Fee", value: "0" },
+    { id: 14, name: "Others", value: "0" },
+  ]);
+
   const [newFeeName, setNewFeeName] = useState("");
   const [newFeeAmount, setNewFeeAmount] = useState("");
 
@@ -68,20 +77,13 @@ const FeesRegistration = () => {
     fetchClasses();
 
     const generateAdmissionNumber = () => {
-      const currentYear = new Date().getFullYear().toString().slice(-2); // e.g., '26'
+      const currentYear = new Date().getFullYear().toString().slice(-2);
       const storedSeq = localStorage.getItem("feeEstimationSeq");
       let seq = storedSeq ? parseInt(storedSeq) : 0;
-
-      // Increment sequence
       seq += 1;
       localStorage.setItem("feeEstimationSeq", seq.toString());
-
-      // Format: YY + 01 + XXX (e.g., 2601001)
-      // The user requested 'year o1' which likely means static '01' or course related.
-      // We use '01' as static part based on request "year 26 and year o1".
       const formattedSeq = seq.toString().padStart(3, "0");
       const newAdmNo = `${currentYear}01${formattedSeq}`;
-
       setFormData((prev) => ({ ...prev, admissionNumber: newAdmNo }));
     };
 
@@ -97,42 +99,35 @@ const FeesRegistration = () => {
       toast.error("Please enter both fee name and amount");
       return;
     }
-    setCustomFees([
-      ...customFees,
+    setFeeItems([
+      ...feeItems,
       { id: Date.now(), name: newFeeName, value: newFeeAmount },
     ]);
     setNewFeeName("");
     setNewFeeAmount("");
   };
 
-  const removeCustomFee = (id: number) => {
-    setCustomFees(customFees.filter((fee) => fee.id !== id));
+  const removeFeeItem = (id: number) => {
+    setFeeItems(feeItems.filter((fee) => fee.id !== id));
+  };
+
+  const handleFeeValueChange = (id: number, newValue: string) => {
+    setFeeItems(feeItems.map(item => 
+      item.id === id ? { ...item, value: newValue } : item
+    ));
+  };
+
+  const handleFeeNameChange = (id: number, newName: string) => {
+    setFeeItems(feeItems.map(item => 
+      item.id === id ? { ...item, name: newName } : item
+    ));
   };
 
   const calculateTotal = () => {
-    const standardTotal =
-      Number(formData.registrationFee) +
-      Number(formData.admissionFee) +
-      Number(formData.laboratoryFee) +
-      Number(formData.internalExamFee) +
-      Number(formData.libraryFee) +
-      Number(formData.sportsFee) +
-      Number(formData.tuitionFee) +
-      Number(formData.annualExamFee) +
-      Number(formData.booksRecordFee) +
-      Number(formData.stationaryCharges) +
-      Number(formData.uniformFee) +
-      Number(formData.foodAccomFee);
-
-    const customTotal = customFees.reduce(
-      (sum, fee) => sum + (Number(fee.value) || 0),
-      0,
-    );
-
-    return standardTotal + customTotal;
+    return feeItems.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
   };
 
-  const handleRegisterStudentAndFees = async () => {
+  const handleRegisterStudentAndFees = async (isPaid: boolean = true) => {
     if (!formData.studentName || !formData.class || !formData.parentName || !formData.parentPhone) {
       toast.error("Please fill required student details (Name, Class, Parent Name, Parent Phone).");
       return;
@@ -165,20 +160,10 @@ const FeesRegistration = () => {
 
       const newStudent = await studentRes.json();
 
-      const feeComponents = {
-        registrationFee: Number(formData.registrationFee),
-        admissionFee: Number(formData.admissionFee),
-        laboratoryFee: Number(formData.laboratoryFee),
-        internalExamFee: Number(formData.internalExamFee),
-        libraryFee: Number(formData.libraryFee),
-        sportsFee: Number(formData.sportsFee),
-        tuitionFee: Number(formData.tuitionFee),
-        annualExamFee: Number(formData.annualExamFee),
-        booksRecordFee: Number(formData.booksRecordFee),
-        stationaryCharges: Number(formData.stationaryCharges),
-        uniformFee: Number(formData.uniformFee),
-        foodAccomFee: Number(formData.foodAccomFee),
-      };
+      const feeItemsPayload = feeItems.map(item => ({
+        name: item.name,
+        value: Number(item.value) || 0
+      }));
 
       const totalFee = calculateTotal();
 
@@ -189,8 +174,10 @@ const FeesRegistration = () => {
         rollNo: newStudent.rollNo || "",
         grade: newStudent.class,
         academicYear: formData.academicYear,
-        feeComponents: feeComponents,
-        totalFee: totalFee
+        feeItems: feeItemsPayload,
+        totalFee: totalFee,
+        paymentMethod: formData.paymentMethod,
+        paymentDate: new Date()
       };
 
       const feeRes = await authFetch(`${API_BASE_URL}/fee-structures`, {
@@ -204,24 +191,77 @@ const FeesRegistration = () => {
         return;
       }
 
-      toast.success("Student and Fee Structure registered successfully!");
+      if (isPaid) {
+         // 3. Mark the payment in the main fees tracking system (so it doesn't show as Due)
+         const paymentPayload = {
+           studentId: newStudent._id,
+           studentName: newStudent.name,
+           admissionNumber: newStudent.admissionNumber,
+           grade: newStudent.class,
+           feeType: "Fee Receipt Payment",
+           amountPaid: totalFee,
+           dueAmount: 0,
+           paymentMethod: formData.paymentMethod === "Cheque" ? "Other" : formData.paymentMethod, // Map to enum ["Card", "Cash", "UPI", "Other"]
+           date: new Date(),
+           status: "Paid"
+         };
 
-      const currentYear = new Date().getFullYear().toString().slice(-2);
-      const storedSeq = localStorage.getItem("feeEstimationSeq");
-      let seq = storedSeq ? parseInt(storedSeq) : 0;
-      seq += 1;
-      localStorage.setItem("feeEstimationSeq", seq.toString());
-      const newAdmNo = `${currentYear}01${seq.toString().padStart(3, "0")}`;
+         await authFetch(`${API_BASE_URL}/fees`, {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify(paymentPayload)
+         });
+      } else {
+        // Register without payment (sets full due amount)
+        const duePayload = {
+          studentId: newStudent._id,
+          studentName: newStudent.name,
+          admissionNumber: newStudent.admissionNumber,
+          grade: newStudent.class,
+          feeType: "Fee Structure Defined",
+          amountPaid: 0,
+          dueAmount: totalFee,
+          paymentMethod: "Other",
+          date: new Date(),
+          status: "Pending"
+        };
 
-      setFormData(prev => ({
-        ...prev,
-        studentName: "",
-        email: "",
-        rollNo: "",
-        parentPhone: "",
-        admissionNumber: newAdmNo
-      }));
-      setCustomFees([]);
+        await authFetch(`${API_BASE_URL}/fees`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(duePayload)
+        });
+      }
+
+      toast.success(isPaid ? "Student and Payment registered successfully!" : "Student registered with dues.");
+
+      // 4. Download PDF automatically
+      handleDownloadPDF();
+
+      // 2. Prepare for next entry after a short delay
+      setTimeout(() => {
+        const currentYear = new Date().getFullYear().toString().slice(-2);
+        const storedSeq = localStorage.getItem("feeEstimationSeq");
+        let seq = storedSeq ? parseInt(storedSeq) : 0;
+        seq += 1;
+        localStorage.setItem("feeEstimationSeq", seq.toString());
+        const newAdmNo = `${currentYear}01${seq.toString().padStart(3, "0")}`;
+
+        setFormData(prev => ({
+          ...prev,
+          studentName: "",
+          email: "",
+          rollNo: "",
+          parentPhone: "",
+          parentName: "",
+          admissionNumber: newAdmNo,
+          receiptNo: (parseInt(prev.receiptNo || "623") + 1).toString(),
+          chequeNo: ""
+        }));
+
+        // Reset fee items to 0
+        setFeeItems(prev => prev.map(item => ({ ...item, value: "0" })));
+      }, 1000);
 
     } catch (error) {
       console.error(error);
@@ -229,14 +269,12 @@ const FeesRegistration = () => {
     }
   };
 
-  // --- UPDATED DOWNLOAD FUNCTION (BLOB METHOD) ---
   const handleDownloadPDF = () => {
     if (!printRef.current) return;
 
-    // 1. Generate Safe Filename
     const namePart = formData.studentName.trim() || "Student";
     const safeName = namePart.replace(/[^a-z0-9]/gi, "_");
-    const filename = `${safeName}_Fee_Estimation.pdf`;
+    const filename = `${safeName}_Fee_Receipt.pdf`;
 
     const element = printRef.current;
 
@@ -248,22 +286,20 @@ const FeesRegistration = () => {
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
     };
 
-    // 2. Generate Blob -> Create Link -> Force Download
-    // This bypasses the library's default save behavior which can be buggy in previews
     html2pdf()
       .set(opt)
       .from(element)
-      .outputPdf("blob") // Generate a Blob object
+      .outputPdf("blob")
       .then((blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = filename; // This attribute forces the correct name
+        link.download = filename;
         document.body.appendChild(link);
-        link.click(); // Trigger the download
-        document.body.removeChild(link); // Clean up
-        URL.revokeObjectURL(url); // Free memory
-        toast.success("Fee Estimation downloaded successfully!");
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("Fee Receipt downloaded successfully!");
       })
       .catch((error) => {
         console.error("Error generating PDF:", error);
@@ -271,14 +307,12 @@ const FeesRegistration = () => {
       });
   };
 
-  const today = new Date().toLocaleDateString("en-GB");
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4">
       <div className="flex items-center justify-between no-print">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Fee Registration
+            Fee Receipt
           </h1>
           <p className="text-muted-foreground">
             Register new student and set their initial fee statement
@@ -293,9 +327,9 @@ const FeesRegistration = () => {
             <Download className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
-          <Button onClick={handleRegisterStudentAndFees}>
+          <Button onClick={() => handleRegisterStudentAndFees(false)}>
             <Save className="mr-2 h-4 w-4" />
-            Register Student & Fees
+            Save & Register
           </Button>
         </div>
       </div>
@@ -306,20 +340,100 @@ const FeesRegistration = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calculator className="h-5 w-5" />
-              Estimation Details
+              Receipt Details
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 max-h-[80vh] overflow-y-auto">
+          <CardContent className="space-y-4 max-h-[85vh] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Receipt No.</Label>
+                <Input
+                  value={formData.receiptNo}
+                  onChange={(e) => handleInputChange("receiptNo", e.target.value)}
+                  placeholder="623"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input
+                  value={formData.date}
+                  onChange={(e) => handleInputChange("date", e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Student Name</Label>
-              <Input
-                value={formData.studentName}
-                onChange={(e) =>
-                  handleInputChange("studentName", e.target.value)
-                }
-                placeholder="e.g. Rahul Kumar"
-              />
+              <div className="flex gap-2">
+                <Select
+                  value={formData.genderPrefix}
+                  onValueChange={(val) => handleInputChange("genderPrefix", val)}
+                >
+                  <SelectTrigger className="w-24 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sri /Miss">Sri /Miss</SelectItem>
+                    <SelectItem value="Kum/Mr.">Kum/Mr.</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  className="flex-1"
+                  value={formData.studentName}
+                  onChange={(e) =>
+                    handleInputChange("studentName", e.target.value)
+                  }
+                  placeholder="e.g. Bhavana N.G."
+                />
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Academic Year</Label>
+                <Select
+                  value={formData.academicYear}
+                  onValueChange={(val) => handleInputChange("academicYear", val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2024-25">2024-25</SelectItem>
+                    <SelectItem value="2025-26">2025-26</SelectItem>
+                    <SelectItem value="2026-27">2026-27</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Year (I / II)</Label>
+                <Select
+                  value={formData.yearPrefix}
+                  onValueChange={(val) => handleInputChange("yearPrefix", val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="I">I</SelectItem>
+                    <SelectItem value="II">II</SelectItem>
+                    <SelectItem value="I / II">I / II</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Roll No.</Label>
+                <Input
+                  value={formData.rollNo}
+                  onChange={(e) => handleInputChange("rollNo", e.target.value)}
+                  placeholder="e.g. 05"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Parent Name</Label>
               <Input
@@ -327,10 +441,11 @@ const FeesRegistration = () => {
                 onChange={(e) =>
                   handleInputChange("parentName", e.target.value)
                 }
-                placeholder="e.g. Rajesh Kumar"
+                placeholder="Parent/Guardian Name"
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Parent Phone</Label>
                 <Input
@@ -338,474 +453,292 @@ const FeesRegistration = () => {
                   onChange={(e) =>
                     handleInputChange("parentPhone", e.target.value)
                   }
-                  placeholder="e.g. 9876543210"
+                  placeholder="Phone No"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Email ID</Label>
+                <Label>Admin No.</Label>
                 <Input
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="email@example.com"
+                  value={formData.admissionNumber}
+                  onChange={(e) => handleInputChange("admissionNumber", e.target.value)}
+                  placeholder="Auto-generated"
                 />
               </div>
             </div>
+
             <div className="space-y-2">
-              <Label>Student Roll No (Optional)</Label>
-              <Input
-                value={formData.rollNo}
-                onChange={(e) => handleInputChange("rollNo", e.target.value)}
-                placeholder="e.g. DP001"
-              />
+              <Label>Class / Course</Label>
+              <Select
+                value={formData.class}
+                onValueChange={(val) => handleInputChange("class", val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classesList.map((cls: any) => {
+                    const className = cls.grade.startsWith("D.")
+                      ? `${cls.grade} - ${cls.section}`
+                      : `Grade ${cls.grade} - ${cls.section}`;
+                    return (
+                      <SelectItem key={cls._id || className} value={className}>
+                        {className}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Admission No. (Auto)</Label>
-              <Input
-                value={formData.admissionNumber}
-                onChange={(e) =>
-                  handleInputChange("admissionNumber", e.target.value)
-                }
-                placeholder="e.g. 2601001"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-dotted">
               <div className="space-y-2">
-                <Label>Class / Grade</Label>
+                <Label>Payment Method</Label>
                 <Select
-                  value={formData.class}
-                  onValueChange={(val) => handleInputChange("class", val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Class" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classesList.map((cls: any) => {
-                      const className = cls.grade.startsWith("D.")
-                        ? `${cls.grade} - ${cls.section}`
-                        : `Grade ${cls.grade} - ${cls.section}`;
-                      return (
-                        <SelectItem key={cls._id || className} value={className}>
-                          {className}
-                        </SelectItem>
-                      );
-                    })}
-                    {classesList.length === 0 && (
-                      <>
-                        <SelectItem value="D.Pharm 1 - A">D.Pharm 1 - A</SelectItem>
-                        <SelectItem value="D.Pharm 2 - A">D.Pharm 2 - A</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Academic Year</Label>
-                <Select
-                  value={formData.academicYear}
-                  onValueChange={(val) =>
-                    handleInputChange("academicYear", val)
-                  }
+                  value={formData.paymentMethod}
+                  onValueChange={(val) => handleInputChange("paymentMethod", val)}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2025-26">2025-26</SelectItem>
-                    <SelectItem value="2026-27">2026-27</SelectItem>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Card">Card</SelectItem>
+                    <SelectItem value="UPI">UPI</SelectItem>
+                    <SelectItem value="Cheque">Cheque</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="border-t pt-4 space-y-3">
-              <h3 className="font-semibold text-sm">Fee Particulars (₹)</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Registration Fee</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.registrationFee}
-                  onChange={(e) =>
-                    handleInputChange("registrationFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Admission Fee</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.admissionFee}
-                  onChange={(e) =>
-                    handleInputChange("admissionFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Laboratory Fee</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.laboratoryFee}
-                  onChange={(e) =>
-                    handleInputChange("laboratoryFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Internal Exam Fee</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.internalExamFee}
-                  onChange={(e) =>
-                    handleInputChange("internalExamFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Library Fee</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.libraryFee}
-                  onChange={(e) =>
-                    handleInputChange("libraryFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Sports/Welfare</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.sportsFee}
-                  onChange={(e) =>
-                    handleInputChange("sportsFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Tuition Fee</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.tuitionFee}
-                  onChange={(e) =>
-                    handleInputChange("tuitionFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Annual Exam Fee</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.annualExamFee}
-                  onChange={(e) =>
-                    handleInputChange("annualExamFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Books & Record</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.booksRecordFee}
-                  onChange={(e) =>
-                    handleInputChange("booksRecordFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Stationary</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.stationaryCharges}
-                  onChange={(e) =>
-                    handleInputChange("stationaryCharges", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Uniform Fee</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.uniformFee}
-                  onChange={(e) =>
-                    handleInputChange("uniformFee", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
-                <Label className="text-xs">Food & Accom.</Label>
-                <Input
-                  type="number"
-                  className="h-8"
-                  value={formData.foodAccomFee}
-                  onChange={(e) =>
-                    handleInputChange("foodAccomFee", e.target.value)
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Custom Fees Section */}
-            <div className="border-t pt-4 space-y-3">
-              <h3 className="font-semibold text-sm">Add Custom Fees</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
-                <div className="col-span-2 space-y-1">
-                  <Label className="text-xs">Fee Name</Label>
+              {formData.paymentMethod === "Cheque" && (
+                <div className="space-y-2">
+                  <Label>Cheque No.</Label>
                   <Input
-                    value={newFeeName}
-                    onChange={(e) => setNewFeeName(e.target.value)}
-                    placeholder="e.g. Bus Fee"
-                    className="h-8 text-xs"
+                    value={formData.chequeNo}
+                    onChange={(e) => handleInputChange("chequeNo", e.target.value)}
+                    placeholder="e.g. 123456"
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Amount</Label>
-                  <Input
-                    type="number"
-                    value={newFeeAmount}
-                    onChange={(e) => setNewFeeAmount(e.target.value)}
-                    placeholder="0"
-                    className="h-8 text-xs"
-                  />
-                </div>
-              </div>
-              <Button
-                onClick={addCustomFee}
-                className="w-full h-8 text-xs bg-slate-800 hover:bg-slate-700"
-              >
-                <Plus className="mr-1 h-3 w-3" /> Add Fee
-              </Button>
-
-              {customFees.length > 0 && (
-                <div className="space-y-2 mt-2 bg-slate-50 p-2 rounded border border-slate-100">
-                  {customFees.map((fee) => (
-                    <div
-                      key={fee.id}
-                      className="flex justify-between items-center text-xs p-1"
-                    >
-                      <span>
-                        {fee.name}:{" "}
-                        <span className="font-semibold">₹{fee.value}</span>
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 text-red-500 hover:bg-red-50"
-                        onClick={() => removeCustomFee(fee.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>
+            
+            <div className="border-t pt-2 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold text-sm">Fee Particulars</h3>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  type="button"
+                  className="h-7 text-xs"
+                  onClick={() => setFeeItems([...feeItems, { id: Date.now(), name: "New Fee", value: "0" }])}
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add Field
+                </Button>
+              </div>
 
-            <div className="bg-slate-100 p-3 rounded-md flex justify-between items-center font-bold mt-4">
-              <span>Total:</span>
-              <span>₹ {calculateTotal().toLocaleString()}</span>
+              <div className="space-y-2 pr-2">
+                {feeItems.map((item) => (
+                  <div key={item.id} className="flex gap-2 items-center group">
+                    <Input 
+                      className="flex-1 h-8 text-xs font-medium" 
+                      value={item.name}
+                      onChange={(e) => handleFeeNameChange(item.id, e.target.value)}
+                    />
+                    <Input 
+                      type="number" 
+                      className="w-24 h-8 text-xs text-right" 
+                      value={item.value}
+                      onChange={(e) => handleFeeValueChange(item.id, e.target.value)}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      type="button"
+                      className="h-8 w-8 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeFeeItem(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-slate-100 p-4 rounded-lg space-y-4 font-bold mt-4 shadow-inner border">
+              <div className="flex justify-between items-center text-xl text-blue-900">
+                <span>Total Amount:</span>
+                <span>₹ {calculateTotal().toLocaleString()}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <Button 
+                  variant="outline"
+                  className="h-14 text-base font-bold border-2 border-blue-900 text-blue-900 hover:bg-blue-50 transform active:scale-95 transition-all flex items-center justify-center gap-2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleRegisterStudentAndFees(false);
+                  }}
+                >
+                  <Save className="h-5 w-5" />
+                  REGISTER ONLY
+                </Button>
+                
+                <Button 
+                  className="h-14 text-base font-bold bg-green-600 hover:bg-green-700 shadow-md transform active:scale-95 transition-all flex items-center justify-center gap-2 text-white"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleRegisterStudentAndFees(true);
+                  }}
+                >
+                  <CreditCard className="h-5 w-5" />
+                  PAY FEE
+                </Button>
+              </div>
             </div>
           </CardContent>
-        </Card>
-
-        {/* Live Preview / PDF Output */}
-        <div className="lg:col-span-2 overflow-auto bg-gray-500/10 p-4 rounded-xl flex justify-center items-start min-h-[800px]">
+        </Card>        {/* Live Preview / PDF Output */}
+        <div className="lg:col-span-2 overflow-auto bg-gray-500/10 p-4 rounded-xl flex justify-center items-start min-h-[900px]">
           <div
             ref={printRef}
-            className="bg-white text-black px-10 py-10 w-[794px] h-[1123px] shadow-2xl flex flex-col relative border-4 border-black shrink-0"
+            className="bg-white text-black px-10 py-10 w-[794px] h-[1123px] shadow-2xl flex flex-col relative border border-gray-200 shrink-0 select-none"
             style={{ fontFamily: "'Times New Roman', serif", boxSizing: "border-box" }}
           >
-            {/* Header */}
-            {/* Header */}
-            <div className="border-b-2 border-black pb-4 mb-6">
-              <div className="flex items-center justify-between px-4">
-                <img
-                  src="/college_logo.png"
-                  alt="Logo"
-                  className="h-24 w-auto object-contain"
-                />
-                <div className="text-center flex-1">
-                  <h1 className="text-2xl font-bold uppercase tracking-wide mb-1 text-[#8B0000]">
-                    Sri Subramanya Swamy College of Pharmacy
+            {/* Header Box */}
+            <div className="border-2 border-blue-900 p-2 flex flex-col items-center relative mb-4">
+              <div className="flex items-center w-full gap-4 mb-2">
+                {/* Logo Section */}
+                <div className="flex items-center gap-1 shrink-0 border-r-2 border-blue-900 pr-4">
+                  <div className="flex flex-col text-[10px] font-bold text-blue-900 leading-none py-1">
+                    <span>S</span>
+                    <span>S</span>
+                    <span>S</span>
+                    <span>C</span>
+                    <span>P</span>
+                  </div>
+                  <img
+                    src="/ssscp_logo.png"
+                    alt=""
+                    className="h-20 w-auto object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/college_logo.png";
+                    }}
+                  />
+                </div>
+
+                <div className="flex-1 text-center pr-12">
+                  <h1 className="text-3xl font-bold tracking-tight text-blue-900 leading-none mb-2">
+                    S.S.S. College of Pharmacy
                   </h1>
-                  <p className="italic text-sm text-gray-600 mb-2">
-                    Building Bridges Across Healthcare
+                  <p className="text-[11px] font-bold leading-tight uppercase text-gray-800">
+                    Akshara Campus, Akshara Nagar, Opp. JNNCE, Savalanga Road,
+                  </p>
+                  <p className="text-[11px] font-bold leading-tight uppercase text-gray-800">
+                    SHIVAMOGGA - 577 204.
+                  </p>
+                  <p className="text-[11px] font-bold leading-tight mt-1 text-gray-800">
+                    Mob. +91 94481 27880, 96329 17880
                   </p>
                 </div>
-                <div className="w-24"></div> {/* Balance the logo space */}
               </div>
-              <div className="w-full h-1 bg-black mt-2 mb-1"></div>
-              <div className="w-full h-0.5 bg-black"></div>
+              
+              <div className="w-full flex justify-center mt-1 border-t-2 border-blue-900 pt-1">
+                <span className="font-bold text-lg underline underline-offset-4 decoration-2">
+                  FEE RECEIPT
+                </span>
+              </div>
+              
+              {/* Receipt Info Line */}
+              <div className="w-full flex justify-between px-2 mt-2 text-base font-bold">
+                <div className="flex gap-1 items-baseline">
+                  No. <span className="text-red-600 ml-4 font-normal text-2xl tracking-tighter">{formData.receiptNo || ""}</span>
+                </div>
+                <div className="flex gap-1 items-baseline">
+                  Dt. <span className="ml-4 font-normal text-xl">{formData.date || ""}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="text-center mb-6">
-              <h2 className="text-lg font-bold uppercase underline underline-offset-4">
-                Fee Registration
-              </h2>
+            {/* Student Details Section */}
+            <div className="space-y-6 px-2 mb-4 text-lg">
+              <div className="flex items-end w-full border-b border-black pb-1">
+                <span className="shrink-0 font-bold whitespace-nowrap">{formData.genderPrefix}</span>
+                <span className="ml-4 font-bold text-2xl italic text-blue-900 flex-1 px-2 uppercase">
+                  {formData.studentName || ""}
+                </span>
+              </div>
+              
+              <div className="flex items-end w-full leading-tight font-bold gap-4 border-b border-black pb-1">
+                <span className="shrink-0 uppercase text-sm">{formData.yearPrefix} D. Pharma Course- academic year</span>
+                <span className="font-bold text-lg text-center px-4">
+                  {formData.academicYear}
+                </span>
+                <div className="flex gap-2 ml-auto items-end">
+                  <span className="uppercase text-sm">Roll No:</span>
+                  <span className="font-bold text-lg px-4">{formData.rollNo || ""}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Date */}
-            <div className="absolute top-8 left-8 text-sm font-bold hidden">
-              Ref No: {formData.admissionNumber}
-            </div>
-            <div className="absolute top-8 right-8 text-sm font-bold">
-              Date: {today}
-            </div>
-
-            {/* Body Text */}
-            <div className="text-justify leading-7 px-4 mb-6 text-lg">
-              <p>
-                This is to certify that{" "}
-                <span className="font-bold">
-                  Kum/Mr. {formData.studentName || "________________"}
-                </span>{" "}
-                D/o, S/o{" "}
-                <span className="font-bold">
-                  {formData.parentName || "________________"}
-                </span>{" "}
-                is studying in{" "}
-                <span className="font-bold">
-                  {formData.class || "________________"}
-                </span>{" "}
-                in our institution for the Academic Year{" "}
-                <span className="font-bold">{formData.academicYear}</span> with
-                Admission Number{" "}
-                <span className="font-bold">{formData.admissionNumber}</span>.
-                Total Duration of the program is Two academic years. Her/His
-                fees details are as follows.
-              </p>
-            </div>
-
-            {/* Table */}
-            <div className="px-4 mb-4 flex-grow">
-              <table className="w-full border-collapse border-2 border-black text-sm">
+            {/* Table Area */}
+            <div className="mb-4 bg-white">
+              <table className="w-full text-base font-bold border-2 border-blue-900 border-collapse table-fixed">
                 <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border-2 border-black p-2 w-16 text-center">
-                      Sl No.
-                    </th>
-                    <th className="border-2 border-black p-2 text-left">
-                      Particulars
-                    </th>
-                    <th className="border-2 border-black p-2 w-40 text-right">
-                      {formData.class || "Class"}
-                    </th>
+                  <tr className="border-b-2 border-blue-900 bg-blue-50/20">
+                    <th className="border-r-2 border-blue-900 p-2 w-[10%] text-center">No.</th>
+                    <th className="border-r-2 border-blue-900 p-2 w-[65%] text-left pl-4 uppercase">Particulars</th>
+                    <th className="p-2 w-[25%] text-center uppercase">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    {
-                      id: 1,
-                      name: "Registration Fee",
-                      value: formData.registrationFee,
-                    },
-                    {
-                      id: 2,
-                      name: "Admission Fee",
-                      value: formData.admissionFee,
-                    },
-                    {
-                      id: 3,
-                      name: "Laboratory Fee",
-                      value: formData.laboratoryFee,
-                    },
-                    {
-                      id: 4,
-                      name: "Internal Examination Fee (Theory & Practical)",
-                      value: formData.internalExamFee,
-                    },
-                    {
-                      id: 5,
-                      name: "Library and Magazine calendar Fee",
-                      value: formData.libraryFee,
-                    },
-                    {
-                      id: 6,
-                      name: "Sports and cultural, Student welfare Fund",
-                      value: formData.sportsFee,
-                    },
-                    { id: 7, name: "Tuition Fee", value: formData.tuitionFee },
-                    {
-                      id: 8,
-                      name: "Annual Exam Fee",
-                      value: formData.annualExamFee,
-                    },
-                    {
-                      id: 9,
-                      name: "Books & record",
-                      value: formData.booksRecordFee,
-                    },
-                    {
-                      id: 10,
-                      name: "Stationary charges",
-                      value: formData.stationaryCharges,
-                    },
-                    { id: 11, name: "Uniform Fee", value: formData.uniformFee },
-                    {
-                      id: 12,
-                      name: "Food And Accommodation Fee",
-                      value: formData.foodAccomFee,
-                    },
-                    ...customFees.map((fee, index) => ({
-                      id: 13 + index,
-                      name: fee.name,
-                      value: fee.value,
-                    })),
-                  ].map((item) => (
-                    <tr key={item.id}>
-                      <td className="border-2 border-black p-2 text-center">
-                        {item.id}.
-                      </td>
-                      <td className="border-2 border-black p-2 font-medium">
-                        {item.name}
-                      </td>
-                      <td className="border-2 border-black p-2 text-right tracking-wider">
-                        {Number(item.value).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                        })}
+                  {feeItems.map((item, idx) => (
+                    <tr key={item.id} className="border-b border-gray-200">
+                      <td className="border-r-2 border-blue-900 p-1 text-center font-normal">{idx + 1}.</td>
+                      <td className="border-r-2 border-blue-900 p-1 pl-4 font-semibold text-[15px]">{item.name}</td>
+                      <td className="p-1 text-right pr-6 tracking-wider font-semibold">
+                        {Number(item.value) > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-gray-200 font-bold text-lg">
-                    <td
-                      className="border-2 border-black p-3 text-center"
-                      colSpan={2}
-                    >
-                      Total
+                  
+                  {Array.from({ length: Math.max(1, 12 - feeItems.length) }).map((_, i) => (
+                    <tr key={`empty-${i}`} className="border-b border-gray-100">
+                      <td className="border-r-2 border-blue-900 p-1 text-center h-8 font-normal text-gray-300">{feeItems.length + i + 1}.</td>
+                      <td className="border-r-2 border-blue-900 p-1"></td>
+                      <td className="p-1"></td>
+                    </tr>
+                  ))}
+
+                  {/* Grand Total Row - Integrated in Table */}
+                  <tr className="font-bold text-lg border-t-2 border-blue-900 bg-blue-50/10">
+                    <td className="p-4 text-right pr-4 uppercase tracking-widest text-[#001f3f] border-r-2 border-blue-900" colSpan={2}>
+                      GRAND TOTAL
                     </td>
-                    <td className="border-2 border-black p-3 text-right">
-                      {calculateTotal().toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                      })}
+                    <td className="p-4 text-right pr-6 text-2xl text-blue-900 font-extrabold">
+                      {calculateTotal().toLocaleString("en-IN")}/-
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            {/* Footer Words */}
-            <div className="px-4 mb-16 font-bold italic text-center text-lg">
-              Total Rupees: Rs {calculateTotal().toLocaleString()} /- per year
+            {/* Rupees in Words - Immediately After Table */}
+            <div className="px-2 mb-8">
+              <div className="flex items-start w-full text-lg font-bold border-b border-black pb-1">
+                <span className="shrink-0 uppercase text-sm mr-4 mt-2">Rupees in words:</span>
+                <span className="font-bold text-xl italic capitalize py-1 text-gray-800">
+                   {calculateTotal() > 0 ? toWords.convert(calculateTotal()) + " Only" : ""}
+                </span>
+              </div>
             </div>
 
-            {/* Signatures */}
-            <div className="flex justify-between items-end px-12 mt-auto mb-16">
-              <div className="text-center">{/* Empty for seal */}</div>
-              <div className="text-center">
-                <p className="font-bold">Principal</p>
-                <p className="text-sm">
-                  Sri Subramanya Swamy College of Pharmacy
-                </p>
-                <p className="text-xs">Shivamogga - 577204</p>
+            {/* Signature Area */}
+            <div className="mt-8 px-2 flex justify-between items-end w-full">
+              <div className="w-[40%] flex flex-col items-start border-t border-black pt-2">
+                 <p className="font-bold text-xs uppercase text-gray-700 underline mb-1">Institutional Seal</p>
+                 <div className="h-12 w-full"></div>
+              </div>
+              <div className="w-[45%] flex flex-col items-center border-t-2 border-blue-900 pt-2">
+                 <p className="font-bold text-sm uppercase text-blue-900">SIGNATURE OF THE RECEIVER</p>
+                 <div className="h-12 w-full"></div>
               </div>
             </div>
           </div>

@@ -236,41 +236,41 @@ const feeStructureSchema = new mongoose.Schema({
   rollNo: { type: String, trim: true },
   grade: { type: String, required: true, trim: true },
   academicYear: { type: String, required: true },
-  feeComponents: {
-    registrationFee: Number,
-    admissionFee: Number,
-    laboratoryFee: Number,
-    internalExamFee: Number,
-    libraryFee: Number,
-    sportsFee: Number,
-    tuitionFee: Number,
-    annualExamFee: Number,
-    booksRecordFee: Number,
-    stationaryCharges: Number,
-    uniformFee: Number,
-    foodAccomFee: Number,
-  },
+  feeItems: [
+    {
+      name: { type: String, required: true },
+      value: { type: Number, required: true, default: 0 }
+    }
+  ],
   totalFee: { type: Number, required: true, min: 0 },
+  paymentMethod: { type: String, default: "Cash" },
+  paymentDate: { type: Date, default: Date.now },
   registeredDate: { type: Date, default: Date.now },
 });
 
 const FeeStructure = mongoose.model("FeeStructure", feeStructureSchema);
 
-const expenditureSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true, trim: true },
-    category: { type: String, required: true, default: "General" },
-    amount: { type: Number, required: true, min: 0 },
-    date: { type: Date, default: Date.now },
-    description: { type: String, trim: true },
-    paymentMethod: { type: String, default: "Cash" },
-  },
-  { timestamps: true },
-);
+const attendanceSchema = new mongoose.Schema({
+  date: { type: String, required: true },
+  className: { type: String, required: true },
+  period: { type: Number, required: true, min: 1, max: 10 },
+  subject: { type: String },
+  records: [
+    {
+      studentId: { type: String, required: true },
+      studentName: { type: String },
+      rollNo: { type: String },
+      status: {
+        type: String,
+        enum: ["Present", "Absent", "Late"],
+        default: "Present",
+      },
+    },
+  ],
+});
 
-const Expenditure = mongoose.model("Expenditure", expenditureSchema);
-
-
+attendanceSchema.index({ date: 1, className: 1, period: 1 }, { unique: true });
+const Attendance = mongoose.model("Attendance", attendanceSchema);
 
 // =============================================================================
 // HELPERS
@@ -456,11 +456,10 @@ app.use("/api/students", authenticate);
 app.use("/api/staff", authenticate);
 app.use("/api/classes", authenticate);
 app.use("/api/fees", authenticate);
-app.use("/api/expenditures", authenticate);
 app.use("/api/fee-structures", authenticate);
 app.use("/api/exams", authenticate);
 app.use("/api/results", authenticate);
-
+app.use("/api/attendance", authenticate);
 app.use("/api/timetable", authenticate);
 app.use("/api/dashboard", authenticate);
 app.use("/api/faculty", authenticate);
@@ -578,7 +577,10 @@ app.delete("/api/students/:id", async (req, res) => {
     // Cascade delete related data
     await FeeStructure.deleteMany({ studentId });
     await Fee.deleteMany({ studentId });
-
+    await Attendance.updateMany(
+      { "records.studentId": studentId },
+      { $pull: { records: { studentId: studentId } } },
+    );
 
     res.json({ message: "Student and related data deleted successfully" });
   } catch (error) {
@@ -833,28 +835,20 @@ app.get("/api/dashboard/stats", async (req, res) => {
       totalFaculty,
       feeStructures,
       fees,
-      expenditures,
+      attendanceRecords,
     ] = await Promise.all([
       Student.countDocuments(),
       Staff.countDocuments(),
       FeeStructure.find({}).lean(),
       Fee.find({}).lean(),
-      Expenditure.find({}).lean(),
+      Attendance.find({}).lean(),
     ]);
 
     // Calculate Revenue
-    const totalFeesCollected = fees.reduce(
+    const totalRevenue = fees.reduce(
       (sum, fee) => sum + (fee.amountPaid || 0),
       0,
     );
-
-    // Calculate Expenditures
-    const totalExpenditure = expenditures.reduce(
-      (sum, exp) => sum + (exp.amount || 0),
-      0,
-    );
-
-    const netRevenue = totalFeesCollected - totalExpenditure;
 
     // Calculate Defaulters and Fees Due
     const studentDues = {};
@@ -895,17 +889,57 @@ app.get("/api/dashboard/stats", async (req, res) => {
     defaultersList.sort((a, b) => b.dueAmount - a.dueAmount);
     const feeDefaulters = defaultersList.slice(0, 5);
 
+    // Calculate Low Attendance
+    const attendanceStats = {};
+    attendanceRecords.forEach((record) => {
+      if (record.records && Array.isArray(record.records)) {
+        record.records.forEach((studentEntry) => {
+          const sid = studentEntry.studentId;
+          if (!attendanceStats[sid]) {
+            attendanceStats[sid] = {
+              name: studentEntry.studentName,
+              className: record.className,
+              present: 0,
+              total: 0,
+            };
+          }
+          attendanceStats[sid].total += 1;
+          if (
+            studentEntry.status === "Present" ||
+            studentEntry.status === "Late"
+          ) {
+            attendanceStats[sid].present += 1;
+          }
+        });
+      }
+    });
 
+    const lowAttendanceList = [];
+    Object.keys(attendanceStats).forEach((sid) => {
+      const data = attendanceStats[sid];
+      const percentage = data.total > 0 ? (data.present / data.total) * 100 : 0;
+      if (percentage < 85) {
+        lowAttendanceList.push({
+          studentName: data.name,
+          className: data.className,
+          attendancePercentage: percentage,
+        });
+      }
+    });
+
+    lowAttendanceList.sort(
+      (a, b) => a.attendancePercentage - b.attendancePercentage,
+    );
+    const lowAttendanceStudents = lowAttendanceList.slice(0, 5);
 
     res.json({
       totalStudents,
       totalFaculty,
-      totalRevenue: totalFeesCollected,
-      feesCollected: totalFeesCollected,
-      totalExpenditure,
-      netRevenue,
+      totalRevenue,
+      feesCollected: totalRevenue,
       feesDue,
       feeDefaulters,
+      lowAttendanceStudents,
     });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error.message);
@@ -1160,7 +1194,166 @@ app.put("/api/timetable/:id/assign-faculty", async (req, res) => {
   }
 });
 
+// =============================================================================
+// ATTENDANCE ROUTES
+// =============================================================================
 
+app.get("/api/attendance", async (req, res) => {
+  try {
+    const { date, className, period } = req.query;
+    if (!date || !className || !period) {
+      return res
+        .status(400)
+        .json({
+          message: "Missing required query parameters: date, className, period",
+        });
+    }
+
+    // Escape regex input to prevent ReDoS
+    const escapedClassName = escapeRegex(className);
+    const attendance = await Attendance.findOne({
+      date,
+      className: { $regex: new RegExp(`^${escapedClassName}$`, "i") },
+      period,
+    });
+    res.json(attendance || null);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching attendance" });
+  }
+});
+
+app.post("/api/attendance", async (req, res) => {
+  try {
+    const { date, className, period, subject, records } = req.body;
+    if (!date || !className || !period || !records) {
+      return res
+        .status(400)
+        .json({
+          message: "Missing required fields: date, className, period, records",
+        });
+    }
+
+    const escapedClassName = escapeRegex(className);
+    let attendanceEntry = await Attendance.findOne({
+      date,
+      className: { $regex: new RegExp(`^${escapedClassName}$`, "i") },
+      period,
+    });
+
+    if (attendanceEntry) {
+      attendanceEntry.subject = subject;
+      attendanceEntry.records = records;
+      await attendanceEntry.save();
+    } else {
+      attendanceEntry = new Attendance({
+        date,
+        className,
+        period,
+        subject,
+        records,
+      });
+      await attendanceEntry.save();
+    }
+
+    res.json(attendanceEntry);
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Error saving attendance", error: error.message });
+  }
+});
+
+app.get("/api/attendance/student/:studentId", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const allAttendance = await Attendance.find({
+      "records.studentId": studentId,
+    });
+
+    let totalClasses = 0;
+    let presentCount = 0;
+
+    allAttendance.forEach((doc) => {
+      const record = doc.records.find((r) => r.studentId === studentId);
+      if (record) {
+        totalClasses++;
+        if (record.status === "Present" || record.status === "Late") {
+          presentCount++;
+        }
+      }
+    });
+
+    const percentage =
+      totalClasses === 0 ? 0 : Math.round((presentCount / totalClasses) * 100);
+    res.json({ totalClasses, presentCount, attendancePercentage: percentage });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching student attendance stats" });
+  }
+});
+
+// Subject-wise attendance breakdown for a student
+app.get("/api/attendance/student/:studentId/subjects", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const allAttendance = await Attendance.find({
+      "records.studentId": studentId,
+    }).lean();
+
+    // Group by subject
+    const subjectMap = {};
+
+    allAttendance.forEach((doc) => {
+      const record = doc.records.find((r) => r.studentId === studentId);
+      if (!record) return;
+
+      const subject = doc.subject || "Unknown";
+
+      if (!subjectMap[subject]) {
+        subjectMap[subject] = {
+          subject,
+          totalClasses: 0,
+          attended: 0,
+        };
+      }
+
+      subjectMap[subject].totalClasses += 1;
+      if (record.status === "Present" || record.status === "Late") {
+        subjectMap[subject].attended += 1;
+      }
+    });
+
+    // Convert to array and calculate percentages
+    const subjects = Object.values(subjectMap).map((s) => ({
+      ...s,
+      percentage:
+        s.totalClasses === 0
+          ? 0
+          : Math.round((s.attended / s.totalClasses) * 100),
+    }));
+
+    // Sort by subject name
+    subjects.sort((a, b) => a.subject.localeCompare(b.subject));
+
+    // Calculate overall totals
+    const totalClasses = subjects.reduce((sum, s) => sum + s.totalClasses, 0);
+    const totalAttended = subjects.reduce((sum, s) => sum + s.attended, 0);
+    const overallPercentage =
+      totalClasses === 0 ? 0 : Math.round((totalAttended / totalClasses) * 100);
+
+    res.json({
+      subjects,
+      overall: {
+        totalClasses,
+        totalAttended,
+        percentage: overallPercentage,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching subject-wise attendance" });
+  }
+});
 
 // =============================================================================
 // FEE STRUCTURE ROUTES
@@ -1187,57 +1380,6 @@ app.post("/api/fee-structures", async (req, res) => {
         message: "Error registering fee structure",
         error: error.message,
       });
-  }
-});
-
-// =============================================================================
-// EXPENDITURE ROUTES
-// =============================================================================
-
-app.get("/api/expenditures", async (req, res) => {
-  try {
-    const expenditures = await Expenditure.find().sort({ date: -1 });
-    res.json(expenditures);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching expenditures" });
-  }
-});
-
-app.post("/api/expenditures", requireAdmin, async (req, res) => {
-  try {
-    const newExpenditure = new Expenditure(req.body);
-    await newExpenditure.save();
-    res.status(201).json(newExpenditure);
-  } catch (error) {
-    res.status(400).json({ message: "Error creating expenditure", error: error.message });
-  }
-});
-
-app.put("/api/expenditures/:id", requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!isValidObjectId(id)) {
-      return res.status(400).json({ message: "Invalid expenditure ID" });
-    }
-    const updated = await Expenditure.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
-    if (!updated) return res.status(404).json({ message: "Expenditure not found" });
-    res.json(updated);
-  } catch (error) {
-    res.status(400).json({ message: "Error updating expenditure", error: error.message });
-  }
-});
-
-app.delete("/api/expenditures/:id", requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!isValidObjectId(id)) {
-      return res.status(400).json({ message: "Invalid expenditure ID" });
-    }
-    const deleted = await Expenditure.findByIdAndDelete(id);
-    if (!deleted) return res.status(404).json({ message: "Expenditure not found" });
-    res.json({ message: "Expenditure deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Error deleting expenditure", error: error.message });
   }
 });
 
@@ -1322,7 +1464,29 @@ app.get("/api/faculty/:facultyId/students", async (req, res) => {
   }
 });
 
+app.get("/api/faculty/:facultyId/attendance", async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.facultyId)) {
+      return res.status(400).json({ message: "Invalid faculty ID" });
+    }
+    const { date } = req.query;
+    const faculty = await Staff.findById(req.params.facultyId);
+    if (!faculty) {
+      return res.status(404).json({ message: "Faculty not found" });
+    }
+    if (!faculty.assignedClasses || faculty.assignedClasses.length === 0) {
+      return res.json([]);
+    }
 
+    const query = { className: { $in: faculty.assignedClasses } };
+    if (date) query.date = date;
+
+    const attendanceRecords = await Attendance.find(query);
+    res.json(attendanceRecords);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching attendance" });
+  }
+});
 
 app.put("/api/staff/:id/assign-classes", async (req, res) => {
   try {

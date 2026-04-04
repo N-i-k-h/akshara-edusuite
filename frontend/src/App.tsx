@@ -16,7 +16,7 @@ import Students from "./pages/Students";
 import Staff from "./pages/Staff";
 import Classes from "./pages/Classes";
 import Timetable from "./pages/Timetable";
-
+// import Attendance from "./pages/Attendance";
 import Exams from "./pages/Exams";
 import Assignments from "./pages/Assignments";
 import Fees from "./pages/Fees";
@@ -24,13 +24,12 @@ import FeesRegistration from "./pages/FeesRegistration";
 import FeesEstimation from "./pages/FeesEstimation";
 import Library from "./pages/Library";
 import Reports from "./pages/Reports";
-import Expenditure from "./pages/Expenditure";
 import TransferCertificate from "./pages/TransferCertificate";
 import StudyCertificate from "./pages/StudyCertificate";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import FacultyStudents from "./pages/FacultyStudents";
 import FacultyTimetable from "./pages/FacultyTimetable";
-
+// import FacultyAttendance from "./pages/FacultyAttendance";
 import FacultyExams from "./pages/FacultyExams";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -77,14 +76,17 @@ const App = () => (
               <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
               <Route path="/faculty/students" element={<FacultyStudents />} />
               <Route path="/faculty/timetable" element={<FacultyTimetable />} />
-
+              {/* <Route
+                path="/faculty/attendance"
+                element={<FacultyAttendance />}
+              /> */}
               <Route path="/faculty/exams" element={<FacultyExams />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/students" element={<Students />} />
               <Route path="/staff" element={<Staff />} />
               <Route path="/classes" element={<Classes />} />
               <Route path="/timetable" element={<Timetable />} />
-
+              {/* <Route path="/attendance" element={<Attendance />} /> */}
               <Route path="/exams" element={<Exams />} />
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/fees" element={<Fees />} />
@@ -97,7 +99,6 @@ const App = () => (
               <Route path="/study-certificate" element={<StudyCertificate />} />
               <Route path="/library" element={<Library />} />
               <Route path="/reports" element={<Reports />} />
-              <Route path="/expenditure" element={<Expenditure />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />

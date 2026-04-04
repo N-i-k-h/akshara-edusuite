@@ -339,30 +339,9 @@ const TransferCertificate = () => {
               className="bg-white text-black p-8 w-[210mm] min-h-[297mm] shadow-2xl flex flex-col relative border-[2px] border-black"
               style={{ fontFamily: "'Times New Roman', serif" }}
             >
-              {/* Header */}
-              <div className="flex border-b-[2px] border-black pb-2 mb-4">
-                <div className="w-[15%] flex items-center justify-center p-2 border-r-[2px] border-black">
-                  <img
-                    src="/college_logo.png"
-                    alt="Logo"
-                    className="w-full h-auto object-contain"
-                  />
-                </div>
-                <div className="w-[85%] text-center p-2 flex flex-col justify-center">
-                  <h1 className="text-2xl font-bold uppercase text-[#8B0000] tracking-wide mb-1">
-                    Sri Subramanya Swamy College of Pharmacy
-                  </h1>
-                  <p className="text-sm font-medium">
-                    2nd Floor, Akshara College Building, Opp.JNNCE, Savalanaga
-                    Road, Shivamogga - 577204
-                  </p>
-                  <div className="w-full h-[1px] bg-black my-1"></div>
-                  <p className="text-xs font-medium">
-                    (Approved by Govt.of Karnataka and Affiliated by PCI, NEW
-                    DELHI)
-                  </p>
-                </div>
-              </div>
+              {/* Header Removed for Pre-printed Paper */}
+              {/* 5cm top gap */}
+              <div style={{ height: "50mm" }}></div>
 
               <div className="text-center mb-6">
                 <h2 className="text-xl font-bold uppercase tracking-widest text-gray-700">
@@ -592,8 +571,8 @@ const TransferCertificate = () => {
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="mt-auto pt-16 flex justify-between items-end">
+              {/* Footer with 4cm bottom gap */}
+              <div className="mt-auto flex justify-between items-end mb-[40mm]">
                 <div>
                   Date :{" "}
                   {formData.date
@@ -601,8 +580,8 @@ const TransferCertificate = () => {
                     : ""}
                 </div>
                 <div className="text-center">
-                  <div className="font-bold">PRINCIPAL</div>
-                  <div className="text-xs mt-1">
+                  <div className="font-bold uppercase tracking-wide border-t border-black pt-2 px-6">Principal</div>
+                  <div className="text-[10px] mt-1 italic">
                     Sri Subramanya Swamy College of Pharmacy
                   </div>
                 </div>

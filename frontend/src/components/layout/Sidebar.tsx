@@ -14,7 +14,6 @@ import {
   Menu,
   X,
   BarChart,
-  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,7 @@ const navigation = [
   { name: "Timetable", href: "/timetable", icon: Calendar },
   { name: "Exams", href: "/exams", icon: FileText },
 
-  { name: "Fees Registration", href: "/fees-registration", icon: FileText },
+  { name: "Fee Receipt", href: "/fees-registration", icon: FileText },
   { name: "Fees Payment", href: "/fees", icon: CreditCard },
   { name: "Estimation", href: "/fees-estimation", icon: Calculator },
   {
@@ -43,7 +42,6 @@ const navigation = [
   { name: "Study Certificate", href: "/study-certificate", icon: BookOpen },
   { name: "Library", href: "/library", icon: Library },
   { name: "Reports", href: "/reports", icon: BarChart },
-  { name: "Expenditure", href: "/expenditure", icon: Wallet },
 ];
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {

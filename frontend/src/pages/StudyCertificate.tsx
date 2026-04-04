@@ -474,29 +474,8 @@ const StudyCertificate = () => {
               {certType === "bonafide" ? (
                 // === BONAFIDE TEMPLATE ===
                 <div className="p-8 border-[3px] border-black h-full min-h-[1050px]">
-                  <div className="flex border-b-[2px] border-black pb-2 mb-8">
-                    <div className="w-[15%] flex items-center justify-center p-2 border-r-[2px] border-black">
-                      <img
-                        src="/college_logo.png"
-                        alt="Logo"
-                        className="w-full h-auto object-contain"
-                      />
-                    </div>
-                    <div className="w-[85%] text-center p-2 flex flex-col justify-center">
-                      <h1 className="text-2xl font-bold uppercase text-[#8B0000] tracking-wide mb-1">
-                        Sri Subramanya Swamy College of Pharmacy
-                      </h1>
-                      <p className="text-sm font-medium">
-                        2nd Floor, Akshara College Building, Opp.JNNCE,
-                        Savalanaga Road, Shivamogga - 577204
-                      </p>
-                      <div className="w-full h-[1px] bg-black my-1"></div>
-                      <p className="text-xs font-medium">
-                        (Approved by Govt.of Karnataka and Affiliated by PCI,
-                        NEW DELHI)
-                      </p>
-                    </div>
-                  </div>
+                  {/* 5cm top gap for pre-printed header */}
+                  <div style={{ height: "50mm" }}></div>
 
                   <div className="text-center mb-12 mt-8">
                     <h2 className="text-2xl font-bold uppercase underline underline-offset-4 tracking-wide">
@@ -538,7 +517,7 @@ const StudyCertificate = () => {
                     </p>
                   </div>
 
-                  <div className="mt-32 px-4 flex justify-between items-end">
+                  <div className="mt-auto px-4 flex justify-between items-end pb-[40mm]">
                     <div>
                       <p className="mb-1">
                         Date:{" "}
@@ -555,7 +534,10 @@ const StudyCertificate = () => {
                 </div>
               ) : (
                 // === COUNCIL FORMAT TEMPLATE ===
-                <div className="p-8 h-full min-h-[1050px] text-sm">
+                <div className="p-8 h-full min-h-[1050px] text-sm flex flex-col">
+                  {/* 5cm top gap for pre-printed header */}
+                  <div style={{ height: "50mm" }}></div>
+                  
                   {/* Top Header Row */}
                   <div className="flex justify-between items-start mb-6">
                     <div>
@@ -869,9 +851,16 @@ const StudyCertificate = () => {
                     </div>
                   </div>
 
-                  {/* Principal Signature Area */}
-                  <div className="text-right mt-8 pr-12">
-                    <p className="font-bold">Principal</p>
+                  {/* Principal Signature Area with footer gap */}
+                  <div className="mt-auto pt-8 flex justify-between items-end pb-[40mm]">
+                    <div>
+                      <p>Date: {new Date(formData.date).toLocaleDateString("en-GB")}</p>
+                      <p>Place: {formData.place}</p>
+                    </div>
+                    <div className="text-center pr-12">
+                      <p className="font-bold underline">Principal</p>
+                      <p className="text-xs italic">(Signature & Seal)</p>
+                    </div>
                   </div>
                 </div>
               )}
