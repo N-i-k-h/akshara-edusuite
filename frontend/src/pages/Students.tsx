@@ -13,6 +13,9 @@ import {
   Download,
 } from "lucide-react";
 import html2pdf from "html2pdf.js";
+import { ToWords } from "to-words";
+const toWords = new ToWords();
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -44,8 +47,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { User, Phone, Mail, Home, ShieldCheck, GraduationCap, FileText } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-
 const Students = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,6 +64,13 @@ const Students = () => {
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [classesList, setClassesList] = useState<any[]>([]);
+
+  const institutionalItems = [
+    "APPLICATION FEE", "ADMISSION FEE", "ELIGIBILITY FEE", "TUITION FEE",
+    "LIBRARY & R.R. FEE", "IDENTITY CARD FEE", "LABORATORY FEE", "SPORTS FEE",
+    "CULTURAL FEE", "ANNUAL DAY FEE", "DIGITAL LIBRARY FEE", "INTERNAL EXAMINATION FEE",
+    "BREAKAGE FEE", "OTHERS"
+  ].map(name => ({ name, value: 0 }));
 
   // Form State
   const [formData, setFormData] = useState({
@@ -226,92 +243,57 @@ const Students = () => {
   // Profile State
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-  const [studentStats, setStudentStats] = useState({
-    attendance: 0,
-    totalFee: 0,
-    paidFee: 0,
-    dueFee: 0,
-  });
-  const [studentExams, setStudentExams] = useState<any[]>([]);
-  const [subjectAttendance, setSubjectAttendance] = useState<any>(null);
+  const [latestReceipt, setLatestReceipt] = useState<any | null>(null);
 
   const handleViewProfile = async (student: any) => {
     setSelectedStudent(student);
     setIsProfileOpen(true);
-    setStudentExams([]); // Clear previous exams
-    setSubjectAttendance(null); // Clear previous attendance
+    setLatestReceipt(null);
 
-    // Fetch Stats
     try {
-      // 1. Attendance
-      const attRes = await authFetch(
-        `${API_BASE_URL}/attendance/student/${student._id}`,
-      );
-      let attendanceVal = 0;
-      if (attRes.ok) {
-        const attData = await attRes.json();
-        attendanceVal = attData.attendancePercentage || 0;
-      }
-
-      // 2. Fees
       const [feesRes, structRes] = await Promise.all([
         authFetch(`${API_BASE_URL}/fees`),
-        authFetch(`${API_BASE_URL}/fee-structures`),
+        authFetch(`${API_BASE_URL}/fee-structures/student/${student._id || student.id}`)
       ]);
 
-      let total = 0;
-      let paid = 0;
-
-      if (feesRes.ok && structRes.ok) {
+      if (feesRes.ok) {
         const feesData = await feesRes.json();
-        const structData = await structRes.json();
+        const studentTrans = feesData
+          .filter((f: any) => String(f.studentId) === String(student._id || student.id))
+          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        // Calculate expected total from structures
-        const studentStructs = structData.filter(
-          (s: any) =>
-            s.studentId === student._id || s.rollNo === student.rollNo,
-        );
-        total = studentStructs.reduce(
-          (sum: number, s: any) => sum + (Number(s.totalFee) || 0),
-          0,
-        );
+        if (studentTrans.length > 0) {
+          const latest = studentTrans[0];
+          
+          // PRIORITY 1: Use snapshot from payment record if exists
+          let feeItems = latest.feeItems || [];
+          
+          // PRIORITY 2: Fallback to current structure if snapshot is missing (legacy records)
+          if (feeItems.length === 0 && structRes.ok) {
+            const structData = await structRes.json();
+            if (structData && structData.feeItems) {
+              feeItems = structData.feeItems;
+            }
+          }
+          
+          // PRIORITY 3: Fallback to Institutional Defaults (Image 3)
+          if (feeItems.length === 0) {
+            feeItems = institutionalItems;
+          }
 
-        // Calculate paid from transactions
-        const studentTrans = feesData.filter(
-          (f: any) => f.studentId === student._id,
-        );
-        paid = studentTrans.reduce(
-          (sum: number, f: any) => sum + (Number(f.amountPaid) || 0),
-          0,
-        );
-      }
-
-      setStudentStats({
-        attendance: attendanceVal,
-        totalFee: total,
-        paidFee: paid,
-        dueFee: total - paid,
-      });
-
-      // 3. Exams
-      const examsRes = await authFetch(
-        `${API_BASE_URL}/results/student/${student._id}`,
-      );
-      if (examsRes.ok) {
-        const examsData = await examsRes.json();
-        setStudentExams(examsData);
-      }
-
-      // 4. Subject-wise Attendance
-      const subAttRes = await authFetch(
-        `${API_BASE_URL}/attendance/student/${student._id}/subjects`,
-      );
-      if (subAttRes.ok) {
-        const subAttData = await subAttRes.json();
-        setSubjectAttendance(subAttData);
+          const totalCalculated = Number(latest.totalFee) || (Number(latest.amountPaid) + Number(latest.dueAmount));
+          
+          setLatestReceipt({
+            ...latest,
+            feeItems,
+            totalFee: totalCalculated,
+            dateStr: new Date(latest.date).toLocaleDateString("en-GB")
+          });
+        }
       }
     } catch (error) {
-      console.error("Error fetching profile stats:", error);
+      console.error("Error fetching latest receipt:", error);
+      toast.error("Failed to load latest fee receipt");
     }
   };
 
@@ -481,253 +463,280 @@ const Students = () => {
 
       {/* Profile Dialog */}
       <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Student Profile</DialogTitle>
+        <DialogContent className="max-w-[880px] overflow-y-auto max-h-[95vh] bg-slate-50 p-6">
+          <DialogHeader className="no-print mb-4 border-b pb-4">
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <User className="h-6 w-6 text-blue-600" />
+              Student Profile: {selectedStudent?.name}
+            </DialogTitle>
           </DialogHeader>
 
           {selectedStudent && (
-            <div className="space-y-6">
-              <div
-                id="student-profile-content"
-                className="p-6 bg-white rounded-lg border shadow-sm"
-              >
-                {/* Header */}
-                <div className="flex items-center gap-4 border-b pb-6 mb-6">
-                  <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
-                    {selectedStudent.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {selectedStudent.name}
-                    </h2>
-                    <p className="text-gray-500">
-                      {selectedStudent.class} | Roll: {selectedStudent.rollNo}
-                    </p>
-                  </div>
-                  <div className="ml-auto text-right">
-                    <div className="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
-                      {selectedStudent.status}
+            <Tabs defaultValue="receipt" className="w-full">
+              <TabsList className="mb-4 grid w-full grid-cols-2 max-w-sm mx-auto no-print bg-slate-100 p-1">
+                <TabsTrigger value="receipt" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
+                   <FileText className="h-4 w-4" /> Latest Receipt
+                </TabsTrigger>
+                <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
+                   <User className="h-4 w-4" /> Student Details
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="receipt" className="space-y-6 flex flex-col items-center animate-in fade-in duration-300">
+                {latestReceipt ? (
+                  <div
+                    id="student-receipt-content"
+                    className="bg-white text-black px-12 py-10 w-[794px] h-[1050px] shadow-2xl flex flex-col relative border border-gray-100 shrink-0 select-none overflow-hidden"
+                    style={{ fontFamily: "'Times New Roman', serif", boxSizing: "border-box" }}
+                  >
+                    {/* Institutional Header Box */}
+                    <div className="border border-blue-900 p-2 flex flex-col items-center relative mb-2">
+                       <div className="flex items-center w-full gap-4 mb-2">
+                          {/* Logo Section */}
+                          <div className="flex items-center gap-3 shrink-0 border-r border-blue-900 pr-5 h-20">
+                             <div className="flex flex-col text-[11px] font-black text-blue-900 leading-[0.8] py-1 uppercase tracking-tighter self-center">
+                               <span>S</span><span>S</span><span>S</span><span>C</span><span>P</span>
+                             </div>
+                             <img
+                               src="/college_logo.png"
+                               alt="College Logo"
+                               className="h-16 w-auto object-contain"
+                               onError={(e) => {
+                                 const target = e.target as HTMLImageElement;
+                                 target.src = "/ssscp_logo.png";
+                               }}
+                             />
+                          </div>
+
+                          <div className="flex-1 text-center pr-10">
+                             <h1 className="text-2xl font-bold tracking-tight text-blue-900 leading-none mb-1">
+                               S.S.S. College of Pharmacy
+                             </h1>
+                             <p className="text-[9px] font-extrabold leading-tight uppercase text-gray-800 tracking-tight">
+                               AKSHARA CAMPUS, AKSHARA NAGAR, OPP. JNNCE, SAVALANGA ROAD,
+                             </p>
+                             <p className="text-[9px] font-extrabold leading-tight uppercase text-gray-800">
+                               SHIVAMOGGA - 577 204.
+                             </p>
+                             <p className="text-[9px] font-bold leading-tight mt-1 text-gray-800">
+                               Mob. +91 94481 27880, 56329 17880
+                             </p>
+                          </div>
+                       </div>
+
+                       <div className="w-full flex justify-center mt-1 border-t border-blue-900 pt-1">
+                          <span className="font-bold text-base underline underline-offset-4 decoration-1 uppercase tracking-widest text-[#1e3a8a]">
+                            PAYMENT RECEIPT
+                          </span>
+                       </div>
+
+                       {/* Meta Info Inside Box */}
+                       <div className="w-full flex justify-between px-2 mt-1 text-[13px] font-bold">
+                          <div className="flex gap-2 items-baseline">
+                             No. <span className="text-red-600 font-bold text-lg ml-6">{latestReceipt.receiptNo || "RCT-303842"}</span>
+                          </div>
+                          <div className="flex gap-2 items-baseline">
+                             Dt. <span className="font-bold ml-10">{latestReceipt.dateStr || ""}</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Student Info */}
+                    <div className="space-y-4 px-2 mb-4 text-sm">
+                       <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
+                          <span className="shrink-0 font-bold whitespace-nowrap text-xs">Sri /Miss</span>
+                          <span className="ml-8 font-bold text-xl italic text-[#1e3a8a] flex-1 px-1 uppercase leading-none">
+                             {selectedStudent.name}
+                          </span>
+                       </div>
+
+                       <div className="flex items-end w-full font-bold gap-4 border-b border-gray-400 pb-0.5">
+                          <span className="shrink-0 uppercase text-[9px]">D. PHARMA COURSE- ACADEMIC YEAR</span>
+                          <span className="font-bold text-sm px-2">2025-26</span>
+                          <div className="flex gap-2 ml-auto items-end">
+                             <span className="uppercase text-[9px]">ROLL NO:</span>
+                             <span className="text-[#1e3a8a] text-lg leading-none border-b border-blue-900 px-2">{selectedStudent.rollNo || ""}</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Table Area */}
+                    <div className="mb-4 bg-white flex-grow">
+                       <table className="w-full text-xs font-bold border border-blue-900 border-collapse table-fixed">
+                          <thead>
+                             <tr className="border-b border-blue-900 bg-blue-50/5">
+                                <th className="border-r border-blue-900 p-1 w-[10%] text-center uppercase">No.</th>
+                                <th className="border-r border-blue-900 p-1 w-[60%] text-left pl-6 uppercase">PARTICULARS</th>
+                                <th className="p-1 w-[30%] text-center uppercase">AMOUNT</th>
+                             </tr>
+                          </thead>
+                          <tbody>
+                             {latestReceipt.feeItems && latestReceipt.feeItems.length > 0 ? (
+                                latestReceipt.feeItems.map((item: any, idx: number) => (
+                                   <tr key={idx} className="border-b border-blue-900/20 h-7">
+                                      <td className="border-r border-blue-900 p-1.5 text-center font-normal">{idx + 1}.</td>
+                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">{item.name}</td>
+                                      <td className="p-1.5 text-right pr-6 font-semibold">{item.value > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}</td>
+                                   </tr>
+                                ))
+                             ) : (
+                                institutionalItems.map((item, idx) => (
+                                   <tr key={idx} className="border-b border-blue-900/20 h-7">
+                                      <td className="border-r border-blue-900 p-1.5 text-center font-normal">{idx + 1}.</td>
+                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">{item.name}</td>
+                                      <td className="p-1.5 text-right pr-6 font-semibold">
+                                         {idx === 13 ? Number(latestReceipt.amountPaid).toLocaleString("en-IN") + "/-" : ""}
+                                      </td>
+                                   </tr>
+                                ))
+                             )}
+
+                             {Array.from({ length: Math.max(0, 15 - (latestReceipt.feeItems?.length || 14)) }).map((_, i) => (
+                                <tr key={`fill-${i}`} className="border-b border-blue-900/10 h-7 opacity-50">
+                                   <td className="border-r border-blue-900 p-1.5 text-center font-normal text-gray-200">
+                                      {(latestReceipt.feeItems?.length || 14) + i + 1}.
+                                   </td>
+                                   <td className="border-r border-blue-900 p-1.5"></td>
+                                   <td className="p-1.5"></td>
+                                </tr>
+                             ))}
+
+                             {/* Grand Total */}
+                             <tr className="border-t-2 border-blue-900 h-9 font-bold bg-blue-50/5">
+                                <td className="p-1.5 text-right pr-6 uppercase text-[9px] border-r border-blue-900" colSpan={2}>
+                                   GRAND TOTAL AMOUNT
+                                </td>
+                                <td className="p-1.5 text-right pr-6 text-sm text-blue-900 font-extrabold">
+                                   ₹ {Number(latestReceipt.totalFee).toLocaleString("en-IN")}/-
+                                </td>
+                             </tr>
+                             {/* Paid */}
+                             <tr className="border-t border-blue-900 h-9 font-bold">
+                                <td className="p-1.5 text-right pr-6 uppercase text-[9px] border-r border-blue-900 text-green-700" colSpan={2}>
+                                   CURRENT PAID AMOUNT
+                                </td>
+                                <td className="p-1.5 text-right pr-6 text-sm text-green-700 font-extrabold">
+                                   ₹ {Number(latestReceipt.amountPaid).toLocaleString("en-IN")}/-
+                                </td>
+                             </tr>
+                             {/* Due */}
+                             <tr className="border-t border-blue-900 h-9 font-bold">
+                                <td className="p-1.5 text-right pr-6 uppercase text-[9px] border-r border-blue-900 text-red-600" colSpan={2}>
+                                   BALANCE DUE AMOUNT
+                                </td>
+                                <td className="p-1.5 text-right pr-6 text-sm text-red-600 font-extrabold">
+                                   ₹ {Number(latestReceipt.dueAmount).toLocaleString("en-IN")}/-
+                                </td>
+                             </tr>
+                          </tbody>
+                       </table>
+                    </div>
+
+                    {/* Words */}
+                    <div className="px-2 mb-8 flex items-baseline border-b border-gray-300 pb-1 mt-2">
+                       <span className="shrink-0 uppercase text-[10px] font-black mr-6">RUPEES IN WORDS:</span>
+                       <span className="font-bold text-lg italic capitalize flex-1 text-gray-800">
+                          {toWords.convert(Number(latestReceipt.amountPaid))} Only
+                       </span>
+                    </div>
+
+                    {/* Footer - Seal and Signatories */}
+                    <div className="mt-auto px-2 flex justify-between items-end w-full mb-6 font-bold">
+                       <div className="w-[45%] flex flex-col items-start">
+                          <div className="w-full border-t border-black mb-2"></div>
+                          <p className="text-[11px] uppercase font-bold tracking-tight text-black">INSTITUTIONAL SEAL</p>
+                       </div>
+                       <div className="w-[48%] flex flex-col items-center">
+                          <div className="w-full border-t border-blue-900 mb-2"></div>
+                          <p className="text-[12px] uppercase font-bold text-blue-900 tracking-tight">SIGNATURE OF THE RECEIVER</p>
+                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="py-20 text-center w-full bg-white rounded-xl border border-dashed border-gray-200">
+                    <p className="text-muted-foreground italic text-lg">No fee history found for this student.</p>
+                  </div>
+                )}
+              </TabsContent>
 
-                {/* Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-500">
-                      Father's / Parent Name
-                    </p>
-                    <p className="font-medium text-gray-900">
-                      {selectedStudent.parentName}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-500">Contact Number</p>
-                    <p className="font-medium text-gray-900">
-                      {selectedStudent.phone}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-500">Email Address</p>
-                    <p className="font-medium text-gray-900">
-                      {selectedStudent.email}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-500">Parent Contact</p>
-                    <p className="font-medium text-gray-900">
-                      {selectedStudent.parentPhone}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Performance Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <p className="text-sm text-gray-500 mb-1">Attendance</p>
-                    <p
-                      className={`text-2xl font-bold ${studentStats.attendance < 75 ? "text-red-600" : "text-green-600"}`}
-                    >
-                      {studentStats.attendance}%
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <p className="text-sm text-gray-500 mb-1">
-                      Total Fees Paid
-                    </p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      ₹{studentStats.paidFee.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <p className="text-sm text-gray-500 mb-1">Pending Dues</p>
-                    <p
-                      className={`text-2xl font-bold ${studentStats.dueFee > 0 ? "text-red-600" : "text-green-600"}`}
-                    >
-                      ₹{studentStats.dueFee.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Subject-wise Attendance Table */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-lg">
-                    Subject-wise Attendance
-                  </h3>
-                  {subjectAttendance &&
-                    subjectAttendance.subjects &&
-                    subjectAttendance.subjects.length > 0 ? (
-                    <div className="border rounded-md overflow-x-auto">
-                      <Table>
-                        <TableHeader className="bg-slate-50">
-                          <TableRow>
-                            <TableHead>Subject</TableHead>
-                            <TableHead className="text-center">
-                              Total Classes
-                            </TableHead>
-                            <TableHead className="text-center">
-                              Attended
-                            </TableHead>
-                            <TableHead className="text-center">
-                              Absent
-                            </TableHead>
-                            <TableHead className="text-right">
-                              Attendance %
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {subjectAttendance.subjects.map(
-                            (sub: any, idx: number) => (
-                              <TableRow key={idx}>
-                                <TableCell className="font-medium">
-                                  {sub.subject}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  {sub.totalClasses}
-                                </TableCell>
-                                <TableCell className="text-center text-green-600">
-                                  {sub.attended}
-                                </TableCell>
-                                <TableCell className="text-center text-red-600">
-                                  {sub.totalClasses - sub.attended}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <span
-                                    className={`font-bold ${sub.percentage < 75 ? "text-red-600" : "text-green-600"}`}
-                                  >
-                                    {sub.percentage}%
-                                  </span>
-                                </TableCell>
-                              </TableRow>
-                            ),
-                          )}
-                          {/* Overall Row */}
-                          <TableRow className="bg-blue-50 font-semibold">
-                            <TableCell className="font-bold">Overall</TableCell>
-                            <TableCell className="text-center font-bold">
-                              {subjectAttendance.overall.totalClasses}
-                            </TableCell>
-                            <TableCell className="text-center font-bold text-green-700">
-                              {subjectAttendance.overall.totalAttended}
-                            </TableCell>
-                            <TableCell className="text-center font-bold text-red-700">
-                              {subjectAttendance.overall.totalClasses -
-                                subjectAttendance.overall.totalAttended}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span
-                                className={`font-bold text-lg ${subjectAttendance.overall.percentage < 75 ? "text-red-700" : "text-green-700"}`}
-                              >
-                                {subjectAttendance.overall.percentage}%
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+              <TabsContent value="overview" className="space-y-6 no-print animate-in transition-all">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="border-blue-100 shadow-sm overflow-hidden">
+                    <div className="bg-blue-600 text-white p-3 flex items-center gap-2">
+                       <GraduationCap className="h-5 w-5" />
+                       <h3 className="font-bold">Academic Details</h3>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      No attendance records found for this student.
-                    </p>
-                  )}
-                </div>
+                    <CardContent className="p-4 space-y-4 pt-4">
+                       <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                          <span className="text-sm text-slate-500">Admission No</span>
+                          <span className="font-bold text-blue-900">{selectedStudent.admissionNumber}</span>
+                       </div>
+                       <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                          <span className="text-sm text-slate-500">Roll Number</span>
+                          <span className="font-bold text-blue-900">{selectedStudent.rollNo || "N/A"}</span>
+                       </div>
+                       <div className="flex justify-between items-center">
+                          <span className="text-sm text-slate-500">Current Class</span>
+                          <span className="font-bold text-blue-900">{selectedStudent.class}</span>
+                       </div>
+                    </CardContent>
+                  </Card>
 
-                {/* Exam Results Table */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-lg">Examination Results</h3>
-                  {studentExams.length > 0 ? (
-                    <div className="border rounded-md overflow-x-auto">
-                      <Table>
-                        <TableHeader className="bg-slate-50">
-                          <TableRow>
-                            <TableHead>Exam Name</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead className="text-right">
-                              Total Marks
-                            </TableHead>
-                            <TableHead className="text-right">
-                              Percentage
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {studentExams.map((exam: any, idx) => {
-                            const totalObtained = exam.marks.reduce(
-                              (a: any, b: any) => a + (b.obtainedMarks || 0),
-                              0,
-                            );
-                            const totalMax = exam.marks.reduce(
-                              (a: any, b: any) => a + (b.totalMarks || 0),
-                              0,
-                            );
-                            const percentage =
-                              totalMax > 0
-                                ? (totalObtained / totalMax) * 100
-                                : 0;
-
-                            return (
-                              <TableRow key={idx}>
-                                <TableCell className="font-medium">
-                                  {exam.examName}
-                                </TableCell>
-                                <TableCell>{exam.examDate}</TableCell>
-                                <TableCell className="text-right">
-                                  {totalObtained} / {totalMax}
-                                </TableCell>
-                                <TableCell className="text-right font-bold">
-                                  {percentage.toFixed(1)}%
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
+                  <Card className="border-indigo-100 shadow-sm overflow-hidden">
+                    <div className="bg-indigo-600 text-white p-3 flex items-center gap-2">
+                       <Phone className="h-5 w-5" />
+                       <h3 className="font-bold">Contact Details</h3>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      No exam records found for this student.
-                    </p>
-                  )}
+                    <CardContent className="p-4 space-y-4 pt-4">
+                       <div className="flex items-center gap-3 border-b border-indigo-50 pb-2">
+                          <Mail className="h-4 w-4 text-indigo-500" />
+                          <div className="flex flex-col">
+                             <span className="text-[10px] uppercase text-slate-400">Email</span>
+                             <span className="font-medium text-slate-700">{selectedStudent.email || "N/A"}</span>
+                          </div>
+                       </div>
+                       <div className="flex items-center gap-3">
+                          <Phone className="h-4 w-4 text-indigo-500" />
+                          <div className="flex flex-col">
+                             <span className="text-[10px] uppercase text-slate-400">Parent Phone</span>
+                             <span className="font-bold text-indigo-900">{selectedStudent.parentPhone}</span>
+                          </div>
+                       </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsProfileOpen(false)}
-                >
-                  Close
-                </Button>
-
-                <Button onClick={downloadProfilePDF}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Report
-                </Button>
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           )}
+
+          <div className="flex justify-end gap-2 w-full mt-4 no-print border-t pt-4">
+            <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
+              Close
+            </Button>
+            {latestReceipt && (
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  const el = document.getElementById("student-receipt-content");
+                  if (el) {
+                    html2pdf()
+                      .set({
+                        margin: 0,
+                        filename: `${selectedStudent.name}_Payment_Receipt.pdf`,
+                        image: { type: "jpeg", quality: 1 },
+                        html2canvas: { scale: 2 },
+                        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                      })
+                      .from(el)
+                      .save();
+                  }
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF Receipt
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

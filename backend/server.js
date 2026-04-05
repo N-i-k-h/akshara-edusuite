@@ -134,6 +134,14 @@ const feeSchema = new mongoose.Schema(
     feeType: { type: String, required: true, trim: true },
     amountPaid: { type: Number, required: true, min: 0 },
     dueAmount: { type: Number, required: true, min: 0 },
+    totalFee: { type: Number, min: 0 },
+    receiptNo: { type: String, trim: true },
+    feeItems: [
+      {
+        name: { type: String, required: true },
+        value: { type: Number, required: true, default: 0 }
+      }
+    ],
     paymentMethod: {
       type: String,
       enum: ["Card", "Cash", "UPI", "Other"],
@@ -249,6 +257,20 @@ const feeStructureSchema = new mongoose.Schema({
 });
 
 const FeeStructure = mongoose.model("FeeStructure", feeStructureSchema);
+
+const expenditureSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    category: { type: String, required: true, default: "General" },
+    amount: { type: Number, required: true, min: 0 },
+    date: { type: Date, default: Date.now },
+    description: { type: String, trim: true },
+    paymentMethod: { type: String, default: "Cash" },
+  },
+  { timestamps: true },
+);
+
+const Expenditure = mongoose.model("Expenditure", expenditureSchema);
 
 const attendanceSchema = new mongoose.Schema({
   date: { type: String, required: true },
@@ -836,19 +858,28 @@ app.get("/api/dashboard/stats", async (req, res) => {
       feeStructures,
       fees,
       attendanceRecords,
+      expenditures,
     ] = await Promise.all([
       Student.countDocuments(),
       Staff.countDocuments(),
       FeeStructure.find({}).lean(),
       Fee.find({}).lean(),
       Attendance.find({}).lean(),
+      Expenditure.find({}).lean(),
     ]);
 
-    // Calculate Revenue
-    const totalRevenue = fees.reduce(
+    // Calculate Financial Management metrics
+    const totalFeesCollected = fees.reduce(
       (sum, fee) => sum + (fee.amountPaid || 0),
       0,
     );
+
+    const totalExpenditure = expenditures.reduce(
+      (sum, exp) => sum + (exp.amount || 0),
+      0,
+    );
+
+    const netRevenue = totalFeesCollected - totalExpenditure;
 
     // Calculate Defaulters and Fees Due
     const studentDues = {};
@@ -935,8 +966,10 @@ app.get("/api/dashboard/stats", async (req, res) => {
     res.json({
       totalStudents,
       totalFaculty,
-      totalRevenue,
-      feesCollected: totalRevenue,
+      totalRevenue: totalFeesCollected,
+      feesCollected: totalFeesCollected,
+      totalExpenditure,
+      netRevenue,
       feesDue,
       feeDefaulters,
       lowAttendanceStudents,
@@ -1368,6 +1401,19 @@ app.get("/api/fee-structures", async (req, res) => {
   }
 });
 
+app.get("/api/fee-structures/student/:studentId", async (req, res) => {
+  try {
+    const structure = await FeeStructure.findOne({
+      studentId: req.params.studentId,
+    }).sort({ registeredDate: -1 });
+    if (!structure)
+      return res.status(404).json({ message: "Fee structure not found" });
+    res.json(structure);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching student fee structure" });
+  }
+});
+
 app.post("/api/fee-structures", async (req, res) => {
   try {
     const newStructure = new FeeStructure(req.body);
@@ -1382,6 +1428,78 @@ app.post("/api/fee-structures", async (req, res) => {
       });
   }
 });
+
+// =============================================================================
+// EXPENDITURE ROUTES
+// =============================================================================
+
+app.get("/api/expenditures", authenticate, async (req, res) => {
+  try {
+    const expenditures = await Expenditure.find().sort({ date: -1 });
+    res.json(expenditures);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching expenditures" });
+  }
+});
+
+app.post("/api/expenditures", authenticate, requireAdmin, async (req, res) => {
+  try {
+    const newExpenditure = new Expenditure(req.body);
+    await newExpenditure.save();
+    res.status(201).json(newExpenditure);
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Error creating expenditure", error: error.message });
+  }
+});
+
+app.put(
+  "/api/expenditures/:id",
+  authenticate,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!isValidObjectId(id)) {
+        return res.status(400).json({ message: "Invalid expenditure ID" });
+      }
+      const updated = await Expenditure.findByIdAndUpdate(id, req.body, {
+        new: true,
+        runValidators: true,
+      });
+      if (!updated)
+        return res.status(404).json({ message: "Expenditure not found" });
+      res.json(updated);
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Error updating expenditure", error: error.message });
+    }
+  },
+);
+
+app.delete(
+  "/api/expenditures/:id",
+  authenticate,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!isValidObjectId(id)) {
+        return res.status(400).json({ message: "Invalid expenditure ID" });
+      }
+      const deleted = await Expenditure.findByIdAndDelete(id);
+      if (!deleted)
+        return res.status(404).json({ message: "Expenditure not found" });
+      res.json({ message: "Expenditure deleted successfully" });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: "Error deleting expenditure", error: error.message });
+    }
+  },
+);
 
 // =============================================================================
 // FACULTY-SPECIFIC ROUTES

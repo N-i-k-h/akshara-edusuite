@@ -37,6 +37,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
+import { ToWords } from 'to-words';
+
+const toWords = new ToWords();
 
 const Fees = () => {
   const [fees, setFees] = useState<any[]>([]);
@@ -258,14 +261,20 @@ const Fees = () => {
 
   // Triggered after submission to prepare receipt data and download
   const triggerReceiptDownload = (feePayload: any, totalFee: number) => {
+    // Find the student's fee structure to populate the particulars table
+    const structure = (feeStructures || []).find(
+      (fs) => String(fs.studentId) === String(feePayload.studentId)
+    );
+
     setReceiptData({
       ...feePayload,
       totalFee: totalFee,
+      feeItems: structure ? structure.feeItems : [],
       receiptNo: `RCT-${Date.now().toString().slice(-6)}`,
       dateStr: new Date().toLocaleDateString(),
     });
 
-    // Allow react to render the receipt template
+    // Provide React time to render before triggering PDF capture
     setTimeout(() => {
       downloadReceiptPDF();
     }, 500);
@@ -288,6 +297,14 @@ const Fees = () => {
 
       const method = editFeeId ? "PUT" : "POST";
 
+      const finalReceiptNo = editFeeId 
+        ? (fees.find(f => f._id === editFeeId)?.receiptNo || `RCT-${Date.now().toString().slice(-6)}`)
+        : `RCT-${Date.now().toString().slice(-6)}`;
+
+      const studentStructure = feeStructures.find(
+        (fs) => String(fs.studentId) === String(formData.studentId)
+      );
+
       const payload = {
         studentId: formData.studentId,
         studentName: formData.studentName,
@@ -295,6 +312,9 @@ const Fees = () => {
         feeType: formData.feeType,
         amountPaid: Number(formData.amountPaid),
         dueAmount: Number(formData.dueAmount),
+        totalFee: Number(formData.totalFee),
+        receiptNo: finalReceiptNo,
+        feeItems: studentStructure?.feeItems || [], // Snapshot of items at time of payment
         paymentMethod: formData.paymentMethod,
         date: formData.date ? formData.date : new Date(),
         admissionNumber: formData.admissionNumber,
@@ -378,7 +398,7 @@ const Fees = () => {
               Add Payment
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
                 {editFeeId
@@ -386,10 +406,10 @@ const Fees = () => {
                   : "Record Fee Payment"}
               </DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
               {/* Grade Selection */}
               <div className="space-y-2">
-                <Label htmlFor="grade">Grade/Class</Label>
+                <Label htmlFor="grade">Grade / Class</Label>
                 <Select
                   onValueChange={(val) =>
                     setFormData({ ...formData, grade: val })
@@ -468,72 +488,79 @@ const Fees = () => {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="method">Payment Method</Label>
+                <Select
+                  onValueChange={(val) =>
+                    setFormData({ ...formData, paymentMethod: val })
+                  }
+                  value={formData.paymentMethod}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Card">Card</SelectItem>
+                    <SelectItem value="UPI">UPI</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Fee Info Display */}
               {formData.studentId && (
-                <div className="p-3 bg-muted rounded-md text-sm space-y-1">
-                  <div className="flex justify-between">
-                    <span>Total Fee:</span>
-                    <span className="font-semibold">
-                      ₹{Number(formData.totalFee).toLocaleString()}
-                    </span>
-                  </div>
+                <div className="p-3 md:col-span-2 bg-muted rounded-md text-sm flex justify-between items-center h-11">
+                  <span className="font-medium">Total Student Fee:</span>
+                  <span className="font-bold text-lg text-blue-900 px-3 py-0.5 rounded border border-blue-200 bg-blue-50">
+                    ₹{Number(formData.totalFee).toLocaleString()}/-
+                  </span>
                 </div>
               )}
-
               {/* DYNAMIC INPUT FIELDS: Edit (Increment) vs New (Standard) */}
               {editFeeId ? (
                 // --- INCREMENT MODE (For Edit) ---
-                <div className="space-y-4 border p-3 rounded-md bg-slate-50 border-slate-200">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Original Paid Amount:
-                    </span>
-                    <span className="font-medium">
-                      ₹{baseAmount.toLocaleString()}
-                    </span>
+                <div className="md:col-span-2 space-y-4 border p-4 rounded-lg bg-blue-50/30 border-blue-100">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Original Paid Amount:</span>
+                        <span className="font-medium">₹{baseAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground font-bold text-blue-800">New Total Paid:</span>
+                        <span className="font-black text-blue-900 border-b-2 border-blue-200">
+                          ₹{Number(formData.amountPaid).toLocaleString()}/-
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                       <Label htmlFor="increment" className="text-blue-700 font-bold text-base">
+                          Add Extra Payment (₹)
+                       </Label>
+                       <Input
+                         id="increment"
+                         type="number"
+                         placeholder="0"
+                         value={paymentIncrement}
+                         onChange={(e) => handleIncrementChange(e.target.value)}
+                         className="border-blue-300 focus-visible:ring-blue-500 bg-white text-lg h-12"
+                         autoFocus
+                       />
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="increment"
-                      className="text-blue-700 font-semibold"
-                    >
-                      Amount to Add (₹)
-                    </Label>
-                    <Input
-                      id="increment"
-                      type="number"
-                      placeholder="Enter amount to add..."
-                      value={paymentIncrement}
-                      onChange={(e) => handleIncrementChange(e.target.value)}
-                      className="border-blue-300 focus-visible:ring-blue-500 bg-white"
-                      autoFocus
-                    />
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-200 flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      New Total Paid:
-                    </span>
-                    <span className="font-bold text-blue-900">
-                      ₹{Number(formData.amountPaid).toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Remaining Due:
-                    </span>
-                    <span
-                      className={`font-bold ${Number(formData.dueAmount) > 0 ? "text-red-600" : "text-green-600"}`}
-                    >
-                      ₹{Number(formData.dueAmount).toLocaleString()}
-                    </span>
+                  <div className="pt-3 border-t border-blue-100 flex justify-center items-center gap-4">
+                     <span className="text-sm font-bold uppercase tracking-wider text-gray-500">Resulting Balance Due:</span>
+                     <span className={`text-xl font-black ${Number(formData.dueAmount) > 0 ? "text-red-600" : "text-green-600"}`}>
+                        ₹{Number(formData.dueAmount).toLocaleString()}/-
+                     </span>
                   </div>
                 </div>
               ) : (
                 // --- STANDARD MODE (For New) ---
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="amount">Amount Paying (₹)</Label>
                     <Input
@@ -567,28 +594,7 @@ const Fees = () => {
                   </div>
                 </div>
               )}
-
-              <div className="space-y-2">
-                <Label htmlFor="method">Payment Method</Label>
-                <Select
-                  onValueChange={(val) =>
-                    setFormData({ ...formData, paymentMethod: val })
-                  }
-                  value={formData.paymentMethod}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Card">Card</SelectItem>
-                    <SelectItem value="UPI">UPI</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex justify-end gap-2 mt-4">
+              <div className="md:col-span-2 flex justify-end gap-2 mt-2 pt-4 border-t">
                 <Button
                   variant="outline"
                   onClick={() => setIsAddDialogOpen(false)}
@@ -744,142 +750,202 @@ const Fees = () => {
         {receiptData && (
           <div
             ref={receiptRef}
-            className="w-[794px] h-[1123px] px-10 py-10 bg-white text-black font-sans relative border-4 border-black shrink-0"
-            style={{ boxSizing: "border-box" }}
+            className="bg-white text-black px-8 py-6 w-[794px] h-[1000px] shadow-2xl flex flex-col relative border border-gray-200 shrink-0 select-none"
+            style={{ fontFamily: "'Times New Roman', serif", boxSizing: "border-box" }}
           >
-            {/* Header/Banner from Estimation style */}
-            {/* Header/Banner from Estimation style */}
-            <div className="border-b-2 border-black pb-4 mb-6">
-              <div className="flex items-center justify-between px-4">
-                <img
-                  src="/college_logo.png"
-                  alt="Logo"
-                  className="h-24 w-auto object-contain"
-                />
-                <div className="text-center flex-1">
-                  <h1 className="text-2xl font-bold uppercase tracking-wide mb-1 text-[#8B0000]">
-                    Sri Subramanya Swamy College of Pharmacy
+            <div className="border border-blue-900 p-1.5 flex flex-col items-center relative mb-2">
+              <div className="flex items-center w-full gap-4 mb-2">
+                {/* Logo Section */}
+                <div className="flex items-center gap-1 shrink-0 border-r-2 border-blue-900 pr-4">
+                  <div className="flex flex-col text-[10px] font-bold text-blue-900 leading-none py-1">
+                    <span>S</span>
+                    <span>S</span>
+                    <span>S</span>
+                    <span>C</span>
+                    <span>P</span>
+                  </div>
+                  <img
+                    src="/ssscp_logo.png"
+                    alt=""
+                    className="h-20 w-auto object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/college_logo.png";
+                    }}
+                  />
+                </div>
+
+                <div className="flex-1 text-center pr-12">
+                  <h1 className="text-2xl font-bold tracking-tight text-blue-900 leading-none mb-1">
+                    S.S.S. College of Pharmacy
                   </h1>
-                  <p className="italic text-sm text-gray-600 mb-2">
-                    Building Bridges Across Healthcare
+                  <p className="text-[10px] font-bold leading-tight uppercase text-gray-800">
+                    Akshara Campus, Akshara Nagar, Opp. JNNCE, Savalanga Road,
+                  </p>
+                  <p className="text-[10px] font-bold leading-tight uppercase text-gray-800">
+                    SHIVAMOGGA - 577 204.
+                  </p>
+                  <p className="text-[10px] font-bold leading-tight mt-1 text-gray-800">
+                    Mob. +91 94481 27880, 96329 17880
                   </p>
                 </div>
-                <div className="w-24"></div> {/* Balance the logo space */}
               </div>
-              <div className="w-full h-1 bg-black mt-2 mb-1"></div>
-              <div className="w-full h-0.5 bg-black"></div>
-            </div>
-
-            <div className="text-center mb-10">
-              <h2 className="text-xl font-bold uppercase tracking-widest border-2 px-4 py-2 inline-block border-black">
-                Fee Receipt
-              </h2>
-            </div>
-
-            <div className="flex justify-between mb-8 text-sm">
-              <div>
-                <p>
-                  <strong>Receipt No:</strong> {receiptData.receiptNo}
-                </p>
-                <p>
-                  <strong>Date:</strong> {receiptData.dateStr}
-                </p>
+              
+              <div className="w-full flex justify-center mt-0.5 border-t border-blue-900 pt-0.5">
+                <span className="font-bold text-base underline underline-offset-4 decoration-1">
+                  PAYMENT RECEIPT
+                </span>
               </div>
-              <div className="text-right">
-                <p>
-                  <strong>Academic Year:</strong> 2025-26
-                </p>{" "}
-                {/* Dynamic if available */}
-                <p>
-                  <strong>Admission No:</strong> {receiptData.admissionNumber}
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-8 border-2 border-black p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Student Name</p>
-                  <p className="font-bold text-lg">{receiptData.studentName}</p>
+              
+              {/* Receipt Info Line */}
+              <div className="w-full flex justify-between px-2 mt-1 text-sm font-bold">
+                <div className="flex gap-1 items-baseline">
+                  No. <span className="text-red-600 ml-4 font-normal text-xl tracking-tighter">{receiptData.receiptNo || ""}</span>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Grade / Class</p>
-                  <p className="font-bold text-lg">{receiptData.grade}</p>
+                <div className="flex gap-1 items-baseline">
+                  Dt. <span className="ml-4 font-normal text-lg">{receiptData.dateStr || ""}</span>
                 </div>
               </div>
             </div>
 
-            <table className="w-full border-collapse border-2 border-black mb-8">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border-2 border-black p-3 text-left">
-                    Description
-                  </th>
-                  <th className="border-2 border-black p-3 text-right">
-                    Amount (INR)
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="border-2 border-black p-3">
-                    <p className="font-bold">{receiptData.feeType} Payment</p>
-                    <p className="text-sm text-gray-600">
-                      Payment via {receiptData.paymentMethod}
-                    </p>
-                  </td>
-                  <td className="border-2 border-black p-3 text-right text-lg">
-                    {Number(receiptData.amountPaid).toLocaleString()}
-                  </td>
-                </tr>
-                <tr className="bg-gray-50">
-                  <td className="border-2 border-black p-3 font-bold text-right">
-                    Total Paid Now
-                  </td>
-                  <td className="border-2 border-black p-3 text-right font-bold text-lg">
-                    ₹ {Number(receiptData.amountPaid).toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div className="flex justify-between items-start mb-12">
-              <div className="w-1/2">
-                <h3 className="font-bold border-b border-black inline-block mb-2">
-                  Payment Status
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  <span className="text-gray-600">Total Agreed Fee:</span>
-                  <span className="font-medium">
-                    ₹ {Number(receiptData.totalFee).toLocaleString()}
-                  </span>
-                  <span className="text-gray-600">Balance Due:</span>
-                  <span
-                    className={`font-bold ${Number(receiptData.dueAmount) > 0 ? "text-red-600" : "text-green-600"}`}
-                  >
-                    ₹ {Number(receiptData.dueAmount).toLocaleString()}
+            {/* Student Details Section */}
+            <div className="space-y-3 px-2 mb-2 text-base">
+              <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 font-bold whitespace-nowrap text-sm">Sri /Miss</span>
+                <span className="ml-3 font-bold text-xl italic text-blue-900 flex-1 px-1 uppercase">
+                  {receiptData.studentName || ""}
+                </span>
+              </div>
+              
+              <div className="flex items-end w-full leading-tight font-bold gap-3 border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 uppercase text-[10px]">D. Pharma Course- academic year</span>
+                <span className="font-bold text-sm text-center px-2">
+                  2025-26
+                </span>
+                <div className="flex gap-2 ml-auto items-end">
+                  <span className="uppercase text-[10px]">Roll No:</span>
+                  <span className="font-bold text-sm px-2 text-blue-900">
+                    {students.find(s => s._id === receiptData.studentId)?.rollNo || ""}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Signatures */}
-            <div className="flex justify-between items-end mt-20 pt-10">
-              <div className="text-center">
-                <div className="w-32 border-b border-black mb-2"></div>
-                <p className="text-sm">Student/Parent Signature</p>
-              </div>
-              <div className="text-center">
-                <div className="w-32 border-b border-black mb-2"></div>
-                <p className="text-sm">Authorized Signatory</p>
-                <p className="text-xs text-gray-500">
-                  Sri Subramanya Swamy College of Pharmacy
-                </p>
+            {/* Table Area */}
+            <div className="mb-2 bg-white">
+              <table className="w-full text-sm font-bold border-2 border-blue-900 border-collapse table-fixed">
+                <thead>
+                  <tr className="border-b-2 border-blue-900 bg-blue-50/20">
+                    <th className="border-r-2 border-blue-900 p-1 w-[10%] text-center text-xs">No.</th>
+                    <th className="border-r-2 border-blue-900 p-1 w-[65%] text-left pl-3 uppercase text-xs">Particulars</th>
+                    <th className="p-1 w-[25%] text-center uppercase text-xs">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receiptData.feeItems && receiptData.feeItems.length > 0 ? (
+                    receiptData.feeItems.map((item: any, idx: number) => (
+                      <tr key={idx} className="border-b border-gray-200">
+                        <td className="border-r-2 border-blue-900 p-1 text-center font-normal">{idx + 1}.</td>
+                        <td className="border-r-2 border-blue-900 p-1 pl-4 font-semibold text-[15px] uppercase">
+                          {item.name}
+                        </td>
+                        <td className="p-1 text-right pr-6 tracking-wider font-semibold">
+                          {Number(item.value) > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    [
+                      "APPLICATION FEE", "ADMISSION FEE", "ELIGIBILITY FEE", "TUITION FEE",
+                      "LIBRARY & R.R. FEE", "IDENTITY CARD FEE", "LABORATORY FEE", "SPORTS FEE",
+                      "CULTURAL FEE", "ANNUAL DAY FEE", "DIGITAL LIBRARY FEE", "INTERNAL EXAMINATION FEE",
+                      "BREAKAGE FEE", "OTHERS"
+                    ].map((name, idx) => (
+                      <tr key={idx} className="border-b border-gray-100">
+                        <td className="border-r-2 border-blue-900 p-1 text-center font-normal">{idx + 1}.</td>
+                        <td className="border-r-2 border-blue-900 p-1 pl-4 font-semibold text-[15px] uppercase">
+                          {name}
+                        </td>
+                        <td className="p-1 text-right pr-6 tracking-wider font-semibold">
+                          {idx === 13 ? Number(receiptData.amountPaid).toLocaleString("en-IN") + "/-" : ""}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                  
+                  {Array.from({ length: Math.max(1, 10 - (receiptData.feeItems?.length || 1)) }).map((_, i) => (
+                    <tr key={`empty-${i}`} className="border-b border-gray-100">
+                      <td className="border-r-2 border-blue-900 p-0.5 text-center h-6 font-normal text-gray-300 transform scale-75">
+                        {(receiptData.feeItems?.length || 1) + i + 1}.
+                      </td>
+                      <td className="border-r-2 border-blue-900 p-0.5"></td>
+                      <td className="p-0.5"></td>
+                    </tr>
+                  ))}
+
+                  {/* Financial Status Summary */}
+                  <tr className="font-bold border-t-2 border-blue-900 bg-blue-50/10">
+                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900" colSpan={2}>
+                      Grand Total Amount
+                    </td>
+                    <td className="p-1.5 text-right pr-4 text-base text-blue-900 font-extrabold">
+                      ₹ {Number(receiptData.totalFee).toLocaleString("en-IN")}/-
+                    </td>
+                  </tr>
+
+                  <tr className="font-bold border-t border-blue-900">
+                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900 text-green-700" colSpan={2}>
+                      Current Paid Amount
+                    </td>
+                    <td className="p-1.5 text-right pr-4 text-base text-green-700 font-extrabold">
+                      ₹ {Number(receiptData.amountPaid).toLocaleString("en-IN")}/-
+                    </td>
+                  </tr>
+
+                  <tr className="font-bold border-t border-blue-900">
+                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900 text-red-700" colSpan={2}>
+                      Balance Due Amount
+                    </td>
+                    <td className="p-1.5 text-right pr-4 text-base text-red-700 font-extrabold">
+                      ₹ {Number(receiptData.dueAmount).toLocaleString("en-IN")}/-
+                    </td>
+                  </tr>
+
+                  {Number(receiptData.dueAmount) === 0 && (
+                    <tr className="bg-green-100/30">
+                      <td colSpan={3} className="text-center py-1 text-green-800 font-black text-sm uppercase tracking-widest border-t-2 border-green-600">
+                        *** FULL ALL AMOUNT PAID ***
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Rupees in Words */}
+            <div className="px-2 mb-4">
+              <div className="flex items-start w-full text-base font-bold border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 uppercase text-[10px] mr-3 mt-1.5">Rupees in words:</span>
+                <span className="font-bold text-base italic capitalize py-0.5 text-gray-800">
+                   {Number(receiptData.amountPaid) > 0 ? toWords.convert(Number(receiptData.amountPaid)) + " Only" : ""}
+                </span>
               </div>
             </div>
 
-            <div className="mt-10 text-center text-xs text-gray-400">
-              This is a computer generated receipt.
+            {/* Signature Area */}
+            <div className="mt-4 px-2 flex justify-between items-end w-full">
+              <div className="w-[40%] flex flex-col items-start border-t border-gray-400 pt-1">
+                 <p className="font-bold text-[10px] uppercase text-gray-700 underline mb-0.5">Institutional Seal</p>
+                 <div className="h-8 w-full"></div>
+              </div>
+              <div className="w-[45%] flex flex-col items-center border-t-2 border-blue-900 pt-1">
+                 <p className="font-bold text-xs uppercase text-blue-900">SIGNATURE OF THE RECEIVER</p>
+                 <div className="h-8 w-full"></div>
+              </div>
+            </div>
+            
+            <div className="mt-10 text-center text-[10px] text-gray-400">
+              This is a computer generated receipt. For any discrepancies, please contact college office.
             </div>
           </div>
         )}

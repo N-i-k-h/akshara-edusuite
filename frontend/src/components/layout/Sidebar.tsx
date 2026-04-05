@@ -8,12 +8,12 @@ import {
   FileText,
   BookOpen,
   CreditCard,
-  Library,
   GraduationCap,
   Calculator,
   Menu,
   X,
   BarChart,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,7 @@ const navigation = [
   { name: "Students", href: "/students", icon: Users },
   { name: "Staff & HR", href: "/staff", icon: UserCog },
   { name: "Classes", href: "/classes", icon: GraduationCap },
-  { name: "Timetable", href: "/timetable", icon: Calendar },
-  { name: "Exams", href: "/exams", icon: FileText },
+
 
   { name: "Fee Receipt", href: "/fees-registration", icon: FileText },
   { name: "Fees Payment", href: "/fees", icon: CreditCard },
@@ -40,7 +39,7 @@ const navigation = [
     icon: FileText,
   },
   { name: "Study Certificate", href: "/study-certificate", icon: BookOpen },
-  { name: "Library", href: "/library", icon: Library },
+  { name: "Expenditure", href: "/expenditure", icon: Wallet },
   { name: "Reports", href: "/reports", icon: BarChart },
 ];
 
