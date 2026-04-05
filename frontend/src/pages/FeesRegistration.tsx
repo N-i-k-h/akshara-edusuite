@@ -24,7 +24,7 @@ const FeesRegistration = () => {
   const [classesList, setClassesList] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
-    receiptNo: "623",
+    receiptNo: "0",
     date: new Date().toLocaleDateString("en-GB"),
     studentName: "",
     genderPrefix: "Sri /Miss",
@@ -39,6 +39,7 @@ const FeesRegistration = () => {
     parentPhone: "",
     paymentMethod: "Cash",
     chequeNo: "",
+    payingAmount: "0",
   });
 
   const [feeItems, setFeeItems] = useState([
@@ -61,6 +62,24 @@ const FeesRegistration = () => {
   const [newFeeName, setNewFeeName] = useState("");
   const [newFeeAmount, setNewFeeAmount] = useState("");
 
+  const generateAdmissionNumber = () => {
+    const currentYear = new Date().getFullYear().toString().slice(-2);
+    const storedSeq = localStorage.getItem("feeEstimationSeq");
+    let seq = storedSeq ? parseInt(storedSeq) : 0;
+    seq += 1;
+    localStorage.setItem("feeEstimationSeq", seq.toString());
+    const formattedSeq = seq.toString().padStart(3, "0");
+    const newAdmNo = `${currentYear}01${formattedSeq}`;
+    setFormData((prev) => ({ ...prev, admissionNumber: newAdmNo }));
+  };
+
+  const generateReceiptNumber = () => {
+    const storedSeq = localStorage.getItem("receiptNoSeq_v2");
+    let seq = storedSeq ? (parseInt(storedSeq) + 1) : 0;
+    localStorage.setItem("receiptNoSeq_v2", seq.toString());
+    setFormData((prev) => ({ ...prev, receiptNo: seq.toString() }));
+  };
+
   // Generate Admission Number and Fetch Classes on Mount
   useEffect(() => {
     const fetchClasses = async () => {
@@ -75,19 +94,8 @@ const FeesRegistration = () => {
       }
     };
     fetchClasses();
-
-    const generateAdmissionNumber = () => {
-      const currentYear = new Date().getFullYear().toString().slice(-2);
-      const storedSeq = localStorage.getItem("feeEstimationSeq");
-      let seq = storedSeq ? parseInt(storedSeq) : 0;
-      seq += 1;
-      localStorage.setItem("feeEstimationSeq", seq.toString());
-      const formattedSeq = seq.toString().padStart(3, "0");
-      const newAdmNo = `${currentYear}01${formattedSeq}`;
-      setFormData((prev) => ({ ...prev, admissionNumber: newAdmNo }));
-    };
-
     generateAdmissionNumber();
+    generateReceiptNumber();
   }, []);
 
   const handleInputChange = (field, value) => {
@@ -127,7 +135,13 @@ const FeesRegistration = () => {
     return feeItems.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
   };
 
-  const handleRegisterStudentAndFees = async (isPaid: boolean = true) => {
+  const calculateDue = () => {
+    const total = calculateTotal();
+    const paid = Number(formData.payingAmount) || 0;
+    return Math.max(0, total - paid);
+  };
+
+  const handleRegisterStudentAndFees = async () => {
     if (!formData.studentName || !formData.class || !formData.parentName || !formData.parentPhone) {
       toast.error("Please fill required student details (Name, Class, Parent Name, Parent Phone).");
       return;
@@ -166,6 +180,8 @@ const FeesRegistration = () => {
       }));
 
       const totalFee = calculateTotal();
+      const payingAmount = Number(formData.payingAmount) || 0;
+      const dueAmount = calculateDue();
 
       const feePayload = {
         studentId: newStudent._id,
@@ -191,62 +207,33 @@ const FeesRegistration = () => {
         return;
       }
 
-      if (isPaid) {
-         // 3. Mark the payment in the main fees tracking system (so it doesn't show as Due)
-         const paymentPayload = {
-           studentId: newStudent._id,
-           studentName: newStudent.name,
-           admissionNumber: newStudent.admissionNumber,
-           grade: newStudent.class,
-           feeType: "Fee Receipt Payment",
-           amountPaid: totalFee,
-           dueAmount: 0,
-           paymentMethod: formData.paymentMethod === "Cheque" ? "Other" : formData.paymentMethod, // Map to enum ["Card", "Cash", "UPI", "Other"]
-           date: new Date(),
-           status: "Paid"
-         };
+      // 3. Register the payment record
+      const paymentPayload = {
+        studentId: newStudent._id,
+        studentName: newStudent.name,
+        admissionNumber: newStudent.admissionNumber,
+        grade: newStudent.class,
+        feeType: "Fee Receipt Payment",
+        amountPaid: payingAmount,
+        dueAmount: dueAmount,
+        paymentMethod: formData.paymentMethod === "Cheque" ? "Other" : formData.paymentMethod, 
+        date: new Date(),
+        status: dueAmount === 0 ? "Paid" : "Pending"
+      };
 
-         await authFetch(`${API_BASE_URL}/fees`, {
-           method: "POST",
-           headers: { "Content-Type": "application/json" },
-           body: JSON.stringify(paymentPayload)
-         });
-      } else {
-        // Register without payment (sets full due amount)
-        const duePayload = {
-          studentId: newStudent._id,
-          studentName: newStudent.name,
-          admissionNumber: newStudent.admissionNumber,
-          grade: newStudent.class,
-          feeType: "Fee Structure Defined",
-          amountPaid: 0,
-          dueAmount: totalFee,
-          paymentMethod: "Other",
-          date: new Date(),
-          status: "Pending"
-        };
+      await authFetch(`${API_BASE_URL}/fees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentPayload)
+      });
 
-        await authFetch(`${API_BASE_URL}/fees`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(duePayload)
-        });
-      }
-
-      toast.success(isPaid ? "Student and Payment registered successfully!" : "Student registered with dues.");
+      toast.success(dueAmount === 0 ? "Student and Full Payment registered successfully!" : `Student registered with ₹${dueAmount} dues.`);
 
       // 4. Download PDF automatically
       handleDownloadPDF();
 
       // 2. Prepare for next entry after a short delay
       setTimeout(() => {
-        const currentYear = new Date().getFullYear().toString().slice(-2);
-        const storedSeq = localStorage.getItem("feeEstimationSeq");
-        let seq = storedSeq ? parseInt(storedSeq) : 0;
-        seq += 1;
-        localStorage.setItem("feeEstimationSeq", seq.toString());
-        const newAdmNo = `${currentYear}01${seq.toString().padStart(3, "0")}`;
-
         setFormData(prev => ({
           ...prev,
           studentName: "",
@@ -254,10 +241,13 @@ const FeesRegistration = () => {
           rollNo: "",
           parentPhone: "",
           parentName: "",
-          admissionNumber: newAdmNo,
-          receiptNo: (parseInt(prev.receiptNo || "623") + 1).toString(),
+          payingAmount: "0",
           chequeNo: ""
         }));
+
+        // Trigger new sequences
+        generateAdmissionNumber();
+        generateReceiptNumber();
 
         // Reset fee items to 0
         setFeeItems(prev => prev.map(item => ({ ...item, value: "0" })));
@@ -308,7 +298,7 @@ const FeesRegistration = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4">
+    <div className="space-y-6 max-w-[1300px] mx-auto p-4">
       <div className="flex items-center justify-between no-print">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
@@ -321,29 +311,29 @@ const FeesRegistration = () => {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" />
-            Print
+            Print Preview
           </Button>
-          <Button variant="outline" onClick={handleDownloadPDF}>
+          <Button variant="outline" onClick={() => handleDownloadPDF()}>
             <Download className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
-          <Button onClick={() => handleRegisterStudentAndFees(false)}>
+          <Button onClick={() => handleRegisterStudentAndFees()} className="bg-blue-900">
             <Save className="mr-2 h-4 w-4" />
-            Save & Register
+            Submit Registration
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Input Form */}
-        <Card className="lg:col-span-1 h-fit no-print">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
+        <Card className="lg:col-span-2 h-fit no-print sticky top-4">
+          <CardHeader className="pb-3 border-b">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Calculator className="h-6 w-6 text-blue-900" />
               Receipt Details
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 max-h-[85vh] overflow-y-auto pr-2">
+          <CardContent className="space-y-6 max-h-[90vh] overflow-y-auto pr-4 py-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Receipt No.</Label>
@@ -562,47 +552,55 @@ const FeesRegistration = () => {
               </div>
             </div>
 
-            <div className="bg-slate-100 p-4 rounded-lg space-y-4 font-bold mt-4 shadow-inner border">
-              <div className="flex justify-between items-center text-xl text-blue-900">
-                <span>Total Amount:</span>
-                <span>₹ {calculateTotal().toLocaleString()}</span>
-              </div>
+            <div className="bg-slate-100 p-4 rounded-lg space-y-4 mt-4 shadow-inner border border-blue-200">
+               <div className="space-y-4">
+                  <div className="flex justify-between items-center text-lg text-slate-700 font-bold">
+                    <span>Total Fee Amount:</span>
+                    <span>₹ {calculateTotal().toLocaleString()}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-blue-900 font-black uppercase text-[10px]">Amount Paying Now</Label>
+                      <Input 
+                        type="number"
+                        className="h-10 text-lg font-black border-2 border-blue-300 focus:border-blue-600 bg-white"
+                        value={formData.payingAmount}
+                        onChange={(e) => handleInputChange("payingAmount", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-red-900 font-black uppercase text-[10px]">Balance Due Amount</Label>
+                      <div className="h-10 text-lg font-black border-2 border-red-100 bg-red-50 flex items-center px-3 text-red-600 rounded-md">
+                        ₹ {calculateDue().toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+               </div>
               
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="pt-2">
                 <Button 
-                  variant="outline"
-                  className="h-14 text-base font-bold border-2 border-blue-900 text-blue-900 hover:bg-blue-50 transform active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="w-full h-14 text-xl font-black bg-blue-900 hover:bg-black shadow-lg transform active:scale-95 transition-all flex items-center justify-center gap-3 text-white uppercase tracking-widest"
                   onClick={(e) => {
                     e.preventDefault();
-                    handleRegisterStudentAndFees(false);
+                    handleRegisterStudentAndFees();
                   }}
                 >
-                  <Save className="h-5 w-5" />
-                  REGISTER ONLY
-                </Button>
-                
-                <Button 
-                  className="h-14 text-base font-bold bg-green-600 hover:bg-green-700 shadow-md transform active:scale-95 transition-all flex items-center justify-center gap-2 text-white"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleRegisterStudentAndFees(true);
-                  }}
-                >
-                  <CreditCard className="h-5 w-5" />
-                  PAY FEE
+                  <Save className="h-6 w-6" />
+                  SUBMIT & PRINT RECEIPT
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>        {/* Live Preview / PDF Output */}
-        <div className="lg:col-span-2 overflow-auto bg-gray-500/10 p-4 rounded-xl flex justify-center items-start min-h-[900px]">
+        <div className="lg:col-span-3 overflow-auto bg-gray-500/10 p-4 rounded-xl flex justify-center items-start min-h-[1000px]">
           <div
             ref={printRef}
-            className="bg-white text-black px-10 py-10 w-[794px] h-[1123px] shadow-2xl flex flex-col relative border border-gray-200 shrink-0 select-none"
+            className="bg-white text-black px-8 py-6 w-[794px] h-[1000px] shadow-2xl flex flex-col relative border border-gray-200 shrink-0 select-none"
             style={{ fontFamily: "'Times New Roman', serif", boxSizing: "border-box" }}
           >
             {/* Header Box */}
-            <div className="border-2 border-blue-900 p-2 flex flex-col items-center relative mb-4">
+            <div className="border border-blue-900 p-1.5 flex flex-col items-center relative mb-2">
               <div className="flex items-center w-full gap-4 mb-2">
                 {/* Logo Section */}
                 <div className="flex items-center gap-1 shrink-0 border-r-2 border-blue-900 pr-4">
@@ -625,67 +623,67 @@ const FeesRegistration = () => {
                 </div>
 
                 <div className="flex-1 text-center pr-12">
-                  <h1 className="text-3xl font-bold tracking-tight text-blue-900 leading-none mb-2">
+                  <h1 className="text-2xl font-bold tracking-tight text-blue-900 leading-none mb-1">
                     S.S.S. College of Pharmacy
                   </h1>
-                  <p className="text-[11px] font-bold leading-tight uppercase text-gray-800">
+                  <p className="text-[10px] font-bold leading-tight uppercase text-gray-800">
                     Akshara Campus, Akshara Nagar, Opp. JNNCE, Savalanga Road,
                   </p>
-                  <p className="text-[11px] font-bold leading-tight uppercase text-gray-800">
+                  <p className="text-[10px] font-bold leading-tight uppercase text-gray-800">
                     SHIVAMOGGA - 577 204.
                   </p>
-                  <p className="text-[11px] font-bold leading-tight mt-1 text-gray-800">
+                  <p className="text-[10px] font-bold leading-tight mt-1 text-gray-800">
                     Mob. +91 94481 27880, 96329 17880
                   </p>
                 </div>
               </div>
               
-              <div className="w-full flex justify-center mt-1 border-t-2 border-blue-900 pt-1">
-                <span className="font-bold text-lg underline underline-offset-4 decoration-2">
+              <div className="w-full flex justify-center mt-0.5 border-t border-blue-900 pt-0.5">
+                <span className="font-bold text-base underline underline-offset-4 decoration-1">
                   FEE RECEIPT
                 </span>
               </div>
               
               {/* Receipt Info Line */}
-              <div className="w-full flex justify-between px-2 mt-2 text-base font-bold">
+              <div className="w-full flex justify-between px-2 mt-1 text-sm font-bold">
                 <div className="flex gap-1 items-baseline">
-                  No. <span className="text-red-600 ml-4 font-normal text-2xl tracking-tighter">{formData.receiptNo || ""}</span>
+                  No. <span className="text-red-600 ml-4 font-normal text-xl tracking-tighter">{formData.receiptNo || ""}</span>
                 </div>
                 <div className="flex gap-1 items-baseline">
-                  Dt. <span className="ml-4 font-normal text-xl">{formData.date || ""}</span>
+                  Dt. <span className="ml-4 font-normal text-lg">{formData.date || ""}</span>
                 </div>
               </div>
             </div>
 
             {/* Student Details Section */}
-            <div className="space-y-6 px-2 mb-4 text-lg">
-              <div className="flex items-end w-full border-b border-black pb-1">
-                <span className="shrink-0 font-bold whitespace-nowrap">{formData.genderPrefix}</span>
-                <span className="ml-4 font-bold text-2xl italic text-blue-900 flex-1 px-2 uppercase">
+            <div className="space-y-3 px-2 mb-2 text-base">
+              <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 font-bold whitespace-nowrap text-sm">{formData.genderPrefix}</span>
+                <span className="ml-3 font-bold text-xl italic text-blue-900 flex-1 px-1 uppercase">
                   {formData.studentName || ""}
                 </span>
               </div>
               
-              <div className="flex items-end w-full leading-tight font-bold gap-4 border-b border-black pb-1">
-                <span className="shrink-0 uppercase text-sm">{formData.yearPrefix} D. Pharma Course- academic year</span>
-                <span className="font-bold text-lg text-center px-4">
+              <div className="flex items-end w-full leading-tight font-bold gap-3 border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 uppercase text-[10px]">{formData.yearPrefix} D. Pharma Course- academic year</span>
+                <span className="font-bold text-sm text-center px-2">
                   {formData.academicYear}
                 </span>
                 <div className="flex gap-2 ml-auto items-end">
-                  <span className="uppercase text-sm">Roll No:</span>
-                  <span className="font-bold text-lg px-4">{formData.rollNo || ""}</span>
+                  <span className="uppercase text-[10px]">Roll No:</span>
+                  <span className="font-bold text-sm px-2">{formData.rollNo || ""}</span>
                 </div>
               </div>
             </div>
 
             {/* Table Area */}
-            <div className="mb-4 bg-white">
-              <table className="w-full text-base font-bold border-2 border-blue-900 border-collapse table-fixed">
+            <div className="mb-2 bg-white">
+              <table className="w-full text-sm font-bold border-2 border-blue-900 border-collapse table-fixed">
                 <thead>
                   <tr className="border-b-2 border-blue-900 bg-blue-50/20">
-                    <th className="border-r-2 border-blue-900 p-2 w-[10%] text-center">No.</th>
-                    <th className="border-r-2 border-blue-900 p-2 w-[65%] text-left pl-4 uppercase">Particulars</th>
-                    <th className="p-2 w-[25%] text-center uppercase">Amount</th>
+                    <th className="border-r-2 border-blue-900 p-1 w-[10%] text-center text-xs">No.</th>
+                    <th className="border-r-2 border-blue-900 p-1 w-[65%] text-left pl-3 uppercase text-xs">Particulars</th>
+                    <th className="p-1 w-[25%] text-center uppercase text-xs">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -699,46 +697,72 @@ const FeesRegistration = () => {
                     </tr>
                   ))}
                   
-                  {Array.from({ length: Math.max(1, 12 - feeItems.length) }).map((_, i) => (
+                  {Array.from({ length: Math.max(1, 10 - feeItems.length) }).map((_, i) => (
                     <tr key={`empty-${i}`} className="border-b border-gray-100">
-                      <td className="border-r-2 border-blue-900 p-1 text-center h-8 font-normal text-gray-300">{feeItems.length + i + 1}.</td>
-                      <td className="border-r-2 border-blue-900 p-1"></td>
-                      <td className="p-1"></td>
+                      <td className="border-r-2 border-blue-900 p-0.5 text-center h-6 font-normal text-gray-300 transform scale-75">{feeItems.length + i + 1}.</td>
+                      <td className="border-r-2 border-blue-900 p-0.5"></td>
+                      <td className="p-0.5"></td>
                     </tr>
                   ))}
 
-                  {/* Grand Total Row - Integrated in Table */}
-                  <tr className="font-bold text-lg border-t-2 border-blue-900 bg-blue-50/10">
-                    <td className="p-4 text-right pr-4 uppercase tracking-widest text-[#001f3f] border-r-2 border-blue-900" colSpan={2}>
-                      GRAND TOTAL
+                  {/* Financial Status Summary */}
+                  <tr className="font-bold border-t-2 border-blue-900 bg-blue-50/10">
+                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900" colSpan={2}>
+                      Grand Total Amount
                     </td>
-                    <td className="p-4 text-right pr-6 text-2xl text-blue-900 font-extrabold">
-                      {calculateTotal().toLocaleString("en-IN")}/-
+                    <td className="p-1.5 text-right pr-4 text-base text-blue-900 font-extrabold">
+                      ₹ {calculateTotal().toLocaleString("en-IN")}/-
                     </td>
                   </tr>
+
+                  <tr className="font-bold border-t border-blue-900">
+                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900 text-green-700" colSpan={2}>
+                      Current Paid Amount
+                    </td>
+                    <td className="p-1.5 text-right pr-4 text-base text-green-700 font-extrabold">
+                      ₹ {Number(formData.payingAmount || 0).toLocaleString("en-IN")}/-
+                    </td>
+                  </tr>
+
+                  <tr className="font-bold border-t border-blue-900">
+                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900 text-red-700" colSpan={2}>
+                      Balance Due Amount
+                    </td>
+                    <td className="p-1.5 text-right pr-4 text-base text-red-700 font-extrabold">
+                      ₹ {calculateDue().toLocaleString("en-IN")}/-
+                    </td>
+                  </tr>
+
+                  {calculateDue() === 0 && calculateTotal() > 0 && (
+                    <tr className="bg-green-100/30">
+                      <td colSpan={3} className="text-center py-1 text-green-800 font-black text-sm uppercase tracking-widest border-t-2 border-green-600">
+                        *** FULL ALL AMOUNT PAID ***
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
 
             {/* Rupees in Words - Immediately After Table */}
-            <div className="px-2 mb-8">
-              <div className="flex items-start w-full text-lg font-bold border-b border-black pb-1">
-                <span className="shrink-0 uppercase text-sm mr-4 mt-2">Rupees in words:</span>
-                <span className="font-bold text-xl italic capitalize py-1 text-gray-800">
-                   {calculateTotal() > 0 ? toWords.convert(calculateTotal()) + " Only" : ""}
+            <div className="px-2 mb-4">
+              <div className="flex items-start w-full text-base font-bold border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 uppercase text-[10px] mr-3 mt-1.5">Rupees in words:</span>
+                <span className="font-bold text-base italic capitalize py-0.5 text-gray-800">
+                   {Number(formData.payingAmount) > 0 ? toWords.convert(Number(formData.payingAmount)) + " Only" : ""}
                 </span>
               </div>
             </div>
 
             {/* Signature Area */}
-            <div className="mt-8 px-2 flex justify-between items-end w-full">
-              <div className="w-[40%] flex flex-col items-start border-t border-black pt-2">
-                 <p className="font-bold text-xs uppercase text-gray-700 underline mb-1">Institutional Seal</p>
-                 <div className="h-12 w-full"></div>
+            <div className="mt-4 px-2 flex justify-between items-end w-full">
+              <div className="w-[40%] flex flex-col items-start border-t border-gray-400 pt-1">
+                 <p className="font-bold text-[10px] uppercase text-gray-700 underline mb-0.5">Institutional Seal</p>
+                 <div className="h-8 w-full"></div>
               </div>
-              <div className="w-[45%] flex flex-col items-center border-t-2 border-blue-900 pt-2">
-                 <p className="font-bold text-sm uppercase text-blue-900">SIGNATURE OF THE RECEIVER</p>
-                 <div className="h-12 w-full"></div>
+              <div className="w-[45%] flex flex-col items-center border-t border-blue-900 pt-1">
+                 <p className="font-bold text-xs uppercase text-blue-900">SIGNATURE OF THE RECEIVER</p>
+                 <div className="h-8 w-full"></div>
               </div>
             </div>
           </div>

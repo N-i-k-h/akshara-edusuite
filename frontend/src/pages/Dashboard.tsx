@@ -7,6 +7,9 @@ import {
   CreditCard,
   AlertTriangle,
   Clock,
+  Wallet,
+  TrendingUp,
+  Banknote,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +30,8 @@ const Dashboard = () => {
     totalFaculty: 0,
     totalRevenue: 0,
     feesCollected: 0,
+    totalExpenditure: 0,
+    netRevenue: 0,
     feesDue: 0,
     feeDefaulters: [],
     lowAttendanceStudents: [],
@@ -53,38 +58,54 @@ const Dashboard = () => {
     { name: "Due", value: stats.feesDue },
   ];
 
-  const COLORS = ["#0088FE", "#FF8042"];
+  const COLORS = ["#10b981", "#ef4444"];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back to Akshara College EduManage
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl border-l-8 border-primary shadow-sm no-print">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Dashboard Overview</h1>
+          <p className="text-muted-foreground mt-1">
+            Real-time financial and academic performance monitoring.
+          </p>
+        </div>
+        <div className="flex gap-4">
+           <div className="text-right">
+             <p className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Total Students</p>
+             <p className="text-2xl font-black text-primary">{stats.totalStudents}</p>
+           </div>
+           <div className="w-px h-10 bg-slate-200"></div>
+           <div className="text-right">
+             <p className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Gross Revenue</p>
+             <p className="text-2xl font-black text-green-600">₹{stats.totalRevenue.toLocaleString()}</p>
+           </div>
+        </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Financial Health Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Students"
-          value={stats.totalStudents.toLocaleString()}
-          icon={Users}
+          title="Net Revenue (Profit)"
+          value={`₹${stats.netRevenue.toLocaleString()}`}
+          icon={TrendingUp}
+          className="bg-emerald-50/50 border-emerald-100"
         />
         <StatCard
+          title="Total Expenditure"
+          value={`₹${stats.totalExpenditure.toLocaleString()}`}
+          icon={Wallet}
+          className="bg-red-50/50 border-red-100"
+        />
+        <StatCard
+          title="Outstanding Dues"
+          value={`₹${stats.feesDue.toLocaleString()}`}
+          icon={AlertTriangle}
+          className="bg-amber-50/50 border-amber-100"
+        />
+         <StatCard
           title="Total Faculty"
           value={stats.totalFaculty.toLocaleString()}
           icon={UserCheck}
-        />
-        <StatCard
-          title="Total Revenue"
-          value={`₹${stats.totalRevenue.toLocaleString()}`}
-          icon={CreditCard}
-        />
-        <StatCard
-          title="Fees Due"
-          value={`₹${stats.feesDue.toLocaleString()}`}
-          icon={AlertTriangle}
         />
       </div>
 

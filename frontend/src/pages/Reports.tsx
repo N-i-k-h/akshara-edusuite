@@ -29,6 +29,9 @@ import {
   Search,
   Download,
   Printer,
+  Wallet,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +42,7 @@ const Reports = () => {
   const [endDate, setEndDate] = useState("");
 
   const [allFees, setAllFees] = useState<any[]>([]);
+  const [allExpenditures, setAllExpenditures] = useState<any[]>([]);
   const [feeStructures, setFeeStructures] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [students, setStudents] = useState<any[]>([]);
@@ -54,9 +58,12 @@ const Reports = () => {
     totalDueAmount: 0,
     studentsWithDue: 0,
     totalExpectedFee: 0,
+    expenditureAmount: 0,
+    netProceeds: 0,
   });
 
   const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
+  const [filteredExpenditures, setFilteredExpenditures] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -64,23 +71,26 @@ const Reports = () => {
 
   const fetchData = async () => {
     try {
-      const [feesRes, studentsRes, structRes] = await Promise.all([
+      const [feesRes, studentsRes, structRes, expRes] = await Promise.all([
         authFetch(`${API_BASE_URL}/fees?t=${Date.now()}`),
         authFetch(`${API_BASE_URL}/students`),
         authFetch(`${API_BASE_URL}/fee-structures`),
+        authFetch(`${API_BASE_URL}/expenditures`),
       ]);
 
-      if (feesRes.ok && studentsRes.ok && structRes.ok) {
+      if (feesRes.ok && studentsRes.ok && structRes.ok && expRes.ok) {
         const feesData = await feesRes.json();
         const studentsData = await studentsRes.json();
         const structData = await structRes.json();
+        const expData = await expRes.json();
 
         setAllFees(feesData);
         setStudents(studentsData);
         setFeeStructures(structData);
+        setAllExpenditures(expData);
 
         calculateGlobalDues(feesData, structData);
-        filterByDate(feesData, "", "");
+        filterByDate(feesData, expData, "", "");
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -120,8 +130,9 @@ const Reports = () => {
     }));
   };
 
-  const filterByDate = (fees: any[], start: string, end: string) => {
-    let filtered = fees;
+  const filterByDate = (fees: any[], expenditures: any[], start: string, end: string) => {
+    let filteredFees = fees;
+    let filteredExp = expenditures;
 
     if (start && end) {
       const s = new Date(start);
@@ -129,34 +140,51 @@ const Reports = () => {
       const e = new Date(end);
       e.setHours(23, 59, 59, 999);
 
-      filtered = fees.filter((f) => {
+      filteredFees = fees.filter((f) => {
         const d = new Date(f.date);
+        return d >= s && d <= e;
+      });
+
+      filteredExp = expenditures.filter((ex) => {
+        const d = new Date(ex.date);
         return d >= s && d <= e;
       });
     }
 
-    const collected = filtered.reduce(
+    // Sort both by date descending
+    filteredFees.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    filteredExp.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const collected = filteredFees.reduce(
       (sum: number, f: any) => sum + (Number(f.amountPaid) || 0),
       0,
     );
 
-    setFilteredTransactions(filtered);
+    const totalExp = filteredExp.reduce(
+      (sum: number, ex: any) => sum + (Number(ex.amount) || 0),
+      0,
+    );
+
+    setFilteredTransactions(filteredFees);
+    setFilteredExpenditures(filteredExp);
     setReportData((prev) => ({
       ...prev,
       collectedAmount: collected,
-      collectedCount: filtered.length,
+      collectedCount: filteredFees.length,
+      expenditureAmount: totalExp,
+      netProceeds: collected - totalExp,
     }));
   };
 
   const handleApplyFilter = () => {
-    filterByDate(allFees, startDate, endDate);
+    filterByDate(allFees, allExpenditures, startDate, endDate);
     toast.success("Report updated");
   };
 
   const handleReset = () => {
     setStartDate("");
     setEndDate("");
-    filterByDate(allFees, "", "");
+    filterByDate(allFees, allExpenditures, "", "");
     toast.info("Filters reset");
   };
 
@@ -211,6 +239,57 @@ const Reports = () => {
     link.click();
     document.body.removeChild(link);
     toast.success("Excel (CSV) Downloaded");
+  };
+
+  const handleDownloadExpCSV = () => {
+    if (!filteredExpenditures.length) {
+      toast.error("No expenditure data to export");
+      return;
+    }
+
+    const headers = [
+      "Date",
+      "Title",
+      "Category",
+      "Method",
+      "Amount",
+      "Description",
+    ];
+    const rows = filteredExpenditures.map((e) => [
+      new Date(e.date).toLocaleDateString(),
+      e.title,
+      e.category,
+      e.paymentMethod,
+      e.amount,
+      e.description || "",
+    ]);
+
+    // Add Total Row
+    const totalAmount = filteredExpenditures.reduce(
+      (sum, e) => sum + (Number(e.amount) || 0),
+      0,
+    );
+    const totalRow = ["", "Total Expenditure", "", "", totalAmount, ""];
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [
+        headers.join(","),
+        ...rows.map((r) => r.join(",")),
+        totalRow.join(","),
+      ].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Akshara_Expenditure_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Expenditure CSV Downloaded");
   };
 
   const handleDownloadPDF = () => {
@@ -307,7 +386,15 @@ const Reports = () => {
                 disabled={filteredTransactions.length === 0}
               >
                 <FileText className="mr-2 h-4 w-4" />
-                Save as Excel
+                Fees Excel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDownloadExpCSV}
+                disabled={filteredExpenditures.length === 0}
+              >
+                <TrendingDown className="mr-2 h-4 w-4" />
+                Expenses Excel
               </Button>
               <Button variant="default" onClick={handleDownloadPDF}>
                 <Download className="mr-2 h-4 w-4" />
@@ -341,67 +428,109 @@ const Reports = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-green-50 border-green-200 shadow-none">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 mb-6">
+          <Card className="bg-emerald-50 border-emerald-200 shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-900">
-                Fees Collected
+              <CardTitle className="text-sm font-black text-emerald-900 uppercase tracking-wider">
+                Gross Collection
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-green-600" />
+              <DollarSign className="h-5 w-5 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-700">
+              <div className="text-3xl font-black text-emerald-700">
                 ₹{reportData.collectedAmount.toLocaleString()}
               </div>
-              <p className="text-xs text-green-600">
-                {reportData.collectedCount} transactions
+              <p className="text-[10px] font-bold text-emerald-600 mt-1 uppercase">
+                {reportData.collectedCount} SUCCESSFUL TRANSACTIONS
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-red-50 border-red-200 shadow-none">
+          <Card className="bg-rose-50 border-rose-200 shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-red-900">
-                Total Due Amount
+              <CardTitle className="text-sm font-black text-rose-900 uppercase tracking-wider">
+                Total Expenditures
               </CardTitle>
-              <CreditCard className="h-4 w-4 text-red-600" />
+              <Wallet className="h-5 w-5 text-rose-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-700">
-                ₹{reportData.totalDueAmount.toLocaleString()}
+              <div className="text-3xl font-black text-rose-700">
+                ₹{reportData.expenditureAmount.toLocaleString()}
               </div>
-              <p className="text-xs text-red-600">Outstanding balance</p>
+              <p className="text-[10px] font-bold text-rose-600 mt-1 uppercase">
+                OUTGOING PAYMENTS
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-50 border-orange-200 shadow-none">
+          <Card className="bg-blue-50 border-blue-200 shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-900">
-                Students with Dues
+              <CardTitle className="text-sm font-black text-blue-900 uppercase tracking-wider">
+                Net Proceeds (Profit)
               </CardTitle>
-              <Users className="h-4 w-4 text-orange-600" />
+              <TrendingUp className="h-5 w-5 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-700">
-                {reportData.studentsWithDue}
+              <div className="text-3xl font-black text-blue-700">
+                ₹{reportData.netProceeds.toLocaleString()}
               </div>
-              <p className="text-xs text-orange-600">Pending payments</p>
+              <p className="text-[10px] font-bold text-blue-600 mt-1 uppercase underline decoration-2">
+                FINAL BALANCE
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+          <Card className="bg-amber-50 border-amber-200 shadow-none">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-black text-amber-900 uppercase tracking-wider">
+                Outstanding Dues
+              </CardTitle>
+              <CreditCard className="h-5 w-5 text-amber-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-black text-amber-700">
+                ₹{reportData.totalDueAmount.toLocaleString()}
+              </div>
+              <p className="text-[10px] font-bold text-amber-600 mt-1 uppercase">
+                FROM {reportData.studentsWithDue} DEFAULTERS
+              </p>
             </CardContent>
           </Card>
 
           <Card className="bg-slate-50 border-slate-200 shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Expected
+              <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                Total Expected Revenue
               </CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <FileText className="h-5 w-5 text-slate-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-3xl font-black text-slate-700">
                 ₹{reportData.totalExpectedFee.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Based on structures
+              <p className="text-[10px] font-bold text-slate-600 mt-1 uppercase">
+                BASED ON ALL STUDENTS
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-indigo-50 border-indigo-200 shadow-none">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-black text-indigo-900 uppercase tracking-wider">
+                Collection Ratio
+              </CardTitle>
+              <Users className="h-5 w-5 text-indigo-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-black text-indigo-700">
+                {reportData.totalExpectedFee > 0 
+                  ? ((reportData.collectedAmount / reportData.totalExpectedFee) * 100).toFixed(1) 
+                  : 0}%
+              </div>
+              <p className="text-[10px] font-bold text-indigo-600 mt-1 uppercase">
+                OF EXPECTED FEES
               </p>
             </CardContent>
           </Card>
@@ -463,6 +592,75 @@ const Reports = () => {
                   </TableCell>
                   <TableCell className="text-right text-green-700 text-lg">
                     ₹{reportData.collectedAmount.toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Expenditure History */}
+        <Card className="shadow-none border mt-6">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-rose-800 flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 transition-transform group-hover:scale-110" />
+              Expenditure History
+            </CardTitle>
+            <CardDescription className="text-xs uppercase font-bold tracking-tight text-rose-600/70">
+              Detailed list of all outgoing payments in this period
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-rose-50/50">
+                  <TableHead className="font-black text-rose-900 uppercase text-xs h-10 border-b">Date</TableHead>
+                  <TableHead className="font-black text-rose-900 uppercase text-xs h-10 border-b">Title/Description</TableHead>
+                  <TableHead className="font-black text-rose-900 uppercase text-xs h-10 border-b text-center">Category</TableHead>
+                  <TableHead className="font-black text-rose-900 uppercase text-xs h-10 border-b">Method</TableHead>
+                  <TableHead className="text-right font-black text-rose-900 uppercase text-xs h-10 border-b">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredExpenditures.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="text-center py-10 text-muted-foreground italic border-b"
+                    >
+                      No expenditures found for this period.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredExpenditures.map((e) => (
+                    <TableRow key={e._id} className="hover:bg-rose-50/30 transition-colors border-b last:border-b-0">
+                      <TableCell className="text-sm py-3">
+                        {e.date ? new Date(e.date).toLocaleDateString() : "N/A"}
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <p className="font-bold text-rose-950 text-sm leading-tight">{e.title}</p>
+                        {e.description && <p className="text-[10px] text-muted-foreground mt-0.5">{e.description}</p>}
+                      </TableCell>
+                      <TableCell className="py-3 text-center">
+                        <Badge variant="outline" className="bg-rose-100/50 border-rose-200 text-rose-700 font-bold text-[10px] px-2 py-0">
+                          {e.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs py-3">{e.paymentMethod}</TableCell>
+                      <TableCell className="text-right font-black text-rose-600 py-3 text-sm">
+                        ₹{Number(e.amount).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+              <TableFooter>
+                <TableRow className="bg-rose-50/80 font-bold border-t-2 border-rose-100">
+                  <TableCell colSpan={4} className="text-right text-rose-900 uppercase text-xs font-black py-4">
+                    Total Expenditure
+                  </TableCell>
+                  <TableCell className="text-right text-rose-700 text-lg font-black py-4">
+                    ₹{reportData.expenditureAmount.toLocaleString()}
                   </TableCell>
                 </TableRow>
               </TableFooter>
