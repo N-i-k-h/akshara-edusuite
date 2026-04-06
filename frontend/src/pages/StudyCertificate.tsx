@@ -757,53 +757,65 @@ const StudyCertificate = () => {
                             Degree/s Obtained
                           </div>
                           <div className="p-2 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.qualDPharm && "✓"}
-                              </div>{" "}
-                              D. Pharm
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.qualDPharm && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>D. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.qualBPharm && "✓"}
-                              </div>{" "}
-                              B. Pharm
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.qualBPharm && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>B. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.qualMPharm && "✓"}
-                              </div>{" "}
-                              M. Pharm
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.qualMPharm && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>M. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.qualPharmD && "✓"}
-                              </div>{" "}
-                              Pharm. D
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.qualPharmD && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>Pharm. D</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.qualPharmDPB && "✓"}
-                              </div>{" "}
-                              Pharm. D (PB)
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.qualPharmDPB && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>Pharm. D (PB)</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.qualPhD && "✓"}
-                              </div>{" "}
-                              Ph. D
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.qualPhD && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>Ph. D</span>
                             </div>
                           </div>
                         </div>
@@ -812,53 +824,65 @@ const StudyCertificate = () => {
                             Registered With KSPC
                           </div>
                           <div className="p-2 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.regDPharm && "✓"}
-                              </div>{" "}
-                              D. Pharm
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.regDPharm && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>D. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.regBPharm && "✓"}
-                              </div>{" "}
-                              B. Pharm
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.regBPharm && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>B. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.regMPharm && "✓"}
-                              </div>{" "}
-                              M. Pharm
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.regMPharm && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>M. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.regPharmD && "✓"}
-                              </div>{" "}
-                              Pharm. D
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.regPharmD && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>Pharm. D</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.regPharmDPB && "✓"}
-                              </div>{" "}
-                              Pharm. D (PB)
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.regPharmDPB && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>Pharm. D (PB)</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-3 h-3 border border-black flex items-center justify-center`}
-                              >
-                                {formData.regPhD && "✓"}
-                              </div>{" "}
-                              Ph. D
+                            <div className="flex items-center gap-2 leading-none">
+                              <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
+                                {formData.regPhD && (
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>Ph. D</span>
                             </div>
                           </div>
                         </div>
