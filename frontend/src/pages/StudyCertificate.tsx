@@ -72,11 +72,26 @@ const StudyCertificate = () => {
 
     const element = printRef.current;
     const opt = {
-      margin: 0,
+      margin: [0, 0, 0, 0] as [number, number, number, number],
       filename: filename,
       image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        letterRendering: true,
+        height: element.offsetHeight,
+        width: element.offsetWidth,
+        scrollX: 0,
+        scrollY: 0
+      },
+      jsPDF: { 
+        unit: "mm", 
+        format: "a4", 
+        orientation: "portrait" as const,
+        putOnlyUsedFonts: true,
+        floatPrecision: 16 
+      },
+      pagebreak: { mode: ["avoid-all"] },
     };
 
     html2pdf()
@@ -468,12 +483,12 @@ const StudyCertificate = () => {
           <div className="transform scale-[0.45] md:scale-[0.7] lg:scale-[0.85] xl:scale-100 origin-top transition-transform duration-300">
             <div
               ref={printRef}
-              className="bg-white text-black w-[210mm] shadow-2xl flex flex-col relative"
+              className="bg-white text-black w-[210mm] h-[295mm] overflow-hidden flex flex-col relative"
               style={{ fontFamily: "'Times New Roman', serif" }}
             >
               {certType === "bonafide" ? (
                 // === BONAFIDE TEMPLATE ===
-                <div className="p-8 border-[3px] border-black h-full min-h-[1050px]">
+                <div className="p-8 h-[295mm] overflow-hidden flex flex-col">
                   {/* 5cm top gap for pre-printed header */}
                   <div style={{ height: "50mm" }}></div>
 
@@ -517,7 +532,7 @@ const StudyCertificate = () => {
                     </p>
                   </div>
 
-                  <div className="mt-auto px-4 flex justify-between items-end pb-[40mm]">
+                  <div className="mt-auto px-4 flex justify-between items-end pb-[25mm]">
                     <div>
                       <p className="mb-1">
                         Date:{" "}
@@ -534,12 +549,12 @@ const StudyCertificate = () => {
                 </div>
               ) : (
                 // === COUNCIL FORMAT TEMPLATE ===
-                <div className="p-8 h-full min-h-[1050px] text-sm flex flex-col">
+                <div className="p-6 h-[295mm] text-[11px] flex flex-col overflow-hidden">
                   {/* 5cm top gap for pre-printed header */}
                   <div style={{ height: "50mm" }}></div>
                   
                   {/* Top Header Row */}
-                  <div className="flex justify-between items-start mb-6">
+                  <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-bold">{formData.refNo}</p>
                     </div>
@@ -552,7 +567,7 @@ const StudyCertificate = () => {
                   </div>
 
                   {/* To Address & Photo */}
-                  <div className="flex justify-between items-start mb-6">
+                  <div className="flex justify-between items-start mb-2">
                     <div className="w-[60%]">
                       <p>To,</p>
                       <p className="font-bold">The Registrar,</p>
@@ -561,21 +576,21 @@ const StudyCertificate = () => {
                       <p>Club Road, Vijayanagar,</p>
                       <p>Bangalore – 560104</p>
                     </div>
-                    <div className="w-[120px] h-[140px] border border-black flex items-center justify-center bg-gray-50 text-xs text-gray-400">
+                    <div className="w-[100px] h-[120px] border border-black flex items-center justify-center bg-gray-50 text-[10px] text-gray-400">
                       Passport Size Photo
                     </div>
                   </div>
 
                   {/* Title */}
                   <div
-                    className="bg-gray-700 text-white font-bold text-center py-1 uppercase mb-4 print:bg-gray-700 print:text-white"
+                    className="bg-gray-700 text-white font-bold text-center py-1 uppercase mb-2 print:bg-gray-700 print:text-white"
                     style={{ WebkitPrintColorAdjust: "exact" }}
                   >
                     STUDENT’S STUDY CERTIFICATE AND PRINCIPAL’S DETAILS
                   </div>
 
                   {/* Student Details Table */}
-                  <table className="w-full border-collapse border border-black mb-4">
+                  <table className="w-full border-collapse border border-black mb-2">
                     <tbody>
                       <tr>
                         <td className="border border-black p-2 font-bold w-[35%] bg-gray-100">
@@ -607,7 +622,7 @@ const StudyCertificate = () => {
                         </td>
                         <td className="border border-black p-2">
                           {formData.dob}{" "}
-                          <span className="uppercase text-xs ml-2">
+                          <span className="uppercase text-[10px] ml-2">
                             ({formData.dobWords})
                           </span>
                         </td>
@@ -616,14 +631,14 @@ const StudyCertificate = () => {
                   </table>
 
                   {/* Disclaimer */}
-                  <p className="text-xs mb-4 font-semibold">
+                  <p className="text-[10px] mb-1 font-semibold">
                     (Date of Birth as per SSLC Marks Card / Transfer Certificate
                     / Birth Certificate)
                   </p>
 
                   {/* Academic Table */}
-                  <table className="w-full border-collapse border border-black mb-4 text-center">
-                    <thead className="bg-gray-100 text-xs">
+                  <table className="w-full border-collapse border border-black mb-2 text-center">
+                    <thead className="bg-gray-100 text-[10px]">
                       <tr>
                         <th className="border border-black p-1">
                           Qualification
@@ -677,14 +692,14 @@ const StudyCertificate = () => {
                   </table>
 
                   {/* Principal Details Section */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 border border-black mb-16">
+                  <div className="grid grid-cols-1 md:grid-cols-2 border border-black mb-4">
                     {/* Left: Registration Details */}
                     <div className="border-r border-black">
-                      <div className="bg-gray-100 font-bold text-center p-1 border-b border-black text-sm">
+                      <div className="bg-gray-100 font-bold text-center p-1 border-b border-black text-[11px]">
                         State Pharmacy Council Registration Details of the
                         Principal
                       </div>
-                      <table className="w-full text-sm">
+                      <table className="w-full text-[11px]">
                         <tbody>
                           <tr className="border-b border-gray-300">
                             <td className="p-2 font-semibold w-1/3">Name</td>
@@ -733,10 +748,10 @@ const StudyCertificate = () => {
 
                     {/* Right: Qualifications */}
                     <div>
-                      <div className="bg-gray-100 font-bold text-center p-1 border-b border-black text-sm">
+                      <div className="bg-gray-100 font-bold text-center p-1 border-b border-black text-[11px]">
                         Educational Qualifications of the Principal
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 text-xs">
+                      <div className="grid grid-cols-1 md:grid-cols-2 text-[10px]">
                         <div className="border-r border-black">
                           <div className="text-center font-semibold border-b border-black bg-gray-50 p-1">
                             Degree/s Obtained
@@ -852,7 +867,7 @@ const StudyCertificate = () => {
                   </div>
 
                   {/* Principal Signature Area with footer gap */}
-                  <div className="mt-auto pt-8 flex justify-between items-end pb-[40mm]">
+                  <div className="mt-auto pt-2 flex justify-between items-end pb-[25mm]">
                     <div>
                       <p>Date: {new Date(formData.date).toLocaleDateString("en-GB")}</p>
                       <p>Place: {formData.place}</p>
