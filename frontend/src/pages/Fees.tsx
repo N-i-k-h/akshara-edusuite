@@ -873,51 +873,7 @@ const Fees = () => {
                     ))
                   )}
                   
-                  {Array.from({ length: Math.max(1, 10 - (receiptData.feeItems?.length || 1)) }).map((_, i) => (
-                    <tr key={`empty-${i}`} className="border-b border-gray-100">
-                      <td className="border-r-2 border-blue-900 p-0.5 text-center h-6 font-normal text-gray-300 transform scale-75">
-                        {(receiptData.feeItems?.length || 1) + i + 1}.
-                      </td>
-                      <td className="border-r-2 border-blue-900 p-0.5"></td>
-                      <td className="p-0.5"></td>
-                    </tr>
-                  ))}
 
-                  {/* Financial Status Summary */}
-                  <tr className="font-bold border-t-2 border-blue-900 bg-blue-50/10">
-                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900" colSpan={2}>
-                      Grand Total Amount
-                    </td>
-                    <td className="p-1.5 text-right pr-4 text-base text-blue-900 font-extrabold">
-                      ₹ {Number(receiptData.totalFee).toLocaleString("en-IN")}/-
-                    </td>
-                  </tr>
-
-                  <tr className="font-bold border-t border-blue-900">
-                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900 text-green-700" colSpan={2}>
-                      Current Paid Amount
-                    </td>
-                    <td className="p-1.5 text-right pr-4 text-base text-green-700 font-extrabold">
-                      ₹ {Number(receiptData.amountPaid).toLocaleString("en-IN")}/-
-                    </td>
-                  </tr>
-
-                  <tr className="font-bold border-t border-blue-900">
-                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900 text-red-700" colSpan={2}>
-                      Balance Due Amount
-                    </td>
-                    <td className="p-1.5 text-right pr-4 text-base text-red-700 font-extrabold">
-                      ₹ {Number(receiptData.dueAmount).toLocaleString("en-IN")}/-
-                    </td>
-                  </tr>
-
-                  {Number(receiptData.dueAmount) === 0 && (
-                    <tr className="bg-green-100/30">
-                      <td colSpan={3} className="text-center py-1 text-green-800 font-black text-sm uppercase tracking-widest border-t-2 border-green-600">
-                        *** FULL ALL AMOUNT PAID ***
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -932,15 +888,27 @@ const Fees = () => {
               </div>
             </div>
 
-            {/* Signature Area */}
-            <div className="mt-4 px-2 flex justify-between items-end w-full">
-              <div className="w-[40%] flex flex-col items-start border-t border-gray-400 pt-1">
-                 <p className="font-bold text-[10px] uppercase text-gray-700 underline mb-0.5">Institutional Seal</p>
-                 <div className="h-8 w-full"></div>
+            {/* Rupees in Words */}
+            <div className="px-2 mb-10 mt-6">
+              <div className="flex items-start w-full text-base font-bold border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 uppercase text-[10px] mr-3 mt-1.5">Rupees in words:</span>
+                <span className="font-bold text-base italic capitalize py-0.5 text-gray-800">
+                   {Number(receiptData.amountPaid) > 0 ? toWords.convert(Number(receiptData.amountPaid)) + " Only" : ""}
+                </span>
               </div>
-              <div className="w-[45%] flex flex-col items-center border-t-2 border-blue-900 pt-1">
-                 <p className="font-bold text-xs uppercase text-blue-900">SIGNATURE OF THE RECEIVER</p>
-                 <div className="h-8 w-full"></div>
+            </div>
+
+            <div className="mt-auto w-full">
+              {/* Signature Area */}
+              <div className="px-2 flex justify-between items-end w-full mb-10 pb-4">
+                <div className="w-[40%] flex flex-col items-start border-t border-gray-400 pt-1">
+                   <p className="font-bold text-[10px] uppercase text-gray-700 underline mb-0.5">Institutional Seal</p>
+                   <div className="h-8 w-full"></div>
+                </div>
+                <div className="w-[45%] flex flex-col items-center border-t-2 border-blue-900 pt-1">
+                   <p className="font-bold text-xs uppercase text-blue-900">SIGNATURE OF THE RECEIVER</p>
+                   <div className="h-8 w-full"></div>
+                </div>
               </div>
             </div>
             

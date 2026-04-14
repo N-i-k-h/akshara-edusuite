@@ -34,7 +34,6 @@ const Dashboard = () => {
     netRevenue: 0,
     feesDue: 0,
     feeDefaulters: [],
-    lowAttendanceStudents: [],
   });
 
   useEffect(() => {
@@ -157,7 +156,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Right Column: Pie Chart and Low Attendance */}
+        {/* Right Column: Pie Chart */}
         <div className="space-y-6">
           {/* Fees Pie Chart */}
           <Card>
@@ -199,47 +198,6 @@ const Dashboard = () => {
                     {(stats.feesCollected + stats.feesDue).toLocaleString()}
                   </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Low Attendance List */}
-          <Card>
-            <CardHeader className="py-4">
-              <CardTitle className="text-base flex items-center gap-2 text-destructive">
-                <Clock className="h-4 w-4" />
-                Low Attendance (&lt;85%)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              <div className="space-y-3">
-                {stats.lowAttendanceStudents &&
-                  stats.lowAttendanceStudents.length > 0 ? (
-                  stats.lowAttendanceStudents.map(
-                    (student: any, index: number) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">
-                            {student.studentName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {student.className}
-                          </p>
-                        </div>
-                        <Badge variant="destructive">
-                          {student.attendancePercentage?.toFixed(1)}%
-                        </Badge>
-                      </div>
-                    ),
-                  )
-                ) : (
-                  <p className="text-sm text-muted-foreground py-2 text-center">
-                    All students have good attendance.
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>

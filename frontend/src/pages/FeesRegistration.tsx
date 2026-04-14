@@ -141,6 +141,12 @@ const FeesRegistration = () => {
     return Math.max(0, total - paid);
   };
 
+  // Sync paying amount with total fee items
+  useEffect(() => {
+    const total = calculateTotal();
+    setFormData(prev => ({ ...prev, payingAmount: total.toString() }));
+  }, [feeItems]);
+
   const handleRegisterStudentAndFees = async () => {
     if (!formData.studentName || !formData.class || !formData.parentName || !formData.parentPhone) {
       toast.error("Please fill required student details (Name, Class, Parent Name, Parent Phone).");
@@ -697,55 +703,13 @@ const FeesRegistration = () => {
                     </tr>
                   ))}
                   
-                  {Array.from({ length: Math.max(1, 10 - feeItems.length) }).map((_, i) => (
-                    <tr key={`empty-${i}`} className="border-b border-gray-100">
-                      <td className="border-r-2 border-blue-900 p-0.5 text-center h-6 font-normal text-gray-300 transform scale-75">{feeItems.length + i + 1}.</td>
-                      <td className="border-r-2 border-blue-900 p-0.5"></td>
-                      <td className="p-0.5"></td>
-                    </tr>
-                  ))}
 
-                  {/* Financial Status Summary */}
-                  <tr className="font-bold border-t-2 border-blue-900 bg-blue-50/10">
-                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900" colSpan={2}>
-                      Grand Total Amount
-                    </td>
-                    <td className="p-1.5 text-right pr-4 text-base text-blue-900 font-extrabold">
-                      ₹ {calculateTotal().toLocaleString("en-IN")}/-
-                    </td>
-                  </tr>
-
-                  <tr className="font-bold border-t border-blue-900">
-                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900 text-green-700" colSpan={2}>
-                      Current Paid Amount
-                    </td>
-                    <td className="p-1.5 text-right pr-4 text-base text-green-700 font-extrabold">
-                      ₹ {Number(formData.payingAmount || 0).toLocaleString("en-IN")}/-
-                    </td>
-                  </tr>
-
-                  <tr className="font-bold border-t border-blue-900">
-                    <td className="p-1.5 text-right pr-3 uppercase text-[10px] border-r-2 border-blue-900 text-red-700" colSpan={2}>
-                      Balance Due Amount
-                    </td>
-                    <td className="p-1.5 text-right pr-4 text-base text-red-700 font-extrabold">
-                      ₹ {calculateDue().toLocaleString("en-IN")}/-
-                    </td>
-                  </tr>
-
-                  {calculateDue() === 0 && calculateTotal() > 0 && (
-                    <tr className="bg-green-100/30">
-                      <td colSpan={3} className="text-center py-1 text-green-800 font-black text-sm uppercase tracking-widest border-t-2 border-green-600">
-                        *** FULL ALL AMOUNT PAID ***
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
 
             {/* Rupees in Words - Immediately After Table */}
-            <div className="px-2 mb-4">
+            <div className="px-2 mb-10 mt-6">
               <div className="flex items-start w-full text-base font-bold border-b border-gray-400 pb-0.5">
                 <span className="shrink-0 uppercase text-[10px] mr-3 mt-1.5">Rupees in words:</span>
                 <span className="font-bold text-base italic capitalize py-0.5 text-gray-800">
@@ -754,15 +718,17 @@ const FeesRegistration = () => {
               </div>
             </div>
 
-            {/* Signature Area */}
-            <div className="mt-4 px-2 flex justify-between items-end w-full">
-              <div className="w-[40%] flex flex-col items-start border-t border-gray-400 pt-1">
-                 <p className="font-bold text-[10px] uppercase text-gray-700 underline mb-0.5">Institutional Seal</p>
-                 <div className="h-8 w-full"></div>
-              </div>
-              <div className="w-[45%] flex flex-col items-center border-t border-blue-900 pt-1">
-                 <p className="font-bold text-xs uppercase text-blue-900">SIGNATURE OF THE RECEIVER</p>
-                 <div className="h-8 w-full"></div>
+            <div className="mt-auto w-full">
+              {/* Signature Area */}
+              <div className="px-2 flex justify-between items-end w-full mb-10 pb-4">
+                <div className="w-[40%] flex flex-col items-start border-t border-gray-400 pt-1">
+                   <p className="font-bold text-[10px] uppercase text-gray-700 underline mb-0.5">Institutional Seal</p>
+                   <div className="h-8 w-full"></div>
+                </div>
+                <div className="w-[45%] flex flex-col items-center border-t border-blue-900 pt-1">
+                   <p className="font-bold text-xs uppercase text-blue-900">SIGNATURE OF THE RECEIVER</p>
+                   <div className="h-8 w-full"></div>
+                </div>
               </div>
             </div>
           </div>

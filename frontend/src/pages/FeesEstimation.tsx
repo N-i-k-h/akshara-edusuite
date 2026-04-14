@@ -13,6 +13,9 @@ import {
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
 import { Printer, Download, Calculator, Plus, Trash2 } from "lucide-react";
+import { ToWords } from 'to-words';
+
+const toWords = new ToWords();
 
 const FeesEstimation = () => {
   const printRef = useRef(null);
@@ -253,14 +256,6 @@ const FeesEstimation = () => {
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-gray-200 font-bold text-lg">
-                    <td className="border-2 border-black p-2 text-center uppercase" colSpan={2}>
-                      Grand Total
-                    </td>
-                    <td className="border-2 border-black p-2 text-right pr-6">
-                      ₹ {calculateTotal().toLocaleString("en-IN")}/-
-                    </td>
-                  </tr>
                 </tbody>
               </table>
             </div>
@@ -268,6 +263,9 @@ const FeesEstimation = () => {
             {/* Total Rupees in Words Area */}
             <div className="px-4 mb-16 font-bold italic text-[17px]">
                Total Rupees: Rs {calculateTotal().toLocaleString()} /- per year
+               <div className="mt-1 text-sm text-gray-700">
+                 (Rupees in words: {toWords.convert(calculateTotal())} Only)
+               </div>
             </div>
 
             {/* Signature Area */}

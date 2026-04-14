@@ -53,7 +53,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { User, Phone, Mail, Home, ShieldCheck, GraduationCap, FileText } from "lucide-react";
+import { User, Phone, Mail, Home, ShieldCheck, GraduationCap, FileText, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 const Students = () => {
@@ -64,6 +64,10 @@ const Students = () => {
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [classesList, setClassesList] = useState<any[]>([]);
+  const [classFilter, setClassFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allFees, setAllFees] = useState<any[]>([]);
+  const pageSize = 10;
 
   const institutionalItems = [
     "APPLICATION FEE", "ADMISSION FEE", "ELIGIBILITY FEE", "TUITION FEE",
@@ -104,6 +108,13 @@ const Students = () => {
       if (classesRes.ok) {
         const classesData = await classesRes.json();
         setClassesList(classesData);
+      }
+
+      // Fetch All Fees for summary
+      const feesRes = await authFetch(`${API_BASE_URL}/fees`);
+      if (feesRes.ok) {
+        const feesData = await feesRes.json();
+        setAllFees(feesData);
       }
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -234,11 +245,40 @@ const Students = () => {
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.rollNo.toLowerCase().includes(searchQuery.toLowerCase());
+      student.rollNo.toString().toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || student.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesClass =
+      classFilter === "all" || student.class === classFilter;
+    return matchesSearch && matchesStatus && matchesClass;
   });
+
+  const getStudentFeeSummary = (studentId: string) => {
+      const studentTrans = allFees
+          .filter((f: any) => String(f.studentId) === String(studentId))
+          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          
+      if (studentTrans.length > 0) {
+          const latest = studentTrans[0];
+          const totalFee = Number(latest.totalFee) || (Number(latest.amountPaid) + Number(latest.dueAmount));
+          return {
+              total: totalFee,
+              paid: latest.amountPaid,
+              due: latest.dueAmount
+          };
+      }
+      return { total: 0, paid: 0, due: 0 };
+  };
+
+  const totalPages = Math.ceil(filteredStudents.length / pageSize);
+  const paginatedStudents = filteredStudents.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, classFilter]);
 
   // Profile State
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -568,7 +608,7 @@ const Students = () => {
                                 <th className="border-r border-blue-900 p-1 w-[10%] text-center uppercase">No.</th>
                                 <th className="border-r border-blue-900 p-1 w-[60%] text-left pl-6 uppercase">PARTICULARS</th>
                                 <th className="p-1 w-[30%] text-center uppercase">AMOUNT</th>
-                             </tr>
+                                    </tr>
                           </thead>
                           <tbody>
                              {latestReceipt.feeItems && latestReceipt.feeItems.length > 0 ? (
@@ -577,7 +617,7 @@ const Students = () => {
                                       <td className="border-r border-blue-900 p-1.5 text-center font-normal">{idx + 1}.</td>
                                       <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">{item.name}</td>
                                       <td className="p-1.5 text-right pr-6 font-semibold">{item.value > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}</td>
-                                   </tr>
+                                    </tr>
                                 ))
                              ) : (
                                 institutionalItems.map((item, idx) => (
@@ -587,68 +627,35 @@ const Students = () => {
                                       <td className="p-1.5 text-right pr-6 font-semibold">
                                          {idx === 13 ? Number(latestReceipt.amountPaid).toLocaleString("en-IN") + "/-" : ""}
                                       </td>
-                                   </tr>
+                                    </tr>
                                 ))
                              )}
 
-                             {Array.from({ length: Math.max(0, 15 - (latestReceipt.feeItems?.length || 14)) }).map((_, i) => (
-                                <tr key={`fill-${i}`} className="border-b border-blue-900/10 h-7 opacity-50">
-                                   <td className="border-r border-blue-900 p-1.5 text-center font-normal text-gray-200">
-                                      {(latestReceipt.feeItems?.length || 14) + i + 1}.
-                                   </td>
-                                   <td className="border-r border-blue-900 p-1.5"></td>
-                                   <td className="p-1.5"></td>
-                                </tr>
-                             ))}
 
-                             {/* Grand Total */}
-                             <tr className="border-t-2 border-blue-900 h-9 font-bold bg-blue-50/5">
-                                <td className="p-1.5 text-right pr-6 uppercase text-[9px] border-r border-blue-900" colSpan={2}>
-                                   GRAND TOTAL AMOUNT
-                                </td>
-                                <td className="p-1.5 text-right pr-6 text-sm text-blue-900 font-extrabold">
-                                   ₹ {Number(latestReceipt.totalFee).toLocaleString("en-IN")}/-
-                                </td>
-                             </tr>
-                             {/* Paid */}
-                             <tr className="border-t border-blue-900 h-9 font-bold">
-                                <td className="p-1.5 text-right pr-6 uppercase text-[9px] border-r border-blue-900 text-green-700" colSpan={2}>
-                                   CURRENT PAID AMOUNT
-                                </td>
-                                <td className="p-1.5 text-right pr-6 text-sm text-green-700 font-extrabold">
-                                   ₹ {Number(latestReceipt.amountPaid).toLocaleString("en-IN")}/-
-                                </td>
-                             </tr>
-                             {/* Due */}
-                             <tr className="border-t border-blue-900 h-9 font-bold">
-                                <td className="p-1.5 text-right pr-6 uppercase text-[9px] border-r border-blue-900 text-red-600" colSpan={2}>
-                                   BALANCE DUE AMOUNT
-                                </td>
-                                <td className="p-1.5 text-right pr-6 text-sm text-red-600 font-extrabold">
-                                   ₹ {Number(latestReceipt.dueAmount).toLocaleString("en-IN")}/-
-                                </td>
-                             </tr>
+
                           </tbody>
                        </table>
                     </div>
 
                     {/* Words */}
-                    <div className="px-2 mb-8 flex items-baseline border-b border-gray-300 pb-1 mt-2">
+                    <div className="px-2 mb-10 flex items-baseline border-b border-gray-300 pb-1 mt-6">
                        <span className="shrink-0 uppercase text-[10px] font-black mr-6">RUPEES IN WORDS:</span>
                        <span className="font-bold text-lg italic capitalize flex-1 text-gray-800">
                           {toWords.convert(Number(latestReceipt.amountPaid))} Only
                        </span>
                     </div>
 
-                    {/* Footer - Seal and Signatories */}
-                    <div className="mt-auto px-2 flex justify-between items-end w-full mb-6 font-bold">
-                       <div className="w-[45%] flex flex-col items-start">
-                          <div className="w-full border-t border-black mb-2"></div>
-                          <p className="text-[11px] uppercase font-bold tracking-tight text-black">INSTITUTIONAL SEAL</p>
-                       </div>
-                       <div className="w-[48%] flex flex-col items-center">
-                          <div className="w-full border-t border-blue-900 mb-2"></div>
-                          <p className="text-[12px] uppercase font-bold text-blue-900 tracking-tight">SIGNATURE OF THE RECEIVER</p>
+                    <div className="mt-auto w-full">
+                       {/* Footer - Seal and Signatories */}
+                       <div className="px-2 flex justify-between items-end w-full mb-10 pb-4 font-bold">
+                          <div className="w-[45%] flex flex-col items-start">
+                             <div className="w-full border-t border-black mb-2"></div>
+                             <p className="text-[11px] uppercase font-bold tracking-tight text-black">INSTITUTIONAL SEAL</p>
+                          </div>
+                          <div className="w-[48%] flex flex-col items-center">
+                             <div className="w-full border-t border-blue-900 mb-2"></div>
+                             <p className="text-[12px] uppercase font-bold text-blue-900 tracking-tight">SIGNATURE OF THE RECEIVER</p>
+                          </div>
                        </div>
                     </div>
                   </div>
@@ -682,25 +689,23 @@ const Students = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-indigo-100 shadow-sm overflow-hidden">
-                    <div className="bg-indigo-600 text-white p-3 flex items-center gap-2">
-                       <Phone className="h-5 w-5" />
-                       <h3 className="font-bold">Contact Details</h3>
+                  <Card className="border-emerald-100 shadow-sm overflow-hidden">
+                    <div className="bg-emerald-600 text-white p-3 flex items-center gap-2">
+                       <Wallet className="h-5 w-5" />
+                       <h3 className="font-bold">Fee Summary</h3>
                     </div>
                     <CardContent className="p-4 space-y-4 pt-4">
-                       <div className="flex items-center gap-3 border-b border-indigo-50 pb-2">
-                          <Mail className="h-4 w-4 text-indigo-500" />
-                          <div className="flex flex-col">
-                             <span className="text-[10px] uppercase text-slate-400">Email</span>
-                             <span className="font-medium text-slate-700">{selectedStudent.email || "N/A"}</span>
-                          </div>
+                       <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
+                          <span className="text-sm text-slate-500">Total Course Fee</span>
+                          <span className="font-bold text-slate-900">₹{Number(latestReceipt?.totalFee || 0).toLocaleString()}</span>
                        </div>
-                       <div className="flex items-center gap-3">
-                          <Phone className="h-4 w-4 text-indigo-500" />
-                          <div className="flex flex-col">
-                             <span className="text-[10px] uppercase text-slate-400">Parent Phone</span>
-                             <span className="font-bold text-indigo-900">{selectedStudent.parentPhone}</span>
-                          </div>
+                       <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
+                          <span className="text-sm text-slate-500">Total Paid Amount</span>
+                          <span className="font-bold text-emerald-600">₹{Number(latestReceipt?.amountPaid || 0).toLocaleString()}</span>
+                       </div>
+                       <div className="flex justify-between items-center">
+                          <span className="text-sm text-slate-500">Balance Due</span>
+                          <span className="font-bold text-rose-600">₹{Number(latestReceipt?.dueAmount || 0).toLocaleString()}</span>
                        </div>
                     </CardContent>
                   </Card>
@@ -751,6 +756,25 @@ const Students = () => {
             className="pl-10"
           />
         </div>
+        <Select value={classFilter} onValueChange={setClassFilter}>
+          <SelectTrigger className="w-56">
+            <GraduationCap className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="All Classes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Classes</SelectItem>
+            {classesList.map((cls: any) => {
+              const className = cls.grade.startsWith("D.")
+                ? `${cls.grade} - ${cls.section}`
+                : `Grade ${cls.grade} - ${cls.section}`;
+              return (
+                <SelectItem key={cls._id} value={className}>
+                  {className}
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40">
             <Filter className="mr-2 h-4 w-4" />
@@ -773,8 +797,9 @@ const Students = () => {
               <TableHead>Admission No</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Class</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
+              <TableHead className="text-right">Total Fee</TableHead>
+              <TableHead className="text-right">Paid</TableHead>
+              <TableHead className="text-right">Due</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Fees</TableHead>
               <TableHead className="w-12"></TableHead>
@@ -794,16 +819,17 @@ const Students = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredStudents.map((student) => (
+              paginatedStudents.map((student) => (
                 <TableRow key={student._id || student.id}>
                   <TableCell className="font-medium">
                     {student.rollNo}
                   </TableCell>
                   <TableCell>{student.admissionNumber}</TableCell>
-                  <TableCell>{student.name}</TableCell>
+                  <TableCell className="font-bold">{student.name}</TableCell>
                   <TableCell>{student.class}</TableCell>
-                  <TableCell>{student.email}</TableCell>
-                  <TableCell>{student.phone}</TableCell>
+                  <TableCell className="text-right font-medium">₹{getStudentFeeSummary(student._id || student.id).total.toLocaleString()}</TableCell>
+                  <TableCell className="text-right font-bold text-green-600">₹{getStudentFeeSummary(student._id || student.id).paid.toLocaleString()}</TableCell>
+                  <TableCell className="text-right font-bold text-red-600">₹{getStudentFeeSummary(student._id || student.id).due.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge
                       variant={
@@ -859,6 +885,47 @@ const Students = () => {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-2 py-4 border-t">
+          <div className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * pageSize + 1} to{" "}
+            {Math.min(currentPage * pageSize, filteredStudents.length)} of{" "}
+            {filteredStudents.length} students
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <Button
+                  key={i}
+                  variant={currentPage === i + 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(i + 1)}
+                  className="w-8"
+                >
+                  {i + 1}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
