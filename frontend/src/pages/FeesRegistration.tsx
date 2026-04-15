@@ -675,9 +675,19 @@ const FeesRegistration = () => {
                 <span className="font-bold text-sm text-center px-2">
                   {formData.academicYear}
                 </span>
-                <div className="flex gap-2 ml-auto items-end">
-                  <span className="uppercase text-[10px]">Roll No:</span>
-                  <span className="font-bold text-sm px-2">{formData.rollNo || ""}</span>
+                <div className="flex gap-4 ml-auto items-end">
+                  <div className="flex gap-1 items-end">
+                    <span className="uppercase text-[8px] text-gray-500">ADM NO:</span>
+                    <span className="font-bold text-base px-1 leading-none text-blue-900 border-b border-gray-400">
+                      {formData.admissionNumber || ""}
+                    </span>
+                  </div>
+                  <div className="flex gap-1 items-end">
+                    <span className="uppercase text-[8px] text-gray-500">Roll No:</span>
+                    <span className="font-bold text-base px-1 leading-none text-blue-900 border-b border-gray-400">
+                      {formData.rollNo || ""}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

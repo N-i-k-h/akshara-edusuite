@@ -593,9 +593,15 @@ const Students = () => {
                        <div className="flex items-end w-full font-bold gap-4 border-b border-gray-400 pb-0.5">
                           <span className="shrink-0 uppercase text-[9px]">D. PHARMA COURSE- ACADEMIC YEAR</span>
                           <span className="font-bold text-sm px-2">2025-26</span>
-                          <div className="flex gap-2 ml-auto items-end">
-                             <span className="uppercase text-[9px]">ROLL NO:</span>
-                             <span className="text-[#1e3a8a] text-lg leading-none border-b border-blue-900 px-2">{selectedStudent.rollNo || ""}</span>
+                          <div className="flex gap-6 ml-auto items-end">
+                             <div className="flex gap-1 items-end">
+                                <span className="uppercase text-[8px] text-gray-500">ADM NO:</span>
+                                <span className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1">{selectedStudent.admissionNumber || ""}</span>
+                             </div>
+                             <div className="flex gap-1 items-end">
+                                <span className="uppercase text-[8px] text-gray-500">ROLL NO:</span>
+                                <span className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1">{selectedStudent.rollNo || ""}</span>
+                             </div>
                           </div>
                        </div>
                     </div>

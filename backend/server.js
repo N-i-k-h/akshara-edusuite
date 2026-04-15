@@ -387,9 +387,12 @@ const seedAdmin = async () => {
 // Update student fee status
 const updateStudentFeeStatus = async (studentId) => {
   try {
-    const fees = await Fee.find({ studentId });
-    const totalDue = fees.reduce((sum, fee) => sum + (fee.dueAmount || 0), 0);
-    const isPaid = fees.length > 0 && totalDue <= 0;
+    // Find all fees for the student, sorted by date descending to get the most recent one
+    const latestFee = await Fee.findOne({ studentId }).sort({ date: -1 });
+    
+    // If there's a record and its dueAmount is 0 or less, then it's paid
+    const isPaid = latestFee && latestFee.dueAmount <= 0;
+    
     await Student.findByIdAndUpdate(studentId, { feesPaid: isPaid });
   } catch (error) {
     console.error("Error updating student fee status:", error.message);

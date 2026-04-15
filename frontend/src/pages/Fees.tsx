@@ -693,7 +693,11 @@ const Fees = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                fees.map((fee) => (
+                fees
+                  .filter((fee, index, self) => 
+                     index === self.findIndex((f) => String(f.studentId) === String(fee.studentId))
+                  )
+                  .map((fee) => (
                   <TableRow key={fee._id}>
                     <TableCell>
                       {new Date(fee.date).toLocaleDateString()}
@@ -822,11 +826,19 @@ const Fees = () => {
                 <span className="font-bold text-sm text-center px-2">
                   2025-26
                 </span>
-                <div className="flex gap-2 ml-auto items-end">
-                  <span className="uppercase text-[10px]">Roll No:</span>
-                  <span className="font-bold text-sm px-2 text-blue-900">
-                    {students.find(s => s._id === receiptData.studentId)?.rollNo || ""}
-                  </span>
+                <div className="flex gap-4 ml-auto items-end">
+                  <div className="flex gap-1 items-end">
+                    <span className="uppercase text-[8px] text-gray-500">ADM NO:</span>
+                    <span className="font-bold text-base px-1 leading-none text-blue-900 border-b border-gray-400">
+                      {students.find(s => s._id === receiptData.studentId)?.admissionNumber || ""}
+                    </span>
+                  </div>
+                  <div className="flex gap-1 items-end">
+                    <span className="uppercase text-[8px] text-gray-500">Roll No:</span>
+                    <span className="font-bold text-base px-1 leading-none text-blue-900 border-b border-gray-400">
+                      {students.find(s => s._id === receiptData.studentId)?.rollNo || ""}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -878,15 +890,7 @@ const Fees = () => {
               </table>
             </div>
 
-            {/* Rupees in Words */}
-            <div className="px-2 mb-4">
-              <div className="flex items-start w-full text-base font-bold border-b border-gray-400 pb-0.5">
-                <span className="shrink-0 uppercase text-[10px] mr-3 mt-1.5">Rupees in words:</span>
-                <span className="font-bold text-base italic capitalize py-0.5 text-gray-800">
-                   {Number(receiptData.amountPaid) > 0 ? toWords.convert(Number(receiptData.amountPaid)) + " Only" : ""}
-                </span>
-              </div>
-            </div>
+
 
             {/* Rupees in Words */}
             <div className="px-2 mb-10 mt-6">
