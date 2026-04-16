@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5010;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
@@ -26,7 +26,7 @@ if (!JWT_SECRET) {
 app.use(helmet());
 
 // CORS — restrict to allowed origins
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "https://ssscp.cloud,http://ssscp.cloud,http://localhost:5173")
   .split(",")
   .map((s) => s.trim());
 app.use(
