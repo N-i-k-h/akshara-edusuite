@@ -75,9 +75,9 @@ const FeesRegistration = () => {
 
   const generateReceiptNumber = () => {
     const storedSeq = localStorage.getItem("receiptNoSeq_v2");
-    let seq = storedSeq ? (parseInt(storedSeq) + 1) : 0;
+    let seq = storedSeq ? (parseInt(storedSeq) + 1) : 1;
     localStorage.setItem("receiptNoSeq_v2", seq.toString());
-    setFormData((prev) => ({ ...prev, receiptNo: seq.toString() }));
+    setFormData((prev) => ({ ...prev, receiptNo: seq.toString().padStart(3, "0") }));
   };
 
   // Generate Admission Number and Fetch Classes on Mount
@@ -677,14 +677,14 @@ const FeesRegistration = () => {
                 </span>
                 <div className="flex gap-4 ml-auto items-end">
                   <div className="flex gap-1 items-end">
-                    <span className="uppercase text-[8px] text-gray-500">ADM NO:</span>
-                    <span className="font-bold text-base px-1 leading-none text-blue-900 border-b border-gray-400">
+                    <span className="uppercase text-[9px] font-bold text-gray-800">ADM NO:</span>
+                    <span className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[80px] text-center">
                       {formData.admissionNumber || ""}
                     </span>
                   </div>
                   <div className="flex gap-1 items-end">
-                    <span className="uppercase text-[8px] text-gray-500">Roll No:</span>
-                    <span className="font-bold text-base px-1 leading-none text-blue-900 border-b border-gray-400">
+                    <span className="uppercase text-[9px] font-bold text-gray-800">Roll No:</span>
+                    <span className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[40px] text-center">
                       {formData.rollNo || ""}
                     </span>
                   </div>
@@ -718,8 +718,15 @@ const FeesRegistration = () => {
               </table>
             </div>
 
-            {/* Rupees in Words - Immediately After Table */}
-            <div className="px-2 mb-10 mt-6">
+            {/* Due Amount & Rupees in Words */}
+            <div className="px-2 mb-10 mt-4 space-y-4">
+              <div className="flex items-center w-full text-base font-bold border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 uppercase text-[10px] mr-3">Balance Due:</span>
+                <span className="font-bold text-lg text-red-600 px-2">
+                  ₹{calculateDue().toLocaleString("en-IN")}/-
+                </span>
+              </div>
+
               <div className="flex items-start w-full text-base font-bold border-b border-gray-400 pb-0.5">
                 <span className="shrink-0 uppercase text-[10px] mr-3 mt-1.5">Rupees in words:</span>
                 <span className="font-bold text-base italic capitalize py-0.5 text-gray-800">

@@ -489,8 +489,8 @@ const StudyCertificate = () => {
               {certType === "bonafide" ? (
                 // === BONAFIDE TEMPLATE ===
                 <div className="p-8 h-[295mm] overflow-hidden flex flex-col">
-                  {/* 5cm top gap for pre-printed header */}
-                  <div style={{ height: "50mm" }}></div>
+                  {/* 3cm top gap for pre-printed header */}
+                  <div style={{ height: "30mm" }}></div>
 
                   <div className="text-center mb-12 mt-8">
                     <h2 className="text-2xl font-bold uppercase underline underline-offset-4 tracking-wide">
@@ -550,8 +550,8 @@ const StudyCertificate = () => {
               ) : (
                 // === COUNCIL FORMAT TEMPLATE ===
                 <div className="p-6 h-[295mm] text-[11px] flex flex-col overflow-hidden">
-                  {/* 5cm top gap for pre-printed header */}
-                  <div style={{ height: "50mm" }}></div>
+                  {/* 3cm top gap for pre-printed header */}
+                  <div style={{ height: "30mm" }}></div>
                   
                   {/* Top Header Row */}
                   <div className="flex justify-between items-start mb-2">

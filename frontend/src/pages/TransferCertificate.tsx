@@ -340,8 +340,8 @@ const TransferCertificate = () => {
               style={{ fontFamily: "'Times New Roman', serif" }}
             >
               {/* Header Removed for Pre-printed Paper */}
-              {/* 5cm top gap */}
-              <div style={{ height: "50mm" }}></div>
+              {/* 3cm top gap */}
+              <div style={{ height: "30mm" }}></div>
 
               <div className="text-center mb-6">
                 <h2 className="text-xl font-bold uppercase tracking-widest text-gray-700">
@@ -571,8 +571,8 @@ const TransferCertificate = () => {
                 </div>
               </div>
 
-              {/* Footer with 4cm bottom gap */}
-              <div className="mt-auto flex justify-between items-end mb-[40mm]">
+              {/* Footer with 2cm bottom gap */}
+              <div className="mt-auto flex justify-between items-end mb-[20mm]">
                 <div>
                   Date :{" "}
                   {formData.date
