@@ -15,6 +15,7 @@ const TransferCertificate = () => {
 
   const [formData, setFormData] = useState({
     admissionNo: "",
+    refNo: "SSSCP/TC/2024-25",
     tcNo: "",
     studentName: "",
     gender: "",
@@ -150,6 +151,14 @@ const TransferCertificate = () => {
                   onChange={(e) => handleInputChange("tcNo", e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Reference No</Label>
+              <Input
+                value={formData.refNo}
+                onChange={(e) => handleInputChange("refNo", e.target.value)}
+              />
             </div>
 
             <div className="space-y-2">
@@ -350,7 +359,10 @@ const TransferCertificate = () => {
               </div>
 
               <div className="flex justify-between font-bold mb-4 px-2">
-                <span>Admission No: {formData.admissionNo}</span>
+                <div className="flex flex-col gap-1">
+                  <span>Admission No: {formData.admissionNo}</span>
+                  <span>Ref No: {formData.refNo}</span>
+                </div>
                 <span>T.C No. {formData.tcNo}</span>
               </div>
 

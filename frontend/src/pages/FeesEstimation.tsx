@@ -27,6 +27,7 @@ const FeesEstimation = () => {
     courseYear: "1st Year",
     course: "D.Pharmacy",
     date: new Date().toLocaleDateString("en-GB"),
+    refNo: "SSSCP/FE/2024-25",
   });
 
   // Dynamic fee items to allow "Delete for all fields"
@@ -154,6 +155,10 @@ const FeesEstimation = () => {
                 <Label>Academic Year</Label>
                 <Input value={studentInfo.academicYear} onChange={(e) => setStudentInfo({ ...studentInfo, academicYear: e.target.value })} />
               </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Reference No</Label>
+                <Input value={studentInfo.refNo} onChange={(e) => setStudentInfo({ ...studentInfo, refNo: e.target.value })} placeholder="e.g. SSSCP/FE/2024-25" />
+              </div>
             </CardContent>
           </Card>
 
@@ -219,8 +224,13 @@ const FeesEstimation = () => {
               </div>
             </div>
 
-            <div className="text-right mb-6 font-bold text-base px-2">
-              Date: {studentInfo.date}
+            <div className="flex justify-between items-start mb-6 font-bold text-base px-2">
+              <div className="text-left">
+                Ref No: {studentInfo.refNo}
+              </div>
+              <div className="text-right">
+                Date: {studentInfo.date}
+              </div>
             </div>
 
             <div className="text-center mb-8">

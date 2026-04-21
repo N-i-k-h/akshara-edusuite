@@ -185,6 +185,13 @@ const StudyCertificate = () => {
                 placeholder="e.g. KUMARACHAR"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Reference No</Label>
+              <Input
+                value={formData.refNo}
+                onChange={(e) => handleInputChange("refNo", e.target.value)}
+              />
+            </div>
 
             {certType === "council" && (
               <>
@@ -211,13 +218,6 @@ const StudyCertificate = () => {
                     onChange={(e) =>
                       handleInputChange("dobWords", e.target.value)
                     }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Reference No</Label>
-                  <Input
-                    value={formData.refNo}
-                    onChange={(e) => handleInputChange("refNo", e.target.value)}
                   />
                 </div>
               </>
@@ -496,6 +496,16 @@ const StudyCertificate = () => {
                     <h2 className="text-2xl font-bold uppercase underline underline-offset-4 tracking-wide">
                       STUDY CERTIFICATE
                     </h2>
+                  </div>
+
+                  <div className="flex justify-between font-bold mb-4 px-4 text-lg">
+                    <span>Ref No: {formData.refNo}</span>
+                    <span>
+                      Date:{" "}
+                      {formData.date
+                        ? new Date(formData.date).toLocaleDateString("en-GB")
+                        : ""}
+                    </span>
                   </div>
 
                   <div className="text-xl leading-10 text-justify mb-8 px-4">
