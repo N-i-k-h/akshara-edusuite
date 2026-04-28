@@ -804,7 +804,7 @@ const Students = () => {
               <TableHead>Name</TableHead>
               <TableHead>Class</TableHead>
               <TableHead className="text-right">Total Fee</TableHead>
-              <TableHead className="text-right">Paid</TableHead>
+              <TableHead className="text-right">Total Paid</TableHead>
               <TableHead className="text-right">Due</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Fees</TableHead>

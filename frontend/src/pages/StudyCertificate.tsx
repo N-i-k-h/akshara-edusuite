@@ -489,8 +489,20 @@ const StudyCertificate = () => {
               {certType === "bonafide" ? (
                 // === BONAFIDE TEMPLATE ===
                 <div className="p-8 h-[295mm] overflow-hidden flex flex-col">
-                  {/* 3cm top gap for pre-printed header */}
-                  <div style={{ height: "30mm" }}></div>
+                  {/* Header */}
+                  <div className="text-center border-b-2 border-black pb-4 mb-4">
+                    <div className="flex items-center justify-between px-2">
+                      <img src="/college_logo.png" alt="Logo" className="h-24 w-auto" />
+                      <div className="text-center flex-1">
+                        <h1 className="text-2xl font-bold uppercase tracking-tight text-[#8B0000]">
+                          Sri Subramanya Swamy College of Pharmacy
+                        </h1>
+                        <p className="italic text-sm text-gray-600 mb-1">Building Bridges Across Healthcare</p>
+                        <p className="text-xs font-bold">Mob. +91 94481 27880, 96329 17880</p>
+                      </div>
+                      <div className="w-24"></div>
+                    </div>
+                  </div>
 
                   <div className="text-center mb-12 mt-8">
                     <h2 className="text-2xl font-bold uppercase underline underline-offset-4 tracking-wide">
@@ -560,8 +572,20 @@ const StudyCertificate = () => {
               ) : (
                 // === COUNCIL FORMAT TEMPLATE ===
                 <div className="p-6 h-[295mm] text-[11px] flex flex-col overflow-hidden">
-                  {/* 3cm top gap for pre-printed header */}
-                  <div style={{ height: "30mm" }}></div>
+                  {/* Header */}
+                  <div className="text-center border-b-2 border-black pb-4 mb-4">
+                    <div className="flex items-center justify-between px-2">
+                      <img src="/college_logo.png" alt="Logo" className="h-24 w-auto" />
+                      <div className="text-center flex-1">
+                        <h1 className="text-2xl font-bold uppercase tracking-tight text-[#8B0000]">
+                          Sri Subramanya Swamy College of Pharmacy
+                        </h1>
+                        <p className="italic text-sm text-gray-600 mb-1">Building Bridges Across Healthcare</p>
+                        <p className="text-xs font-bold">Mob. +91 94481 27880, 96329 17880</p>
+                      </div>
+                      <div className="w-24"></div>
+                    </div>
+                  </div>
                   
                   {/* Top Header Row */}
                   <div className="flex justify-between items-start mb-2">

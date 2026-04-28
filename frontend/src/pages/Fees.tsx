@@ -671,7 +671,7 @@ const Fees = () => {
                 <TableHead>Student Name</TableHead>
                 <TableHead>Grade</TableHead>
                 <TableHead>Fee Type</TableHead>
-                <TableHead>Paid</TableHead>
+                <TableHead>Total Paid</TableHead>
                 <TableHead>Due</TableHead>
                 <TableHead>Method</TableHead>
                 <TableHead>Status</TableHead>
