@@ -80,8 +80,16 @@ const TransferCertificate = () => {
       margin: 0,
       filename: filename,
       image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        height: element.offsetHeight,
+        width: element.offsetWidth,
+        scrollX: 0,
+        scrollY: 0
+      },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+      pagebreak: { mode: ["avoid-all"] },
     };
 
     html2pdf()
@@ -345,12 +353,23 @@ const TransferCertificate = () => {
           <div className="transform scale-[0.45] md:scale-[0.7] lg:scale-[0.85] xl:scale-100 origin-top transition-transform duration-300">
             <div
               ref={printRef}
-              className="bg-white text-black p-8 w-[210mm] min-h-[297mm] shadow-2xl flex flex-col relative border-[2px] border-black"
+              className="bg-white text-black p-8 w-[210mm] h-[295mm] overflow-hidden shadow-2xl flex flex-col relative border-[2px] border-black box-border"
               style={{ fontFamily: "'Times New Roman', serif" }}
             >
-              {/* Header Removed for Pre-printed Paper */}
-              {/* 3cm top gap */}
-              <div style={{ height: "30mm" }}></div>
+              {/* Header */}
+              <div className="text-center border-b-2 border-black pb-4 mb-4 mt-2">
+                <div className="flex items-center justify-between px-2">
+                  <img src="/college_logo.png" alt="Logo" className="h-24 w-auto" />
+                  <div className="text-center flex-1">
+                    <h1 className="text-2xl font-bold uppercase tracking-tight text-[#8B0000]">
+                      Sri Subramanya Swamy College of Pharmacy
+                    </h1>
+                    <p className="italic text-sm text-gray-600 mb-1">Building Bridges Across Healthcare</p>
+                    <p className="text-xs font-bold">Mob. +91 94481 27880, 96329 17880</p>
+                  </div>
+                  <div className="w-24"></div>
+                </div>
+              </div>
 
               <div className="text-center mb-6">
                 <h2 className="text-xl font-bold uppercase tracking-widest text-gray-700">
@@ -583,8 +602,8 @@ const TransferCertificate = () => {
                 </div>
               </div>
 
-              {/* Footer with 2cm bottom gap */}
-              <div className="mt-auto flex justify-between items-end mb-[20mm]">
+              {/* Footer pushed further down */}
+              <div className="mt-auto pt-16 flex justify-between items-end mb-4">
                 <div>
                   Date :{" "}
                   {formData.date
