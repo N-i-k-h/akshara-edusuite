@@ -16,6 +16,7 @@ cloudinary.config({
 });
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5010;
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -452,12 +453,21 @@ const requireAdmin = (req, res, next) => {
 app.post("/api/login", loginLimiter, async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+  console.log("LOGIN BODY:", req.body);
+  console.log("EMAIL TYPE:", typeof email);
+
+  if (
+    typeof email !== "string" ||
+    typeof password !== "string"
+  ) {
+    return res.status(400).json({
+      message: "Invalid email or password format"
+    });
   }
 
   try {
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
