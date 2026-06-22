@@ -21,6 +21,20 @@ const toWords = new ToWords();
 const FeesRegistration = () => {
   const printRef = useRef(null);
 
+  const inlineInputStyle = {
+    fontFamily: "inherit",
+    fontSize: "inherit",
+    fontWeight: "inherit",
+    fontStyle: "inherit",
+    color: "inherit",
+    backgroundColor: "transparent",
+    border: "none",
+    padding: "0",
+    margin: "0",
+    outline: "none",
+  };
+
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [classesList, setClassesList] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
@@ -40,6 +54,7 @@ const FeesRegistration = () => {
     paymentMethod: "Cash",
     chequeNo: "",
     payingAmount: "0",
+    wordsOverride: "",
   });
 
   const [feeItems, setFeeItems] = useState([
@@ -268,6 +283,8 @@ const FeesRegistration = () => {
   const handleDownloadPDF = () => {
     if (!printRef.current) return;
 
+    setIsGeneratingPDF(true);
+
     const namePart = formData.studentName.trim() || "Student";
     const safeName = namePart.replace(/[^a-z0-9]/gi, "_");
     const filename = `${safeName}_Fee_Receipt.pdf`;
@@ -282,25 +299,29 @@ const FeesRegistration = () => {
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
     };
 
-    html2pdf()
-      .set(opt)
-      .from(element)
-      .outputPdf("blob")
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        toast.success("Fee Receipt downloaded successfully!");
-      })
-      .catch((error) => {
-        console.error("Error generating PDF:", error);
-        toast.error("Failed to generate PDF");
-      });
+    setTimeout(() => {
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .outputPdf("blob")
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          toast.success("Fee Receipt downloaded successfully!");
+          setIsGeneratingPDF(false);
+        })
+        .catch((error) => {
+          console.error("Error generating PDF:", error);
+          toast.error("Failed to generate PDF");
+          setIsGeneratingPDF(false);
+        });
+    }, 150);
   };
 
   return (
@@ -486,6 +507,15 @@ const FeesRegistration = () => {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label>Course Name</Label>
+              <Input
+                value={formData.course}
+                onChange={(e) => handleInputChange("course", e.target.value)}
+                placeholder="e.g. D. Pharma"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4 pt-2 border-t border-dotted">
               <div className="space-y-2">
                 <Label>Payment Method</Label>
@@ -653,10 +683,30 @@ const FeesRegistration = () => {
               {/* Receipt Info Line */}
               <div className="w-full flex justify-between px-2 mt-1 text-sm font-bold">
                 <div className="flex gap-1 items-baseline">
-                  No. <span className="text-red-600 ml-4 font-normal text-xl tracking-tighter">{formData.receiptNo || ""}</span>
+                  No. {isGeneratingPDF ? (
+                    <span className="text-red-600 ml-4 font-normal text-xl tracking-tighter">{formData.receiptNo || ""}</span>
+                  ) : (
+                    <input
+                      type="text"
+                      style={{ ...inlineInputStyle, width: "100px" }}
+                      className="text-red-600 ml-4 font-normal text-xl tracking-tighter"
+                      value={formData.receiptNo}
+                      onChange={(e) => handleInputChange("receiptNo", e.target.value)}
+                    />
+                  )}
                 </div>
                 <div className="flex gap-1 items-baseline">
-                  Dt. <span className="ml-4 font-normal text-lg">{formData.date || ""}</span>
+                  Dt. {isGeneratingPDF ? (
+                    <span className="ml-4 font-normal text-lg">{formData.date || ""}</span>
+                  ) : (
+                    <input
+                      type="text"
+                      style={{ ...inlineInputStyle, width: "120px" }}
+                      className="ml-4 font-normal text-lg"
+                      value={formData.date}
+                      onChange={(e) => handleInputChange("date", e.target.value)}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -664,29 +714,100 @@ const FeesRegistration = () => {
             {/* Student Details Section */}
             <div className="space-y-3 px-2 mb-2 text-base">
               <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
-                <span className="shrink-0 font-bold whitespace-nowrap text-sm">{formData.genderPrefix}</span>
-                <span className="ml-3 font-bold text-xl italic text-blue-900 flex-1 px-1 uppercase">
-                  {formData.studentName || ""}
-                </span>
+                {isGeneratingPDF ? (
+                  <span className="shrink-0 font-bold whitespace-nowrap text-sm inline-block pb-0.5 leading-normal align-bottom">{formData.genderPrefix}</span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle, width: "70px" }}
+                    className="shrink-0 font-bold whitespace-nowrap text-sm"
+                    value={formData.genderPrefix}
+                    onChange={(e) => handleInputChange("genderPrefix", e.target.value)}
+                  />
+                )}
+                {isGeneratingPDF ? (
+                  <span className="ml-3 font-bold text-xl italic text-blue-900 flex-1 px-1 uppercase inline-block pb-0.5 leading-normal align-bottom">
+                    {formData.studentName || ""}
+                  </span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle }}
+                    className="ml-3 font-bold text-xl italic text-blue-900 flex-1 px-1 uppercase"
+                    value={formData.studentName}
+                    onChange={(e) => handleInputChange("studentName", e.target.value)}
+                    placeholder="STUDENT NAME"
+                  />
+                )}
               </div>
               
               <div className="flex items-end w-full leading-tight font-bold gap-3 border-b border-gray-400 pb-0.5">
-                <span className="shrink-0 uppercase text-[10px]">{formData.yearPrefix} D. Pharma Course- academic year</span>
-                <span className="font-bold text-sm text-center px-2">
-                  {formData.academicYear}
-                </span>
+                {isGeneratingPDF ? (
+                  <span className="shrink-0 uppercase text-[10px] inline-block pb-0.5 leading-normal align-bottom">{formData.yearPrefix}</span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle, width: "40px" }}
+                    className="uppercase text-[10px]"
+                    value={formData.yearPrefix}
+                    onChange={(e) => handleInputChange("yearPrefix", e.target.value)}
+                  />
+                )}
+                {isGeneratingPDF ? (
+                  <span className="shrink-0 uppercase text-[10px] ml-1 inline-block pb-0.5 leading-normal align-bottom">{formData.course}</span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle, width: "120px" }}
+                    className="uppercase text-[10px]"
+                    value={formData.course}
+                    onChange={(e) => handleInputChange("course", e.target.value)}
+                  />
+                )}
+                <span className="uppercase text-[10px] whitespace-nowrap inline-block pb-0.5 leading-normal align-bottom">Course- academic year</span>
+                {isGeneratingPDF ? (
+                  <span className="font-bold text-sm text-center px-2 inline-block pb-0.5 leading-normal align-bottom">{formData.academicYear}</span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle, width: "80px", textAlign: "center" }}
+                    className="font-bold text-sm text-center"
+                    value={formData.academicYear}
+                    onChange={(e) => handleInputChange("academicYear", e.target.value)}
+                  />
+                )}
                 <div className="flex gap-4 ml-auto items-end">
                   <div className="flex gap-1 items-end">
                     <span className="uppercase text-[9px] font-bold text-gray-800">ADM NO:</span>
-                    <span className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[80px] text-center">
-                      {formData.admissionNumber || ""}
-                    </span>
+                    {isGeneratingPDF ? (
+                      <span className="inline-block font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[80px] text-center leading-normal">
+                        {formData.admissionNumber || ""}
+                      </span>
+                    ) : (
+                      <input
+                        type="text"
+                        style={{ ...inlineInputStyle, width: "100px", textAlign: "center" }}
+                        className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 text-center"
+                        value={formData.admissionNumber}
+                        onChange={(e) => handleInputChange("admissionNumber", e.target.value)}
+                      />
+                    )}
                   </div>
                   <div className="flex gap-1 items-end">
                     <span className="uppercase text-[9px] font-bold text-gray-800">Roll No:</span>
-                    <span className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[40px] text-center">
-                      {formData.rollNo || ""}
-                    </span>
+                    {isGeneratingPDF ? (
+                      <span className="inline-block font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[40px] text-center leading-normal">
+                        {formData.rollNo || ""}
+                      </span>
+                    ) : (
+                      <input
+                        type="text"
+                        style={{ ...inlineInputStyle, width: "60px", textAlign: "center" }}
+                        className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 text-center"
+                        value={formData.rollNo}
+                        onChange={(e) => handleInputChange("rollNo", e.target.value)}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -706,14 +827,34 @@ const FeesRegistration = () => {
                   {feeItems.map((item, idx) => (
                     <tr key={item.id} className="border-b border-gray-200">
                       <td className="border-r-2 border-blue-900 p-1 text-center font-normal">{idx + 1}.</td>
-                      <td className="border-r-2 border-blue-900 p-1 pl-4 font-semibold text-[15px]">{item.name}</td>
+                      <td className="border-r-2 border-blue-900 p-1 pl-4 font-semibold text-[15px]">
+                        {isGeneratingPDF ? (
+                          <span>{item.name}</span>
+                        ) : (
+                          <input
+                            type="text"
+                            style={inlineInputStyle}
+                            className="w-full font-semibold"
+                            value={item.name}
+                            onChange={(e) => handleFeeNameChange(item.id, e.target.value)}
+                          />
+                        )}
+                      </td>
                       <td className="p-1 text-right pr-6 tracking-wider font-semibold">
-                        {Number(item.value) > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}
+                        {isGeneratingPDF ? (
+                          <span>{Number(item.value) > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}</span>
+                        ) : (
+                          <input
+                            type="text"
+                            style={{ ...inlineInputStyle, textAlign: "right" }}
+                            className="w-full tracking-wider font-semibold"
+                            value={item.value}
+                            onChange={(e) => handleFeeValueChange(item.id, e.target.value)}
+                          />
+                        )}
                       </td>
                     </tr>
                   ))}
-                  
-
                 </tbody>
               </table>
             </div>
@@ -729,9 +870,19 @@ const FeesRegistration = () => {
 
               <div className="flex items-start w-full text-base font-bold border-b border-gray-400 pb-0.5">
                 <span className="shrink-0 uppercase text-[10px] mr-3 mt-1.5">Rupees in words:</span>
-                <span className="font-bold text-base italic capitalize py-0.5 text-gray-800">
-                   {Number(formData.payingAmount) > 0 ? toWords.convert(Number(formData.payingAmount)) + " Only" : ""}
-                </span>
+                {isGeneratingPDF ? (
+                  <span className="font-bold text-base italic capitalize py-0.5 text-gray-800">
+                    {formData.wordsOverride || (Number(formData.payingAmount) > 0 ? toWords.convert(Number(formData.payingAmount)) + " Only" : "")}
+                  </span>
+                ) : (
+                  <input
+                    type="text"
+                    style={inlineInputStyle}
+                    className="font-bold text-base italic capitalize py-0.5 text-gray-800 w-full"
+                    value={formData.wordsOverride || (Number(formData.payingAmount) > 0 ? toWords.convert(Number(formData.payingAmount)) + " Only" : "")}
+                    onChange={(e) => handleInputChange("wordsOverride", e.target.value)}
+                  />
+                )}
               </div>
             </div>
 

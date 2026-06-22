@@ -7,6 +7,14 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 const app = express();
 const PORT = process.env.PORT || 5010;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -45,7 +53,7 @@ app.use(
 );
 
 // Body parser with size limit to prevent payload attacks
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 
 // Rate limiting — general
 const generalLimiter = rateLimit({
@@ -119,6 +127,16 @@ const studentSchema = new mongoose.Schema(
     parentPhone: { type: String, required: true, trim: true },
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
     feesPaid: { type: Boolean, default: false },
+    passportImage: { type: String, default: "" },
+    customFields: {
+      type: [
+        {
+          label: { type: String, required: true },
+          value: { type: String, required: true }
+        }
+      ],
+      default: []
+    },
   },
   { timestamps: true },
 );
@@ -489,6 +507,25 @@ app.use("/api/timetable", authenticate);
 app.use("/api/dashboard", authenticate);
 app.use("/api/faculty", authenticate);
 app.use("/api/users", authenticate);
+
+// =============================================================================
+// PASSPORT UPLOAD ROUTE
+// =============================================================================
+app.post("/api/upload-passport", authenticate, async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) {
+      return res.status(400).json({ message: "Image data is required" });
+    }
+    const uploadResponse = await cloudinary.uploader.upload(image, {
+      folder: "student_passports",
+    });
+    res.json({ url: uploadResponse.secure_url });
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
+    res.status(500).json({ message: "Failed to upload image", error: error.message });
+  }
+});
 
 // =============================================================================
 // STUDENT ROUTES
@@ -1692,3 +1729,4 @@ const gracefulShutdown = async (signal) => {
 
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+// Trigger nodemon reload with correct env variables

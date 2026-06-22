@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { API_BASE_URL, authFetch } from "@/config";
+import TransferCertificate from "./TransferCertificate";
+import StudyCertificate from "./StudyCertificate";
 
 import {
   Plus,
@@ -53,10 +55,24 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { User, Phone, Mail, Home, ShieldCheck, GraduationCap, FileText, Wallet } from "lucide-react";
+import { User, Phone, Mail, Home, ShieldCheck, GraduationCap, FileText, Wallet, Save } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 const Students = () => {
+  const [isGeneratingReceiptPDF, setIsGeneratingReceiptPDF] = useState(false);
+  const inlineInputStyle = {
+    fontFamily: "inherit",
+    fontSize: "inherit",
+    fontWeight: "inherit",
+    fontStyle: "inherit",
+    color: "inherit",
+    backgroundColor: "transparent",
+    border: "none",
+    padding: "0",
+    margin: "0",
+    outline: "none",
+  };
+
   const [students, setStudents] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -284,6 +300,177 @@ const Students = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [latestReceipt, setLatestReceipt] = useState<any | null>(null);
+  const [amountPayingNow, setAmountPayingNow] = useState(0);
+  
+  // Custom Fields State
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldValue, setNewFieldValue] = useState("");
+
+  const handleAddCustomField = () => {
+    if (!newFieldName.trim() || !newFieldValue.trim()) {
+      toast.error("Please enter both field name and value");
+      return;
+    }
+    if (!selectedStudent) return;
+    const updatedCustomFields = [
+      ...(selectedStudent.customFields || []),
+      { label: newFieldName.trim(), value: newFieldValue.trim() }
+    ];
+    setSelectedStudent({ ...selectedStudent, customFields: updatedCustomFields });
+    setNewFieldName("");
+    setNewFieldValue("");
+  };
+
+  const handleRemoveCustomField = (index: number) => {
+    if (!selectedStudent) return;
+    const updatedCustomFields = (selectedStudent.customFields || []).filter(
+      (_: any, idx: number) => idx !== index
+    );
+    setSelectedStudent({ ...selectedStudent, customFields: updatedCustomFields });
+  };
+
+  const handleCustomFieldChange = (index: number, key: 'label' | 'value', val: string) => {
+    if (!selectedStudent) return;
+    const updatedCustomFields = [...(selectedStudent.customFields || [])];
+    updatedCustomFields[index] = { ...updatedCustomFields[index], [key]: val };
+    setSelectedStudent({ ...selectedStudent, customFields: updatedCustomFields });
+  };
+
+  const handleStudentFieldChange = (field: string, val: string) => {
+    setSelectedStudent((prev: any) => {
+      if (!prev) return null;
+      return { ...prev, [field]: val };
+    });
+  };
+
+  const handleSaveStudentDetails = async () => {
+    if (!selectedStudent) return;
+    const toastId = toast.loading("Saving student details...");
+    try {
+      const studentId = selectedStudent._id || selectedStudent.id;
+      const response = await authFetch(`${API_BASE_URL}/students/${studentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: selectedStudent.name,
+          rollNo: selectedStudent.rollNo,
+          admissionNumber: selectedStudent.admissionNumber,
+          email: selectedStudent.email,
+          phone: selectedStudent.phone,
+          class: selectedStudent.class,
+          parentName: selectedStudent.parentName,
+          parentPhone: selectedStudent.parentPhone,
+          status: selectedStudent.status,
+          customFields: selectedStudent.customFields || [],
+        }),
+      });
+
+      if (response.ok) {
+        const updatedStudent = await response.json();
+        toast.success("Student details saved successfully!", { id: toastId });
+        setSelectedStudent(updatedStudent);
+        setStudents((prev) =>
+          prev.map((s) => (s._id === studentId || s.id === studentId ? updatedStudent : s))
+        );
+      } else {
+        const err = await response.json();
+        toast.error(err.message || "Failed to save student details", { id: toastId });
+      }
+    } catch (error) {
+      console.error("Error saving student details:", error);
+      toast.error("An error occurred while saving student details", { id: toastId });
+    }
+  };
+
+  const handleReceiptInputChange = (field: string, value: any) => {
+    setLatestReceipt((prev: any) => {
+      if (!prev) return null;
+      return { ...prev, [field]: value };
+    });
+  };
+
+  const handleReceiptFeeNameChange = (index: number, newName: string) => {
+    setLatestReceipt((prev: any) => {
+      if (!prev) return null;
+      const updated = [...(prev.feeItems || [])];
+      updated[index] = { ...updated[index], name: newName };
+      return { ...prev, feeItems: updated };
+    });
+  };
+
+  const handleReceiptFeeValueChange = (index: number, newValue: string) => {
+    setLatestReceipt((prev: any) => {
+      if (!prev) return null;
+      const updated = [...(prev.feeItems || [])];
+      updated[index] = { ...updated[index], value: Number(newValue) || 0 };
+      return { ...prev, feeItems: updated };
+    });
+  };
+
+  const handleAddReceiptFeeItem = () => {
+    setLatestReceipt((prev: any) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        feeItems: [...(prev.feeItems || []), { name: "NEW PARTICULAR", value: 0 }]
+      };
+    });
+  };
+
+  const handleRemoveReceiptFeeItem = (index: number) => {
+    setLatestReceipt((prev: any) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        feeItems: (prev.feeItems || []).filter((_: any, idx: number) => idx !== index)
+      };
+    });
+  };
+
+  const calculateReceiptTotal = () => {
+    if (!latestReceipt || !latestReceipt.feeItems) return 0;
+    return latestReceipt.feeItems.reduce((sum: number, item: any) => sum + (Number(item.value) || 0), 0);
+  };
+
+  const calculateReceiptDue = () => {
+    if (!latestReceipt) return 0;
+    const total = calculateReceiptTotal();
+    const paid = Number(latestReceipt.amountPaid) || 0;
+    return Math.max(0, total - paid);
+  };
+
+  const handleSaveReceiptChanges = async () => {
+    if (!latestReceipt) return;
+    try {
+      const newAmountPaid = Number(latestReceipt.amountPaid || 0) + amountPayingNow;
+      const totalFee = calculateReceiptTotal();
+      const dueAmount = Math.max(0, totalFee - newAmountPaid);
+      const payload = {
+        ...latestReceipt,
+        amountPaid: newAmountPaid,
+        totalFee,
+        dueAmount,
+      };
+
+      const response = await authFetch(`${API_BASE_URL}/fees/${latestReceipt._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast.success("Receipt changes and payment saved successfully!");
+        setAmountPayingNow(0);
+        fetchStudents();
+        handleViewProfile(selectedStudent);
+      } else {
+        toast.error("Failed to save receipt changes.");
+      }
+    } catch (error) {
+      console.error("Error saving receipt changes:", error);
+      toast.error("An error occurred while saving.");
+    }
+  };
 
   const handleViewProfile = async (student: any) => {
     setSelectedStudent(student);
@@ -318,7 +505,9 @@ const Students = () => {
           
           // PRIORITY 3: Fallback to Institutional Defaults (Image 3)
           if (feeItems.length === 0) {
-            feeItems = institutionalItems;
+            feeItems = institutionalItems.map((item, idx) => 
+              idx === 13 ? { ...item, value: Number(latest.amountPaid) || 0 } : item
+            );
           }
 
           const totalCalculated = Number(latest.totalFee) || (Number(latest.amountPaid) + Number(latest.dueAmount));
@@ -350,6 +539,97 @@ const Students = () => {
     };
 
     html2pdf().set(opt).from(element).save();
+  };
+
+  const handleOverviewPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const toastId = toast.loading("Uploading passport photo...");
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        const base64Data = reader.result;
+        try {
+          const uploadRes = await authFetch(`${API_BASE_URL}/upload-passport`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ image: base64Data }),
+          });
+
+          if (!uploadRes.ok) {
+            throw new Error("Failed to upload photo to server");
+          }
+
+          const uploadData = await uploadRes.json();
+          const passportUrl = uploadData.url;
+
+          const studentId = selectedStudent._id || selectedStudent.id;
+          const updateRes = await authFetch(`${API_BASE_URL}/students/${studentId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ passportImage: passportUrl }),
+          });
+
+          if (!updateRes.ok) {
+            throw new Error("Failed to save photo URL to student profile");
+          }
+
+          const updatedStudent = await updateRes.json();
+          setSelectedStudent(updatedStudent);
+          
+          setStudents((prevStudents) =>
+            prevStudents.map((st) => (st._id === studentId || st.id === studentId ? updatedStudent : st))
+          );
+
+          toast.success("Passport photo updated successfully!", { id: toastId });
+        } catch (error: any) {
+          console.error("Upload error:", error);
+          toast.error(error.message || "Failed to update passport photo", { id: toastId });
+        }
+      };
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to read file", { id: toastId });
+    }
+  };
+
+  const handleDeletePassportPhoto = async () => {
+    if (!window.confirm("Are you sure you want to remove this passport photo?")) return;
+    const toastId = toast.loading("Removing passport photo...");
+
+    try {
+      const studentId = selectedStudent._id || selectedStudent.id;
+      const updateRes = await authFetch(`${API_BASE_URL}/students/${studentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ passportImage: "" }),
+      });
+
+      if (!updateRes.ok) {
+        throw new Error("Failed to remove photo from student profile");
+      }
+
+      const updatedStudent = await updateRes.json();
+      setSelectedStudent(updatedStudent);
+
+      setStudents((prevStudents) =>
+        prevStudents.map((st) => (st._id === studentId || st.id === studentId ? updatedStudent : st))
+      );
+
+      toast.success("Passport photo removed successfully!", { id: toastId });
+    } catch (error: any) {
+      console.error("Delete photo error:", error);
+      toast.error(error.message || "Failed to remove passport photo", { id: toastId });
+    }
   };
 
   return (
@@ -503,7 +783,7 @@ const Students = () => {
 
       {/* Profile Dialog */}
       <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <DialogContent className="max-w-[880px] overflow-y-auto max-h-[95vh] bg-slate-50 p-6">
+        <DialogContent className="max-w-[1250px] w-[95vw] overflow-y-auto max-h-[95vh] bg-slate-50 p-6">
           <DialogHeader className="no-print mb-4 border-b pb-4">
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <User className="h-6 w-6 text-blue-600" />
@@ -513,22 +793,88 @@ const Students = () => {
 
           {selectedStudent && (
             <Tabs defaultValue="receipt" className="w-full">
-              <TabsList className="mb-4 grid w-full grid-cols-2 max-w-sm mx-auto no-print bg-slate-100 p-1">
+              <TabsList className="mb-4 grid w-full grid-cols-4 max-w-2xl mx-auto no-print bg-slate-100 p-1">
                 <TabsTrigger value="receipt" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
                    <FileText className="h-4 w-4" /> Latest Receipt
                 </TabsTrigger>
                 <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
                    <User className="h-4 w-4" /> Student Details
                 </TabsTrigger>
+                <TabsTrigger value="study-cert" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
+                   <GraduationCap className="h-4 w-4" /> Study Certificate
+                </TabsTrigger>
+                <TabsTrigger value="transfer-cert" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
+                   <FileText className="h-4 w-4" /> Transfer Cert (TC)
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="receipt" className="space-y-6 flex flex-col items-center animate-in fade-in duration-300">
+              <TabsContent value="receipt" className="space-y-6 animate-in fade-in duration-300">
                 {latestReceipt ? (
-                  <div
-                    id="student-receipt-content"
-                    className="bg-white text-black px-12 py-10 w-[794px] h-[1050px] shadow-2xl flex flex-col relative border border-gray-100 shrink-0 select-none overflow-hidden"
-                    style={{ fontFamily: "'Times New Roman', serif", boxSizing: "border-box" }}
-                  >
+                  <div className="flex flex-col xl:flex-row gap-6 items-start justify-center">
+                     {/* Payment Details Panel (left side, no-print) */}
+                     <Card className="w-full xl:w-[320px] h-fit no-print shadow-sm border-blue-100 bg-white shrink-0">
+                       <CardContent className="p-4 space-y-4">
+                         <h3 className="font-bold text-base text-blue-900 border-b pb-2 flex items-center gap-2">
+                           <Wallet className="h-4 w-4" /> Payment Details
+                         </h3>
+                         
+                         <div className="space-y-2">
+                           <Label className="text-xs">Payment Method</Label>
+                           <Select
+                             value={latestReceipt.paymentMethod || "Cash"}
+                             onValueChange={(val) => handleReceiptInputChange("paymentMethod", val)}
+                           >
+                             <SelectTrigger className="h-9 text-xs">
+                               <SelectValue placeholder="Select method" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="Cash">Cash</SelectItem>
+                               <SelectItem value="Card">Card</SelectItem>
+                               <SelectItem value="UPI">UPI</SelectItem>
+                               <SelectItem value="Cheque">Cheque</SelectItem>
+                               <SelectItem value="Other">Other</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+
+                         <div className="space-y-2">
+                           <Label className="text-xs">Amount Paying Now (₹)</Label>
+                           <Input
+                             type="number"
+                             value={amountPayingNow || ""}
+                             onChange={(e) => setAmountPayingNow(Number(e.target.value) || 0)}
+                             className="h-9 text-sm font-bold"
+                             placeholder="0"
+                           />
+                         </div>
+
+                         <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-2 text-xs">
+                           <div className="flex justify-between">
+                             <span className="text-slate-500">Total Course Fee:</span>
+                             <span className="font-bold">₹{calculateReceiptTotal().toLocaleString()}</span>
+                           </div>
+                           <div className="flex justify-between">
+                             <span className="text-slate-500">Previously Paid:</span>
+                             <span className="font-bold text-green-600">₹{Number(latestReceipt.amountPaid || 0).toLocaleString()}</span>
+                           </div>
+                           <div className="flex justify-between text-blue-600 border-t pt-1.5 mt-1.5">
+                             <span className="font-semibold">New Total Paid:</span>
+                             <span className="font-bold">₹{(Number(latestReceipt.amountPaid || 0) + amountPayingNow).toLocaleString()}</span>
+                           </div>
+                           <div className="flex justify-between text-red-600 border-t pt-1.5 mt-1.5">
+                             <span className="font-semibold">Remaining Due:</span>
+                             <span className="font-bold">₹{Math.max(0, calculateReceiptTotal() - (Number(latestReceipt.amountPaid || 0) + amountPayingNow)).toLocaleString()}</span>
+                           </div>
+                         </div>
+                       </CardContent>
+                     </Card>
+
+                     {/* Receipt Preview */}
+                     <div
+                       id="student-receipt-content"
+                       className="bg-white text-black px-12 py-10 w-[794px] h-[1050px] shadow-2xl flex flex-col relative border border-gray-100 shrink-0 select-none overflow-hidden"
+                       style={{ fontFamily: "'Times New Roman', serif", boxSizing: "border-box" }}
+                     >
                     {/* Institutional Header Box */}
                     <div className="border border-blue-900 p-2 flex flex-col items-center relative mb-2">
                        <div className="flex items-center w-full gap-4 mb-2">
@@ -573,10 +919,30 @@ const Students = () => {
                        {/* Meta Info Inside Box */}
                        <div className="w-full flex justify-between px-2 mt-1 text-[13px] font-bold">
                           <div className="flex gap-2 items-baseline">
-                             No. <span className="text-red-600 font-bold text-lg ml-6">{latestReceipt.receiptNo || "RCT-303842"}</span>
+                             No. {isGeneratingReceiptPDF ? (
+                               <span className="text-red-600 font-bold text-lg ml-6">{latestReceipt.receiptNo || "RCT-303842"}</span>
+                             ) : (
+                               <input
+                                 type="text"
+                                 style={{ ...inlineInputStyle, width: "120px" }}
+                                 className="text-red-600 font-bold text-lg ml-6"
+                                 value={latestReceipt.receiptNo || ""}
+                                 onChange={(e) => handleReceiptInputChange("receiptNo", e.target.value)}
+                               />
+                             )}
                           </div>
                           <div className="flex gap-2 items-baseline">
-                             Dt. <span className="font-bold ml-10">{latestReceipt.dateStr || ""}</span>
+                             Dt. {isGeneratingReceiptPDF ? (
+                               <span className="font-bold ml-10">{latestReceipt.dateStr || ""}</span>
+                             ) : (
+                               <input
+                                 type="text"
+                                 style={{ ...inlineInputStyle, width: "120px" }}
+                                 className="font-bold ml-10"
+                                 value={latestReceipt.dateStr || ""}
+                                 onChange={(e) => handleReceiptInputChange("dateStr", e.target.value)}
+                               />
+                             )}
                           </div>
                        </div>
                     </div>
@@ -584,71 +950,199 @@ const Students = () => {
                     {/* Student Info */}
                     <div className="space-y-4 px-2 mb-4 text-sm">
                        <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
-                          <span className="shrink-0 font-bold whitespace-nowrap text-xs">Sri /Miss</span>
-                          <span className="ml-8 font-bold text-xl italic text-[#1e3a8a] flex-1 px-1 uppercase leading-none">
-                             {selectedStudent.name}
-                          </span>
+                          {isGeneratingReceiptPDF ? (
+                            <span className="shrink-0 font-bold whitespace-nowrap text-xs inline-block pb-0.5 leading-normal align-bottom">{latestReceipt.genderPrefix || "Sri /Miss"}</span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "70px" }}
+                              className="shrink-0 font-bold whitespace-nowrap text-xs"
+                              value={latestReceipt.genderPrefix || "Sri /Miss"}
+                              onChange={(e) => handleReceiptInputChange("genderPrefix", e.target.value)}
+                            />
+                          )}
+                          {isGeneratingReceiptPDF ? (
+                            <span className="ml-8 font-bold text-xl italic text-[#1e3a8a] flex-1 px-1 uppercase inline-block pb-0.5 leading-normal align-bottom">
+                               {latestReceipt.studentName || selectedStudent.name}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={inlineInputStyle}
+                              className="ml-8 font-bold text-xl italic text-[#1e3a8a] flex-1 px-1 uppercase leading-none"
+                              value={latestReceipt.studentName || selectedStudent.name}
+                              onChange={(e) => handleReceiptInputChange("studentName", e.target.value)}
+                              placeholder="STUDENT NAME"
+                            />
+                          )}
                        </div>
 
                        <div className="flex items-end w-full font-bold gap-4 border-b border-gray-400 pb-0.5">
-                          <span className="shrink-0 uppercase text-[9px]">D. PHARMA COURSE- ACADEMIC YEAR</span>
-                          <span className="font-bold text-sm px-2">2025-26</span>
+                          {isGeneratingReceiptPDF ? (
+                            <span className="shrink-0 uppercase text-[9px] inline-block pb-0.5 leading-normal align-bottom">{latestReceipt.course || "D. PHARMA COURSE"} - ACADEMIC YEAR</span>
+                          ) : (
+                            <div className="flex gap-1 items-center shrink-0">
+                              <input
+                                type="text"
+                                style={{ ...inlineInputStyle, width: "120px" }}
+                                className="uppercase text-[9px]"
+                                value={latestReceipt.course || "D. PHARMA COURSE"}
+                                onChange={(e) => handleReceiptInputChange("course", e.target.value)}
+                              />
+                              <span className="uppercase text-[9px]">- ACADEMIC YEAR</span>
+                            </div>
+                          )}
+                          {isGeneratingReceiptPDF ? (
+                            <span className="font-bold text-sm px-2 inline-block pb-0.5 leading-normal align-bottom">{latestReceipt.academicYear || "2025-26"}</span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "80px" }}
+                              className="font-bold text-sm px-2"
+                              value={latestReceipt.academicYear || "2025-26"}
+                              onChange={(e) => handleReceiptInputChange("academicYear", e.target.value)}
+                            />
+                          )}
                           <div className="flex gap-6 ml-auto items-end">
                              <div className="flex gap-1 items-end">
                                 <span className="uppercase text-[8px] text-gray-500">ADM NO:</span>
-                                <span className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1">{selectedStudent.admissionNumber || ""}</span>
+                                {isGeneratingReceiptPDF ? (
+                                  <span className="text-[#1e3a8a] text-base inline-block pb-0.5 leading-normal border-b border-blue-900 px-1 text-center min-w-[80px]">{latestReceipt.admissionNumber || selectedStudent.admissionNumber || ""}</span>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    style={{ ...inlineInputStyle, width: "100px", textAlign: "center" }}
+                                    className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1 text-center"
+                                    value={latestReceipt.admissionNumber || selectedStudent.admissionNumber || ""}
+                                    onChange={(e) => handleReceiptInputChange("admissionNumber", e.target.value)}
+                                  />
+                                )}
                              </div>
                              <div className="flex gap-1 items-end">
                                 <span className="uppercase text-[8px] text-gray-500">ROLL NO:</span>
-                                <span className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1">{selectedStudent.rollNo || ""}</span>
+                                {isGeneratingReceiptPDF ? (
+                                  <span className="text-[#1e3a8a] text-base inline-block pb-0.5 leading-normal border-b border-blue-900 px-1 text-center min-w-[40px]">{latestReceipt.rollNo || selectedStudent.rollNo || ""}</span>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    style={{ ...inlineInputStyle, width: "60px", textAlign: "center" }}
+                                    className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1 text-center"
+                                    value={latestReceipt.rollNo || selectedStudent.rollNo || ""}
+                                    onChange={(e) => handleReceiptInputChange("rollNo", e.target.value)}
+                                  />
+                                )}
                              </div>
                           </div>
                        </div>
                     </div>
 
                     {/* Table Area */}
-                    <div className="mb-4 bg-white flex-grow">
+                    <div className="mb-4 bg-white flex-grow relative">
                        <table className="w-full text-xs font-bold border border-blue-900 border-collapse table-fixed">
                           <thead>
                              <tr className="border-b border-blue-900 bg-blue-50/5">
                                 <th className="border-r border-blue-900 p-1 w-[10%] text-center uppercase">No.</th>
                                 <th className="border-r border-blue-900 p-1 w-[60%] text-left pl-6 uppercase">PARTICULARS</th>
                                 <th className="p-1 w-[30%] text-center uppercase">AMOUNT</th>
-                                    </tr>
+                             </tr>
                           </thead>
                           <tbody>
                              {latestReceipt.feeItems && latestReceipt.feeItems.length > 0 ? (
                                 latestReceipt.feeItems.map((item: any, idx: number) => (
-                                   <tr key={idx} className="border-b border-blue-900/20 h-7">
-                                      <td className="border-r border-blue-900 p-1.5 text-center font-normal">{idx + 1}.</td>
-                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">{item.name}</td>
-                                      <td className="p-1.5 text-right pr-6 font-semibold">{item.value > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}</td>
-                                    </tr>
+                                   <tr key={idx} className="border-b border-blue-900/20 h-7 group">
+                                      <td className="border-r border-blue-900 p-1.5 text-center font-normal relative">
+                                         {idx + 1}.
+                                         {!isGeneratingReceiptPDF && (
+                                            <button
+                                               type="button"
+                                               onClick={() => handleRemoveReceiptFeeItem(idx)}
+                                               className="absolute left-1 top-1 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full h-5 w-5 flex items-center justify-center border font-sans font-bold"
+                                               title="Delete Row"
+                                            >
+                                               ✕
+                                            </button>
+                                         )}
+                                      </td>
+                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">
+                                         {isGeneratingReceiptPDF ? (
+                                            <span>{item.name}</span>
+                                         ) : (
+                                            <input
+                                               type="text"
+                                               style={inlineInputStyle}
+                                               className="w-full font-semibold uppercase"
+                                               value={item.name}
+                                               onChange={(e) => handleReceiptFeeNameChange(idx, e.target.value)}
+                                            />
+                                         )}
+                                      </td>
+                                      <td className="p-1.5 text-right pr-6 font-semibold">
+                                         {isGeneratingReceiptPDF ? (
+                                            <span>{item.value > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}</span>
+                                         ) : (
+                                            <input
+                                               type="text"
+                                               style={{ ...inlineInputStyle, textAlign: "right" }}
+                                               className="w-full font-semibold"
+                                               value={item.value}
+                                               onChange={(e) => handleReceiptFeeValueChange(idx, e.target.value)}
+                                            />
+                                         )}
+                                      </td>
+                                   </tr>
                                 ))
                              ) : (
                                 institutionalItems.map((item, idx) => (
                                    <tr key={idx} className="border-b border-blue-900/20 h-7">
                                       <td className="border-r border-blue-900 p-1.5 text-center font-normal">{idx + 1}.</td>
-                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">{item.name}</td>
+                                      <td className="border-r-2 border-blue-900 p-1.5 pl-6 font-semibold uppercase">{item.name}</td>
                                       <td className="p-1.5 text-right pr-6 font-semibold">
-                                         {idx === 13 ? Number(latestReceipt.amountPaid).toLocaleString("en-IN") + "/-" : ""}
+                                         {idx === 13 ? Number(Number(latestReceipt.amountPaid || 0) + amountPayingNow).toLocaleString("en-IN") + "/-" : ""}
                                       </td>
-                                    </tr>
+                                   </tr>
                                 ))
                              )}
-
-
-
                           </tbody>
                        </table>
+                       {!isGeneratingReceiptPDF && (
+                          <div className="mt-2 flex justify-start">
+                             <Button
+                                size="sm"
+                                variant="outline"
+                                type="button"
+                                onClick={handleAddReceiptFeeItem}
+                                className="h-7 text-xs border border-dashed border-blue-900 text-blue-900 hover:bg-blue-50"
+                             >
+                                + Add Field
+                             </Button>
+                          </div>
+                       )}
                     </div>
 
                     {/* Words */}
-                    <div className="px-2 mb-10 flex items-baseline border-b border-gray-300 pb-1 mt-6">
-                       <span className="shrink-0 uppercase text-[10px] font-black mr-6">RUPEES IN WORDS:</span>
-                       <span className="font-bold text-lg italic capitalize flex-1 text-gray-800">
-                          {toWords.convert(Number(latestReceipt.amountPaid))} Only
-                       </span>
+                    <div className="px-2 mb-10 flex flex-col gap-2 border-b border-gray-300 pb-2 mt-6">
+                       <div className="flex items-center w-full text-base font-bold border-b border-gray-100 pb-0.5 mb-2">
+                          <span className="shrink-0 uppercase text-[10px] mr-3">Balance Due:</span>
+                          <span className="font-bold text-lg text-red-600 px-2">
+                             ₹{calculateReceiptDue().toLocaleString("en-IN")}/-
+                          </span>
+                       </div>
+                       <div className="flex items-baseline w-full">
+                          <span className="shrink-0 uppercase text-[10px] font-black mr-6">RUPEES IN WORDS:</span>
+                          {isGeneratingReceiptPDF ? (
+                             <span className="font-bold text-lg italic capitalize flex-1 text-gray-800">
+                                {latestReceipt.wordsOverride || (toWords.convert(Number(latestReceipt.amountPaid || 0) + amountPayingNow) + " Only")}
+                             </span>
+                          ) : (
+                             <input
+                                type="text"
+                                style={inlineInputStyle}
+                                className="font-bold text-lg italic capitalize flex-1 text-gray-800"
+                                value={latestReceipt.wordsOverride || (toWords.convert(Number(latestReceipt.amountPaid || 0) + amountPayingNow) + " Only")}
+                                onChange={(e) => handleReceiptInputChange("wordsOverride", e.target.value)}
+                             />
+                          )}
+                       </div>
                     </div>
 
                     <div className="mt-auto w-full">
@@ -661,10 +1155,11 @@ const Students = () => {
                           <div className="w-[48%] flex flex-col items-center">
                              <div className="w-full border-t border-blue-900 mb-2"></div>
                              <p className="text-[12px] uppercase font-bold text-blue-900 tracking-tight">SIGNATURE OF THE RECEIVER</p>
-                          </div>
-                       </div>
-                    </div>
+                           </div>
+                        </div>
+                     </div>
                   </div>
+                 </div>
                 ) : (
                   <div className="py-20 text-center w-full bg-white rounded-xl border border-dashed border-gray-200">
                     <p className="text-muted-foreground italic text-lg">No fee history found for this student.</p>
@@ -673,49 +1168,260 @@ const Students = () => {
               </TabsContent>
 
               <TabsContent value="overview" className="space-y-6 no-print animate-in transition-all">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="border-blue-100 shadow-sm overflow-hidden">
-                    <div className="bg-blue-600 text-white p-3 flex items-center gap-2">
-                       <GraduationCap className="h-5 w-5" />
-                       <h3 className="font-bold">Academic Details</h3>
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {/* Photo Section */}
+                  <Card className="w-full md:w-[200px] border-blue-100 shadow-sm overflow-hidden flex flex-col items-center justify-center p-4 bg-white shrink-0">
+                    <h3 className="font-bold text-sm text-blue-900 mb-3">Passport Photo</h3>
+                    <div className="w-[100px] h-[120px] border-2 border-dashed border-blue-200 rounded-md flex items-center justify-center bg-slate-50 relative overflow-hidden group shadow-inner">
+                      {selectedStudent.passportImage ? (
+                        <>
+                          <img
+                            src={selectedStudent.passportImage}
+                            alt="Passport"
+                            className="w-full h-full object-cover"
+                          />
+                          <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">
+                            Update
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleOverviewPhotoUpload}
+                            />
+                          </label>
+                        </>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer text-slate-400 hover:text-blue-500 transition-colors">
+                          <Plus className="h-6 w-6 mb-1" />
+                          <span className="text-[10px] font-bold uppercase">Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleOverviewPhotoUpload}
+                          />
+                        </label>
+                      )}
                     </div>
-                    <CardContent className="p-4 space-y-4 pt-4">
-                       <div className="flex justify-between items-center border-b border-blue-50 pb-2">
-                          <span className="text-sm text-slate-500">Admission No</span>
-                          <span className="font-bold text-blue-900">{selectedStudent.admissionNumber}</span>
-                       </div>
-                       <div className="flex justify-between items-center border-b border-blue-50 pb-2">
-                          <span className="text-sm text-slate-500">Roll Number</span>
-                          <span className="font-bold text-blue-900">{selectedStudent.rollNo || "N/A"}</span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-500">Current Class</span>
-                          <span className="font-bold text-blue-900">{selectedStudent.class}</span>
-                       </div>
-                    </CardContent>
+                    {selectedStudent.passportImage && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 text-xs mt-2 h-auto p-0"
+                        onClick={handleDeletePassportPhoto}
+                      >
+                        Remove Photo
+                      </Button>
+                    )}
                   </Card>
 
-                  <Card className="border-emerald-100 shadow-sm overflow-hidden">
-                    <div className="bg-emerald-600 text-white p-3 flex items-center gap-2">
-                       <Wallet className="h-5 w-5" />
-                       <h3 className="font-bold">Fee Summary</h3>
-                    </div>
-                    <CardContent className="p-4 space-y-4 pt-4">
-                       <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
-                          <span className="text-sm text-slate-500">Total Course Fee</span>
-                          <span className="font-bold text-slate-900">₹{Number(latestReceipt?.totalFee || 0).toLocaleString()}</span>
-                       </div>
-                       <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
-                          <span className="text-sm text-slate-500">Total Paid Amount</span>
-                          <span className="font-bold text-emerald-600">₹{Number(latestReceipt?.amountPaid || 0).toLocaleString()}</span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-500">Balance Due</span>
-                          <span className="font-bold text-rose-600">₹{Number(latestReceipt?.dueAmount || 0).toLocaleString()}</span>
-                       </div>
-                    </CardContent>
-                  </Card>
+                  {/* Details Section */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 w-full">
+                     {/* Column 1: Academic Details & Parent & Contact Details */}
+                     <div className="space-y-4 w-full">
+                       <Card className="border-blue-100 shadow-sm overflow-hidden bg-white">
+                         <div className="bg-blue-600 text-white p-3 flex items-center gap-2">
+                            <GraduationCap className="h-5 w-5" />
+                            <h3 className="font-bold">Academic Details</h3>
+                         </div>
+                         <CardContent className="p-4 space-y-4 pt-4">
+                            <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                               <span className="text-sm text-slate-500 font-medium">Admission No</span>
+                               <span className="font-bold text-blue-900">{selectedStudent.admissionNumber}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                               <span className="text-sm text-slate-500 font-medium">Roll Number</span>
+                               <span className="font-bold text-blue-900">{selectedStudent.rollNo || "N/A"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                               <span className="text-sm text-slate-500 font-medium">Current Class</span>
+                               <span className="font-bold text-blue-900">{selectedStudent.class}</span>
+                            </div>
+                         </CardContent>
+                       </Card>
+
+                       <Card className="border-indigo-100 shadow-sm overflow-hidden bg-white">
+                         <div className="bg-indigo-600 text-white p-3 flex items-center gap-2">
+                            <User className="h-5 w-5" />
+                            <h3 className="font-bold">Parent & Contact Details</h3>
+                         </div>
+                         <CardContent className="p-4 space-y-3 pt-4">
+                            <div className="space-y-1">
+                               <Label className="text-xs text-slate-500 font-medium">Parent/Guardian Name</Label>
+                               <Input
+                                 value={selectedStudent.parentName || ""}
+                                 onChange={(e) => handleStudentFieldChange("parentName", e.target.value)}
+                                 className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
+                                 placeholder="Parent Name"
+                               />
+                            </div>
+                            <div className="space-y-1">
+                               <Label className="text-xs text-slate-500 font-medium">Parent Phone</Label>
+                               <Input
+                                 value={selectedStudent.parentPhone || ""}
+                                 onChange={(e) => handleStudentFieldChange("parentPhone", e.target.value)}
+                                 className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
+                                 placeholder="Parent Phone"
+                               />
+                            </div>
+                            <div className="space-y-1">
+                               <Label className="text-xs text-slate-500 font-medium">Student Phone</Label>
+                               <Input
+                                 value={selectedStudent.phone || ""}
+                                 onChange={(e) => handleStudentFieldChange("phone", e.target.value)}
+                                 className="h-8 text-xs bg-slate-50 border-slate-200"
+                                 placeholder="Student Phone"
+                               />
+                            </div>
+                            <div className="space-y-1">
+                               <Label className="text-xs text-slate-500 font-medium">Student Email</Label>
+                               <Input
+                                 value={selectedStudent.email || ""}
+                                 onChange={(e) => handleStudentFieldChange("email", e.target.value)}
+                                 className="h-8 text-xs bg-slate-50 border-slate-200"
+                                 placeholder="Student Email"
+                               />
+                            </div>
+                         </CardContent>
+                       </Card>
+                     </div>
+
+                     {/* Column 2: Fee Summary & Custom Fields */}
+                     <div className="space-y-4 w-full">
+                       <Card className="border-emerald-100 shadow-sm overflow-hidden bg-white">
+                         <div className="bg-emerald-600 text-white p-3 flex items-center gap-2">
+                            <Wallet className="h-5 w-5" />
+                            <h3 className="font-bold">Fee Summary</h3>
+                         </div>
+                         <CardContent className="p-4 space-y-4 pt-4">
+                            <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
+                               <span className="text-sm text-slate-500 font-medium">Total Course Fee</span>
+                               <span className="font-bold text-slate-900">₹{Number(latestReceipt?.totalFee || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
+                               <span className="text-sm text-slate-500 font-medium">Total Paid Amount</span>
+                               <span className="font-bold text-emerald-600">₹{Number(latestReceipt?.amountPaid || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                               <span className="text-sm text-slate-500 font-medium">Balance Due</span>
+                               <span className="font-bold text-rose-600">₹{Number(latestReceipt?.dueAmount || 0).toLocaleString()}</span>
+                            </div>
+                         </CardContent>
+                       </Card>
+
+                       <Card className="border-violet-100 shadow-sm overflow-hidden bg-white">
+                         <div className="bg-violet-600 text-white p-3 flex items-center gap-2">
+                            <Plus className="h-5 w-5" />
+                            <h3 className="font-bold">Custom Fields</h3>
+                         </div>
+                         <CardContent className="p-4 space-y-3 pt-4">
+                            {/* Existing Custom Fields */}
+                            {(selectedStudent.customFields || []).length > 0 ? (
+                               <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                                  {(selectedStudent.customFields || []).map((field: any, idx: number) => (
+                                     <div key={idx} className="flex gap-2 items-center group">
+                                        <Input
+                                           className="flex-1 h-8 text-xs font-semibold uppercase bg-slate-50 border-slate-200"
+                                           value={field.label}
+                                           onChange={(e) => handleCustomFieldChange(idx, "label", e.target.value)}
+                                           placeholder="Label"
+                                        />
+                                        <Input
+                                           className="flex-1 h-8 text-xs bg-slate-50 border-slate-200"
+                                           value={field.value}
+                                           onChange={(e) => handleCustomFieldChange(idx, "value", e.target.value)}
+                                           placeholder="Value"
+                                        />
+                                        <Button
+                                           variant="ghost"
+                                           size="icon"
+                                           type="button"
+                                           className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                                           onClick={() => handleRemoveCustomField(idx)}
+                                        >
+                                           <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                     </div>
+                                  ))}
+                               </div>
+                            ) : (
+                               <p className="text-xs text-muted-foreground italic text-center py-2">
+                                  No custom fields added yet. Add one below!
+                               </p>
+                            )}
+
+                            {/* Add New Custom Field Form */}
+                            <div className="flex gap-2 items-center pt-3 border-t border-slate-100 mt-2">
+                               <Input
+                                  placeholder="New Field Label"
+                                  value={newFieldName}
+                                  onChange={(e) => setNewFieldName(e.target.value)}
+                                  className="h-8 text-xs flex-1"
+                               />
+                               <Input
+                                  placeholder="Value"
+                                  value={newFieldValue}
+                                  onChange={(e) => setNewFieldValue(e.target.value)}
+                                  className="h-8 text-xs flex-1"
+                               />
+                               <Button
+                                  size="sm"
+                                  variant="outline"
+                                  type="button"
+                                  onClick={handleAddCustomField}
+                                  className="h-8 text-xs border border-dashed border-violet-900 text-violet-900 hover:bg-violet-50"
+                                >
+                                  <Plus className="h-3 w-3 mr-1" /> Add
+                               </Button>
+                            </div>
+                         </CardContent>
+                       </Card>
+                     </div>
+                  </div>
                 </div>
+                {/* Save Details Action Panel */}
+                <div className="flex justify-end pt-4 border-t border-slate-200 mt-4">
+                   <Button
+                      onClick={handleSaveStudentDetails}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 flex items-center gap-2"
+                   >
+                      <Save className="h-4 w-4" /> Save Student Details
+                   </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="study-cert" className="no-print mt-4">
+                <StudyCertificate
+                  isEmbedded={true}
+                  prefilledData={{
+                    studentId: selectedStudent?._id || selectedStudent?.id,
+                    admissionNo: selectedStudent?.admissionNumber,
+                    studentName: selectedStudent?.name,
+                    parentName: selectedStudent?.parentName,
+                    course: selectedStudent?.class?.startsWith("D.Pharm") ? "D.PHARMA" : selectedStudent?.class || "D.PHARMA",
+                    regNo: selectedStudent?.rollNo,
+                    passportImage: selectedStudent?.passportImage,
+                  }}
+                  onStudentUpdate={(updatedStudent) => {
+                    setSelectedStudent(updatedStudent);
+                    setStudents((prev) =>
+                      prev.map((s) => (s._id === updatedStudent._id || s.id === updatedStudent._id ? updatedStudent : s))
+                    );
+                  }}
+                />
+              </TabsContent>
+
+              <TabsContent value="transfer-cert" className="no-print mt-4">
+                <TransferCertificate
+                  isEmbedded={true}
+                  prefilledData={{
+                    admissionNo: selectedStudent?.admissionNumber,
+                    studentName: selectedStudent?.name,
+                    fatherName: selectedStudent?.parentName,
+                    classLeft: selectedStudent?.class || "",
+                    regNo: selectedStudent?.rollNo || "",
+                  }}
+                />
               </TabsContent>
             </Tabs>
           )}
@@ -725,27 +1431,44 @@ const Students = () => {
               Close
             </Button>
             {latestReceipt && (
-              <Button
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => {
-                  const el = document.getElementById("student-receipt-content");
-                  if (el) {
-                    html2pdf()
-                      .set({
-                        margin: 0,
-                        filename: `${selectedStudent.name}_Payment_Receipt.pdf`,
-                        image: { type: "jpeg", quality: 1 },
-                        html2canvas: { scale: 2 },
-                        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                      })
-                      .from(el)
-                      .save();
-                  }
-                }}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF Receipt
-              </Button>
+              <>
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={handleSaveReceiptChanges}
+                >
+                  Save Changes
+                </Button>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    const el = document.getElementById("student-receipt-content");
+                    if (el) {
+                      setIsGeneratingReceiptPDF(true);
+                      setTimeout(() => {
+                        html2pdf()
+                          .set({
+                            margin: 0,
+                            filename: `${selectedStudent.name}_Payment_Receipt.pdf`,
+                            image: { type: "jpeg", quality: 1 },
+                            html2canvas: { scale: 2 },
+                            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                          })
+                          .from(el)
+                          .save()
+                          .then(() => {
+                            setIsGeneratingReceiptPDF(false);
+                          })
+                          .catch(() => {
+                            setIsGeneratingReceiptPDF(false);
+                          });
+                      }, 150);
+                    }
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF Receipt
+                </Button>
+              </>
             )}
           </div>
         </DialogContent>

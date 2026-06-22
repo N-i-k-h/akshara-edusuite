@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,21 +6,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
 import { Printer, Download, FileText } from "lucide-react";
+import { API_BASE_URL, authFetch } from "@/config";
 
-const StudyCertificate = () => {
+interface StudyCertificateProps {
+  prefilledData?: {
+    studentId?: string;
+    admissionNo?: string;
+    studentName?: string;
+    parentName?: string;
+    course?: string;
+    regNo?: string;
+    passportImage?: string;
+  };
+  isEmbedded?: boolean;
+  onStudentUpdate?: (updatedStudent: any) => void;
+}
+
+const StudyCertificate = ({ prefilledData, isEmbedded = false }: StudyCertificateProps) => {
   const printRef = useRef(null);
   const [certType, setCertType] = useState<"bonafide" | "council">("bonafide");
 
   const [formData, setFormData] = useState({
     // Common / Bonafide
-    studentName: "",
-    parentName: "",
-    admissionNo: "",
+    studentName: prefilledData?.studentName || "",
+    parentName: prefilledData?.parentName || "",
+    admissionNo: prefilledData?.admissionNo || "",
     year: "1st", // 1st, 2nd, etc.
     course: "D.PHARMA",
     academicYear: "2024-25",
     date: new Date().toISOString().split("T")[0],
     place: "Shivamogga",
+    passportImage: prefilledData?.passportImage || "",
 
     // Council Specific
     refNo: "SSSCP/SC/2024-25",
@@ -58,8 +74,78 @@ const StudyCertificate = () => {
     regPhD: false,
   });
 
+  useEffect(() => {
+    if (prefilledData) {
+      setFormData((prev) => ({
+        ...prev,
+        studentName: prefilledData.studentName || prev.studentName || "",
+        admissionNo: prefilledData.admissionNo || prev.admissionNo || "",
+        parentName: prefilledData.parentName || prev.parentName || "",
+        course: prefilledData.course || prev.course || "D.PHARMA",
+        regNo: prefilledData.regNo || prev.regNo || "",
+        passportImage: prefilledData.passportImage || prev.passportImage || "",
+      }));
+    }
+  }, [prefilledData]);
+
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const toastId = toast.loading("Uploading photo...");
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        const base64Data = reader.result;
+        try {
+          const response = await authFetch(`${API_BASE_URL}/upload-passport`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ image: base64Data }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to upload photo to server");
+          }
+
+          const data = await response.json();
+          handleInputChange("passportImage", data.url);
+          toast.success("Photo uploaded successfully!", { id: toastId });
+
+          if (prefilledData?.studentId && onStudentUpdate) {
+            try {
+              const updateRes = await authFetch(`${API_BASE_URL}/students/${prefilledData.studentId}`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ passportImage: data.url }),
+              });
+              if (updateRes.ok) {
+                const updatedStudent = await updateRes.json();
+                onStudentUpdate(updatedStudent);
+              }
+            } catch (err) {
+              console.error("Auto-sync photo to student failed:", err);
+            }
+          }
+        } catch (error: any) {
+          console.error("Upload error:", error);
+          toast.error(error.message || "Failed to upload photo", { id: toastId });
+        }
+      };
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to read file", { id: toastId });
+    }
   };
 
   const handleDownloadPDF = () => {
@@ -112,45 +198,79 @@ const StudyCertificate = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4">
-      <div className="flex items-center justify-between no-print">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Study Certificate
-          </h1>
-          <p className="text-muted-foreground mr-4">
-            Generate Study Certificates
-          </p>
-        </div>
+    <div className={isEmbedded ? "space-y-4" : "space-y-6 max-w-7xl mx-auto p-4"}>
+      {!isEmbedded && (
+        <div className="flex items-center justify-between no-print">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Study Certificate
+            </h1>
+            <p className="text-muted-foreground mr-4">
+              Generate Study Certificates
+            </p>
+          </div>
 
-        <div className="flex items-center gap-4 bg-muted p-1 rounded-lg">
-          <Button
-            variant={certType === "bonafide" ? "default" : "ghost"}
-            onClick={() => setCertType("bonafide")}
-            size="sm"
-          >
-            Bonafide
-          </Button>
-          <Button
-            variant={certType === "council" ? "default" : "ghost"}
-            onClick={() => setCertType("council")}
-            size="sm"
-          >
-            Council Format
-          </Button>
-        </div>
+          <div className="flex items-center gap-4 bg-muted p-1 rounded-lg">
+            <Button
+              variant={certType === "bonafide" ? "default" : "ghost"}
+              onClick={() => setCertType("bonafide")}
+              size="sm"
+            >
+              Bonafide
+            </Button>
+            <Button
+              variant={certType === "council" ? "default" : "ghost"}
+              onClick={() => setCertType("council")}
+              size="sm"
+            >
+              Council Format
+            </Button>
+          </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
-          <Button onClick={handleDownloadPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+            <Button onClick={handleDownloadPDF}>
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+      {isEmbedded && (
+        <div className="flex items-center justify-between no-print border-b pb-2 mb-2 gap-4">
+          <div className="flex items-center gap-2 bg-muted p-0.5 rounded-lg shrink-0">
+            <Button
+              variant={certType === "bonafide" ? "default" : "ghost"}
+              onClick={() => setCertType("bonafide")}
+              size="sm"
+              className="h-8 text-xs"
+            >
+              Bonafide
+            </Button>
+            <Button
+              variant={certType === "council" ? "default" : "ghost"}
+              onClick={() => setCertType("council")}
+              size="sm"
+              className="h-8 text-xs"
+            >
+              Council Format
+            </Button>
+          </div>
+          <div className="flex gap-1.5 shrink-0">
+            <Button variant="outline" onClick={() => window.print()} size="sm" className="h-8 text-xs">
+              <Printer className="mr-1 h-3.5 w-3.5" />
+              Print
+            </Button>
+            <Button onClick={handleDownloadPDF} size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700">
+              <Download className="mr-1 h-3.5 w-3.5" />
+              Download PDF
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Inputs */}
@@ -195,6 +315,24 @@ const StudyCertificate = () => {
 
             {certType === "council" && (
               <>
+                <div className="space-y-2">
+                  <Label>Passport Photo</Label>
+                  <div className="flex items-center gap-3">
+                    {formData.passportImage && (
+                      <img
+                        src={formData.passportImage}
+                        alt="Passport"
+                        className="w-10 h-12 object-cover border rounded bg-white shrink-0"
+                      />
+                    )}
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label>Mother's Name</Label>
                   <Input
@@ -588,8 +726,16 @@ const StudyCertificate = () => {
                       <p>Club Road, Vijayanagar,</p>
                       <p>Bangalore – 560104</p>
                     </div>
-                    <div className="w-[100px] h-[120px] border border-black flex items-center justify-center bg-gray-50 text-[10px] text-gray-400">
-                      Passport Size Photo
+                    <div className="w-[130px] h-[120px] border border-black flex items-center justify-center bg-gray-50 text-[10px] text-gray-400 relative overflow-hidden shrink-0">
+                      {formData.passportImage ? (
+                        <img
+                          src={formData.passportImage}
+                          alt="Passport"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>Passport Size Photo</span>
+                      )}
                     </div>
                   </div>
 
@@ -763,13 +909,13 @@ const StudyCertificate = () => {
                       <div className="bg-gray-100 font-bold text-center p-1 border-b border-black text-[11px]">
                         Educational Qualifications of the Principal
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 text-[10px]">
+                      <div className="grid grid-cols-1 md:grid-cols-2 text-[10px] border-b border-black">
                         <div className="border-r border-black">
                           <div className="text-center font-semibold border-b border-black bg-gray-50 p-1">
                             Degree/s Obtained
                           </div>
                           <div className="p-2 space-y-1">
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.qualDPharm && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -779,7 +925,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>D. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.qualBPharm && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -789,7 +935,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>B. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.qualMPharm && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -799,7 +945,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>M. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.qualPharmD && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -809,7 +955,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>Pharm. D</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.qualPharmDPB && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -819,7 +965,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>Pharm. D (PB)</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.qualPhD && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -836,7 +982,7 @@ const StudyCertificate = () => {
                             Registered With KSPC
                           </div>
                           <div className="p-2 space-y-1">
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.regDPharm && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -846,7 +992,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>D. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.regBPharm && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -856,7 +1002,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>B. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.regMPharm && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -866,7 +1012,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>M. Pharm</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.regPharmD && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -876,7 +1022,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>Pharm. D</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.regPharmDPB && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
@@ -886,7 +1032,7 @@ const StudyCertificate = () => {
                               </div>
                               <span>Pharm. D (PB)</span>
                             </div>
-                            <div className="flex items-center gap-2 leading-none">
+                            <div className="flex items-center gap-2 py-[2px]">
                               <div className="w-[12px] h-[12px] border border-black flex-shrink-0 flex items-center justify-center bg-white">
                                 {formData.regPhD && (
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">

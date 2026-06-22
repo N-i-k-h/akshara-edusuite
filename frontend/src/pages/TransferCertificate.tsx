@@ -9,18 +9,30 @@ import html2pdf from "html2pdf.js";
 import { Printer, Download, FileText } from "lucide-react";
 import { ToWords } from "to-words";
 
-const TransferCertificate = () => {
+interface TransferCertificateProps {
+  prefilledData?: {
+    admissionNo?: string;
+    studentName?: string;
+    gender?: string;
+    fatherName?: string;
+    classLeft?: string;
+    regNo?: string;
+  };
+  isEmbedded?: boolean;
+}
+
+const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCertificateProps) => {
   const printRef = useRef(null);
   const toWords = new ToWords();
 
   const [formData, setFormData] = useState({
-    admissionNo: "",
+    admissionNo: prefilledData?.admissionNo || "",
     refNo: "SSSCP/TC/2024-25",
     tcNo: "",
-    studentName: "",
-    gender: "",
+    studentName: prefilledData?.studentName || "",
+    gender: prefilledData?.gender || "",
     nationality: "INDIAN",
-    fatherName: "",
+    fatherName: prefilledData?.fatherName || "",
     motherName: "",
     religionCaste: "",
     casteCategory: "No", // SC/ST
@@ -29,15 +41,29 @@ const TransferCertificate = () => {
     placeOfBirth: "",
     dateOfAdmission: "",
     dateOfLeaving: "",
-    classLeft: "",
+    classLeft: prefilledData?.classLeft || "",
     promotionStatus: "YES", // Qualified for promotion
-    regNo: "",
+    regNo: prefilledData?.regNo || "",
     examMonth: "",
     examYear: "",
     duesPaid: "YES",
     character: "Satisfactory",
     date: new Date().toISOString().split("T")[0],
   });
+
+  useEffect(() => {
+    if (prefilledData) {
+      setFormData((prev) => ({
+        ...prev,
+        admissionNo: prefilledData.admissionNo || prev.admissionNo || "",
+        studentName: prefilledData.studentName || prev.studentName || "",
+        gender: prefilledData.gender || prev.gender || "",
+        fatherName: prefilledData.fatherName || prev.fatherName || "",
+        classLeft: prefilledData.classLeft || prev.classLeft || "",
+        regNo: prefilledData.regNo || prev.regNo || "",
+      }));
+    }
+  }, [prefilledData]);
 
   useEffect(() => {
     if (formData.dob) {
@@ -110,27 +136,41 @@ const TransferCertificate = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4">
-      <div className="flex items-center justify-between no-print">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Transfer Certificate
-          </h1>
-          <p className="text-muted-foreground">
-            Generate and print Transfer Certificates
-          </p>
+    <div className={isEmbedded ? "space-y-4" : "space-y-6 max-w-7xl mx-auto p-4"}>
+      {!isEmbedded && (
+        <div className="flex items-center justify-between no-print">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Transfer Certificate
+            </h1>
+            <p className="text-muted-foreground">
+              Generate and print Transfer Certificates
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+            <Button onClick={handleDownloadPDF}>
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
+      )}
+      {isEmbedded && (
+        <div className="flex justify-end gap-2 no-print mb-2 border-b pb-2">
+          <Button variant="outline" onClick={() => window.print()} size="sm">
             <Printer className="mr-2 h-4 w-4" />
             Print
           </Button>
-          <Button onClick={handleDownloadPDF}>
+          <Button onClick={handleDownloadPDF} size="sm" className="bg-blue-600 hover:bg-blue-700">
             <Download className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Inputs */}
