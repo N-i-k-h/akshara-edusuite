@@ -103,6 +103,12 @@ const Students = () => {
     parentName: "",
     parentPhone: "",
     status: "Active",
+    address: "",
+    dob: "",
+    joiningDate: "",
+    fatherName: "",
+    motherName: "",
+    passingYear: "",
   });
 
   useEffect(() => {
@@ -162,6 +168,12 @@ const Students = () => {
       parentName: student.parentName || "",
       parentPhone: student.parentPhone || "",
       status: student.status || "Active",
+      address: student.address || "",
+      dob: student.dob || "",
+      joiningDate: student.joiningDate || "",
+      fatherName: student.fatherName || "",
+      motherName: student.motherName || "",
+      passingYear: student.passingYear || "",
     });
     setIsAddDialogOpen(true);
   };
@@ -178,6 +190,12 @@ const Students = () => {
       parentName: "",
       parentPhone: "",
       status: "Active",
+      address: "",
+      dob: "",
+      joiningDate: "",
+      fatherName: "",
+      motherName: "",
+      passingYear: "",
     });
     setIsAddDialogOpen(true);
   };
@@ -209,6 +227,12 @@ const Students = () => {
           parentName: "",
           parentPhone: "",
           status: "Active",
+          address: "",
+          dob: "",
+          joiningDate: "",
+          fatherName: "",
+          motherName: "",
+          passingYear: "",
         });
       } else {
         const errorData = await response.json();
@@ -301,6 +325,7 @@ const Students = () => {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [latestReceipt, setLatestReceipt] = useState<any | null>(null);
   const [amountPayingNow, setAmountPayingNow] = useState(0);
+  const [activeProfileTab, setActiveProfileTab] = useState("receipt");
   
   // Custom Fields State
   const [newFieldName, setNewFieldName] = useState("");
@@ -310,6 +335,31 @@ const Students = () => {
   const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
   const [promotingStudent, setPromotingStudent] = useState<any | null>(null);
   const [promoteTarget, setPromoteTarget] = useState<string>("");
+
+  // Bulk Selection State
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+
+  const handleSelectStudent = (studentId: string) => {
+    setSelectedStudentIds((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAllStudents = (pageStudents: any[]) => {
+    const pageStudentIds = pageStudents.map((s) => s._id || s.id);
+    const allOnPageSelected = pageStudentIds.every((id) => selectedStudentIds.includes(id));
+
+    if (allOnPageSelected) {
+      setSelectedStudentIds((prev) => prev.filter((id) => !pageStudentIds.includes(id)));
+    } else {
+      setSelectedStudentIds((prev) => {
+        const uniqueIds = new Set([...prev, ...pageStudentIds]);
+        return Array.from(uniqueIds);
+      });
+    }
+  };
 
   const handleAddCustomField = () => {
     if (!newFieldName.trim() || !newFieldValue.trim()) {
@@ -366,6 +416,12 @@ const Students = () => {
           parentName: selectedStudent.parentName,
           parentPhone: selectedStudent.parentPhone,
           status: selectedStudent.status,
+          address: selectedStudent.address,
+          dob: selectedStudent.dob,
+          joiningDate: selectedStudent.joiningDate,
+          fatherName: selectedStudent.fatherName,
+          motherName: selectedStudent.motherName,
+          passingYear: selectedStudent.passingYear,
           customFields: selectedStudent.customFields || [],
         }),
       });
@@ -388,49 +444,81 @@ const Students = () => {
   };
 
   const handlePromoteStudent = async () => {
-    if (!promotingStudent || !promoteTarget) {
+    const isBulk = !promotingStudent && selectedStudentIds.length > 0;
+    
+    if ((!promotingStudent && !isBulk) || !promoteTarget) {
       toast.error("Please select a target class or graduation option.");
       return;
     }
 
     const toastId = toast.loading("Processing student promotion/graduation...");
     try {
-      const studentId = promotingStudent._id || promotingStudent.id;
       const isGraduation = promoteTarget === "Graduated";
 
-      const payload = isGraduation
-        ? { status: "Graduated" }
-        : { class: promoteTarget };
+      if (isBulk) {
+        // Bulk Promotion logic
+        const payload = isGraduation
+          ? { studentIds: selectedStudentIds, status: "Graduated" }
+          : { studentIds: selectedStudentIds, targetClass: promoteTarget };
 
-      const response = await authFetch(`${API_BASE_URL}/students/${studentId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+        const response = await authFetch(`${API_BASE_URL}/students/bulk/promote`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      if (response.ok) {
-        const updatedStudent = await response.json();
-        toast.success(
-          isGraduation
-            ? "Student marked as Graduated / Pass Out!"
-            : `Student promoted to ${promoteTarget}!`,
-          { id: toastId }
-        );
-        
-        // Refresh local student list
-        setStudents((prev) =>
-          prev.map((s) => (s._id === studentId || s.id === studentId ? updatedStudent : s))
-        );
-        setIsPromoteDialogOpen(false);
-        setPromotingStudent(null);
-        setPromoteTarget("");
+        if (response.ok) {
+          toast.success(
+            isGraduation
+              ? `Successfully graduated ${selectedStudentIds.length} students!`
+              : `Successfully promoted ${selectedStudentIds.length} students to ${promoteTarget}!`,
+            { id: toastId }
+          );
+          
+          fetchStudents();
+          setSelectedStudentIds([]);
+          setIsPromoteDialogOpen(false);
+          setPromoteTarget("");
+        } else {
+          const err = await response.json();
+          toast.error(err.message || "Failed to promote students in bulk", { id: toastId });
+        }
       } else {
-        const err = await response.json();
-        toast.error(err.message || "Failed to promote student", { id: toastId });
+        // Single Student Promotion logic
+        const studentId = promotingStudent._id || promotingStudent.id;
+        const payload = isGraduation
+          ? { status: "Graduated" }
+          : { class: promoteTarget };
+
+        const response = await authFetch(`${API_BASE_URL}/students/${studentId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const updatedStudent = await response.json();
+          toast.success(
+            isGraduation
+              ? "Student marked as Graduated / Pass Out!"
+              : `Student promoted to ${promoteTarget}!`,
+            { id: toastId }
+          );
+          
+          setStudents((prev) =>
+            prev.map((s) => (s._id === studentId || s.id === studentId ? updatedStudent : s))
+          );
+          setIsPromoteDialogOpen(false);
+          setPromotingStudent(null);
+          setPromoteTarget("");
+        } else {
+          const err = await response.json();
+          toast.error(err.message || "Failed to promote student", { id: toastId });
+        }
       }
     } catch (error) {
-      console.error("Error promoting student:", error);
-      toast.error("An error occurred while promoting student", { id: toastId });
+      console.error("Error promoting student(s):", error);
+      toast.error("An error occurred while promoting student(s)", { id: toastId });
     }
   };
 
@@ -528,6 +616,7 @@ const Students = () => {
     setSelectedStudent(student);
     setIsProfileOpen(true);
     setLatestReceipt(null);
+    setActiveProfileTab("receipt");
 
     try {
       const [feesRes, structRes] = await Promise.all([
@@ -803,6 +892,66 @@ const Students = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="fatherName">Father's Name</Label>
+                  <Input
+                    id="fatherName"
+                    placeholder="Enter father's name"
+                    value={formData.fatherName}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="motherName">Mother's Name</Label>
+                  <Input
+                    id="motherName"
+                    placeholder="Enter mother's name"
+                    value={formData.motherName}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dob">Date of Birth (DOB)</Label>
+                  <Input
+                    id="dob"
+                    type="date"
+                    value={formData.dob}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="joiningDate">Joining Date</Label>
+                  <Input
+                    id="joiningDate"
+                    type="date"
+                    value={formData.joiningDate}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="passingYear">Passing Year</Label>
+                  <Input
+                    id="passingYear"
+                    placeholder="e.g. 2026"
+                    value={formData.passingYear}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    placeholder="Enter home address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label>Status</Label>
                   <Select
                     onValueChange={(val) => setFormData({ ...formData, status: val })}
@@ -844,7 +993,7 @@ const Students = () => {
           </DialogHeader>
 
           {selectedStudent && (
-            <Tabs defaultValue="receipt" className="w-full">
+            <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
               <TabsList className="mb-4 grid w-full grid-cols-4 max-w-2xl mx-auto no-print bg-slate-100 p-1">
                 <TabsTrigger value="receipt" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
                    <FileText className="h-4 w-4" /> Latest Receipt
@@ -1271,71 +1420,125 @@ const Students = () => {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 w-full">
                      {/* Column 1: Academic Details & Parent & Contact Details */}
                      <div className="space-y-4 w-full">
-                       <Card className="border-blue-100 shadow-sm overflow-hidden bg-white">
-                         <div className="bg-blue-600 text-white p-3 flex items-center gap-2">
-                            <GraduationCap className="h-5 w-5" />
-                            <h3 className="font-bold">Academic Details</h3>
-                         </div>
-                         <CardContent className="p-4 space-y-4 pt-4">
-                            <div className="flex justify-between items-center border-b border-blue-50 pb-2">
-                               <span className="text-sm text-slate-500 font-medium">Admission No</span>
-                               <span className="font-bold text-blue-900">{selectedStudent.admissionNumber}</span>
-                            </div>
-                            <div className="flex justify-between items-center border-b border-blue-50 pb-2">
-                               <span className="text-sm text-slate-500 font-medium">Roll Number</span>
-                               <span className="font-bold text-blue-900">{selectedStudent.rollNo || "N/A"}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                               <span className="text-sm text-slate-500 font-medium">Current Class</span>
-                               <span className="font-bold text-blue-900">{selectedStudent.class}</span>
-                            </div>
-                         </CardContent>
-                       </Card>
+                        <Card className="border-blue-100 shadow-sm overflow-hidden bg-white">
+                          <div className="bg-blue-600 text-white p-3 flex items-center gap-2">
+                             <GraduationCap className="h-5 w-5" />
+                             <h3 className="font-bold">Academic Details</h3>
+                          </div>
+                          <CardContent className="p-4 space-y-4 pt-4">
+                             <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                                <span className="text-sm text-slate-500 font-medium">Admission No</span>
+                                <span className="font-bold text-blue-900">{selectedStudent.admissionNumber}</span>
+                             </div>
+                             <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                                <span className="text-sm text-slate-500 font-medium">Roll Number</span>
+                                <span className="font-bold text-blue-900">{selectedStudent.rollNo || "N/A"}</span>
+                             </div>
+                             <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                                <span className="text-sm text-slate-500 font-medium">Current Class</span>
+                                <span className="font-bold text-blue-900">{selectedStudent.class}</span>
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Date of Birth (DOB)</Label>
+                                <Input
+                                  type="date"
+                                  value={selectedStudent.dob || ""}
+                                  onChange={(e) => handleStudentFieldChange("dob", e.target.value)}
+                                  className="h-8 text-xs bg-slate-50 border-slate-200"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Joining Date</Label>
+                                <Input
+                                  type="date"
+                                  value={selectedStudent.joiningDate || ""}
+                                  onChange={(e) => handleStudentFieldChange("joiningDate", e.target.value)}
+                                  className="h-8 text-xs bg-slate-50 border-slate-200"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Passing Year</Label>
+                                <Input
+                                  value={selectedStudent.passingYear || ""}
+                                  onChange={(e) => handleStudentFieldChange("passingYear", e.target.value)}
+                                  className="h-8 text-xs bg-slate-50 border-slate-200"
+                                  placeholder="e.g. 2026"
+                                />
+                             </div>
+                          </CardContent>
+                        </Card>
 
-                       <Card className="border-indigo-100 shadow-sm overflow-hidden bg-white">
-                         <div className="bg-indigo-600 text-white p-3 flex items-center gap-2">
-                            <User className="h-5 w-5" />
-                            <h3 className="font-bold">Parent & Contact Details</h3>
-                         </div>
-                         <CardContent className="p-4 space-y-3 pt-4">
-                            <div className="space-y-1">
-                               <Label className="text-xs text-slate-500 font-medium">Parent/Guardian Name</Label>
-                               <Input
-                                 value={selectedStudent.parentName || ""}
-                                 onChange={(e) => handleStudentFieldChange("parentName", e.target.value)}
-                                 className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
-                                 placeholder="Parent Name"
-                               />
-                            </div>
-                            <div className="space-y-1">
-                               <Label className="text-xs text-slate-500 font-medium">Parent Phone</Label>
-                               <Input
-                                 value={selectedStudent.parentPhone || ""}
-                                 onChange={(e) => handleStudentFieldChange("parentPhone", e.target.value)}
-                                 className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
-                                 placeholder="Parent Phone"
-                               />
-                            </div>
-                            <div className="space-y-1">
-                               <Label className="text-xs text-slate-500 font-medium">Student Phone</Label>
-                               <Input
-                                 value={selectedStudent.phone || ""}
-                                 onChange={(e) => handleStudentFieldChange("phone", e.target.value)}
-                                 className="h-8 text-xs bg-slate-50 border-slate-200"
-                                 placeholder="Student Phone"
-                               />
-                            </div>
-                            <div className="space-y-1">
-                               <Label className="text-xs text-slate-500 font-medium">Student Email</Label>
-                               <Input
-                                 value={selectedStudent.email || ""}
-                                 onChange={(e) => handleStudentFieldChange("email", e.target.value)}
-                                 className="h-8 text-xs bg-slate-50 border-slate-200"
-                                 placeholder="Student Email"
-                               />
-                            </div>
-                         </CardContent>
-                       </Card>
+                        <Card className="border-indigo-100 shadow-sm overflow-hidden bg-white">
+                          <div className="bg-indigo-600 text-white p-3 flex items-center gap-2">
+                             <User className="h-5 w-5" />
+                             <h3 className="font-bold">Parent & Contact Details</h3>
+                          </div>
+                          <CardContent className="p-4 space-y-3 pt-4">
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Parent/Guardian Name</Label>
+                                <Input
+                                  value={selectedStudent.parentName || ""}
+                                  onChange={(e) => handleStudentFieldChange("parentName", e.target.value)}
+                                  className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
+                                  placeholder="Parent Name"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Father's Name</Label>
+                                <Input
+                                  value={selectedStudent.fatherName || ""}
+                                  onChange={(e) => handleStudentFieldChange("fatherName", e.target.value)}
+                                  className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
+                                  placeholder="Father's Name"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Mother's Name</Label>
+                                <Input
+                                  value={selectedStudent.motherName || ""}
+                                  onChange={(e) => handleStudentFieldChange("motherName", e.target.value)}
+                                  className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
+                                  placeholder="Mother's Name"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Parent Phone</Label>
+                                <Input
+                                  value={selectedStudent.parentPhone || ""}
+                                  onChange={(e) => handleStudentFieldChange("parentPhone", e.target.value)}
+                                  className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
+                                  placeholder="Parent Phone"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Student Phone</Label>
+                                <Input
+                                  value={selectedStudent.phone || ""}
+                                  onChange={(e) => handleStudentFieldChange("phone", e.target.value)}
+                                  className="h-8 text-xs bg-slate-50 border-slate-200"
+                                  placeholder="Student Phone"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Student Email</Label>
+                                <Input
+                                  value={selectedStudent.email || ""}
+                                  onChange={(e) => handleStudentFieldChange("email", e.target.value)}
+                                  className="h-8 text-xs bg-slate-50 border-slate-200"
+                                  placeholder="Student Email"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 font-medium">Home Address</Label>
+                                <Input
+                                  value={selectedStudent.address || ""}
+                                  onChange={(e) => handleStudentFieldChange("address", e.target.value)}
+                                  className="h-8 text-xs bg-slate-50 border-slate-200"
+                                  placeholder="Home Address"
+                                />
+                             </div>
+                          </CardContent>
+                        </Card>
                      </div>
 
                      {/* Column 2: Fee Summary & Custom Fields */}
@@ -1482,7 +1685,7 @@ const Students = () => {
             <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
               Close
             </Button>
-            {latestReceipt && (
+            {latestReceipt && activeProfileTab === "receipt" && (
               <>
                 <Button
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -1535,7 +1738,7 @@ const Students = () => {
             </DialogTitle>
           </DialogHeader>
 
-          {promotingStudent && (
+          {promotingStudent ? (
             <div className="space-y-4">
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-2 text-sm">
                 <div>
@@ -1594,7 +1797,56 @@ const Students = () => {
                 </Button>
               </div>
             </div>
-          )}
+          ) : selectedStudentIds.length > 0 ? (
+            <div className="space-y-4">
+              <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 text-sm flex flex-col gap-1.5">
+                <div className="font-semibold text-blue-900">
+                  Bulk Operation Selected
+                </div>
+                <div className="text-slate-600">
+                  You are performing a bulk action on <span className="font-bold text-slate-900">{selectedStudentIds.length}</span> students.
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="promoteTargetBulk" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  Target Destination / Action for all selected
+                </Label>
+                <Select value={promoteTarget} onValueChange={setPromoteTarget}>
+                  <SelectTrigger id="promoteTargetBulk" className="w-full">
+                    <SelectValue placeholder="Select class or graduate option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classesList.map((cls: any) => {
+                      const className = cls.grade.startsWith("D.")
+                        ? `${cls.grade} - ${cls.section}`
+                        : `Grade ${cls.grade} - ${cls.section}`;
+                      return (
+                        <SelectItem key={cls._id} value={className}>
+                          {className} (Promote All)
+                        </SelectItem>
+                      );
+                    })}
+                    <SelectItem value="Graduated" className="text-emerald-700 font-bold hover:bg-emerald-50">
+                      ★ Pass Out (Graduate All)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t mt-6">
+                <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePromoteStudent}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                >
+                  Confirm Bulk Action
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -1642,11 +1894,54 @@ const Students = () => {
         </Select>
       </div>
 
+      {selectedStudentIds.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between animate-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2 text-sm text-blue-900 font-medium">
+            <span className="bg-blue-200 text-blue-800 rounded-full px-2.5 py-0.5 text-xs font-bold">
+              {selectedStudentIds.length}
+            </span>
+            <span>students selected for actions</span>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                setPromotingStudent(null);
+                setPromoteTarget("");
+                setIsPromoteDialogOpen(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-8 text-xs flex items-center gap-1.5"
+            >
+              <GraduationCap className="h-3.5 w-3.5" /> Bulk Promote / Graduate
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelectedStudentIds([])}
+              className="border-slate-300 text-slate-700 h-8 text-xs hover:bg-slate-100"
+            >
+              Clear Selection
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 text-center">
+                <input
+                  type="checkbox"
+                  checked={
+                    paginatedStudents.length > 0 &&
+                    paginatedStudents.every((s) => selectedStudentIds.includes(s._id || s.id))
+                  }
+                  onChange={() => handleSelectAllStudents(paginatedStudents)}
+                  className="rounded border-slate-300 h-4 w-4 accent-blue-600 cursor-pointer"
+                />
+              </TableHead>
               <TableHead>Roll No</TableHead>
               <TableHead>Admission No</TableHead>
               <TableHead>Name</TableHead>
@@ -1662,19 +1957,27 @@ const Students = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
+                <TableCell colSpan={10} className="text-center py-8">
                   Loading students...
                 </TableCell>
               </TableRow>
             ) : filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
+                <TableCell colSpan={10} className="text-center py-8">
                   No students found
                 </TableCell>
               </TableRow>
             ) : (
               paginatedStudents.map((student) => (
-                <TableRow key={student._id || student.id}>
+                <TableRow key={student._id || student.id} className={selectedStudentIds.includes(student._id || student.id) ? "bg-blue-50/20" : ""}>
+                  <TableCell className="text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedStudentIds.includes(student._id || student.id)}
+                      onChange={() => handleSelectStudent(student._id || student.id)}
+                      className="rounded border-slate-300 h-4 w-4 accent-blue-600 cursor-pointer"
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">
                     {student.rollNo}
                   </TableCell>

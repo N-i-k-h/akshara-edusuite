@@ -129,6 +129,12 @@ const studentSchema = new mongoose.Schema(
     status: { type: String, enum: ["Active", "Inactive", "Graduated"], default: "Active" },
     feesPaid: { type: Boolean, default: false },
     passportImage: { type: String, default: "" },
+    address: { type: String, trim: true, default: "" },
+    dob: { type: String, trim: true, default: "" },
+    joiningDate: { type: String, trim: true, default: "" },
+    fatherName: { type: String, trim: true, default: "" },
+    motherName: { type: String, trim: true, default: "" },
+    passingYear: { type: String, trim: true, default: "" },
     customFields: {
       type: [
         {
@@ -588,6 +594,33 @@ app.post("/api/students", async (req, res) => {
     res
       .status(400)
       .json({ message: "Error creating student", error: error.message });
+  }
+});
+
+app.put("/api/students/bulk/promote", async (req, res) => {
+  try {
+    const { studentIds, targetClass, status } = req.body;
+    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ message: "Student IDs are required" });
+    }
+
+    const updatePayload = {};
+    if (status) {
+      updatePayload.status = status;
+    } else if (targetClass) {
+      updatePayload.class = targetClass;
+    } else {
+      return res.status(400).json({ message: "Target class or status is required" });
+    }
+
+    const result = await Student.updateMany(
+      { _id: { $in: studentIds } },
+      { $set: updatePayload }
+    );
+
+    res.json({ message: `Successfully updated ${result.modifiedCount} students` });
+  } catch (error) {
+    res.status(500).json({ message: "Error promoting students in bulk", error: error.message });
   }
 });
 
