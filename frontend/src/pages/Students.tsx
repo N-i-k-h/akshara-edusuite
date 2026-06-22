@@ -306,6 +306,11 @@ const Students = () => {
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldValue, setNewFieldValue] = useState("");
 
+  // Promotion/Graduation State
+  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
+  const [promotingStudent, setPromotingStudent] = useState<any | null>(null);
+  const [promoteTarget, setPromoteTarget] = useState<string>("");
+
   const handleAddCustomField = () => {
     if (!newFieldName.trim() || !newFieldValue.trim()) {
       toast.error("Please enter both field name and value");
@@ -379,6 +384,53 @@ const Students = () => {
     } catch (error) {
       console.error("Error saving student details:", error);
       toast.error("An error occurred while saving student details", { id: toastId });
+    }
+  };
+
+  const handlePromoteStudent = async () => {
+    if (!promotingStudent || !promoteTarget) {
+      toast.error("Please select a target class or graduation option.");
+      return;
+    }
+
+    const toastId = toast.loading("Processing student promotion/graduation...");
+    try {
+      const studentId = promotingStudent._id || promotingStudent.id;
+      const isGraduation = promoteTarget === "Graduated";
+
+      const payload = isGraduation
+        ? { status: "Graduated" }
+        : { class: promoteTarget };
+
+      const response = await authFetch(`${API_BASE_URL}/students/${studentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const updatedStudent = await response.json();
+        toast.success(
+          isGraduation
+            ? "Student marked as Graduated / Pass Out!"
+            : `Student promoted to ${promoteTarget}!`,
+          { id: toastId }
+        );
+        
+        // Refresh local student list
+        setStudents((prev) =>
+          prev.map((s) => (s._id === studentId || s.id === studentId ? updatedStudent : s))
+        );
+        setIsPromoteDialogOpen(false);
+        setPromotingStudent(null);
+        setPromoteTarget("");
+      } else {
+        const err = await response.json();
+        toast.error(err.message || "Failed to promote student", { id: toastId });
+      }
+    } catch (error) {
+      console.error("Error promoting student:", error);
+      toast.error("An error occurred while promoting student", { id: toastId });
     }
   };
 
@@ -1474,6 +1526,78 @@ const Students = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Promote Student Dialog */}
+      <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+        <DialogContent className="max-w-md bg-white p-6 rounded-lg shadow-xl">
+          <DialogHeader className="border-b pb-3 mb-4">
+            <DialogTitle className="text-xl font-bold text-blue-900 flex items-center gap-2">
+              <User className="h-5 w-5" /> Promote / Graduate Student
+            </DialogTitle>
+          </DialogHeader>
+
+          {promotingStudent && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-2 text-sm">
+                <div>
+                  <span className="text-slate-500 font-medium">Student Name: </span>
+                  <span className="font-bold text-slate-800">{promotingStudent.name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Admission No: </span>
+                  <span className="font-bold text-slate-800">{promotingStudent.admissionNumber}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Current Class: </span>
+                  <span className="font-bold text-blue-800">{promotingStudent.class}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Current Status: </span>
+                  <span className="font-bold text-slate-700">{promotingStudent.status}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="promoteTarget" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  Target Destination / Action
+                </Label>
+                <Select value={promoteTarget} onValueChange={setPromoteTarget}>
+                  <SelectTrigger id="promoteTarget" className="w-full">
+                    <SelectValue placeholder="Select class or graduate option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classesList.map((cls: any) => {
+                      const className = cls.grade.startsWith("D.")
+                        ? `${cls.grade} - ${cls.section}`
+                        : `Grade ${cls.grade} - ${cls.section}`;
+                      return (
+                        <SelectItem key={cls._id} value={className}>
+                          {className} (Promote)
+                        </SelectItem>
+                      );
+                    })}
+                    <SelectItem value="Graduated" className="text-emerald-700 font-bold hover:bg-emerald-50">
+                      ★ Pass Out (Graduate Student)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t mt-6">
+                <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePromoteStudent}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                >
+                  Confirm Action
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Filters */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
@@ -1513,6 +1637,7 @@ const Students = () => {
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="Active">Active</SelectItem>
             <SelectItem value="Inactive">Inactive</SelectItem>
+            <SelectItem value="Graduated">Graduated</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -1595,6 +1720,16 @@ const Students = () => {
                         <DropdownMenuItem onClick={() => handleEditClick(student)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setPromotingStudent(student);
+                            setPromoteTarget(student.class || "");
+                            setIsPromoteDialogOpen(true);
+                          }}
+                        >
+                          <GraduationCap className="mr-2 h-4 w-4" />
+                          Promote / Graduate
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"

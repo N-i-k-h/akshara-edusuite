@@ -126,7 +126,7 @@ const studentSchema = new mongoose.Schema(
     class: { type: String, required: true, trim: true },
     parentName: { type: String, required: true, trim: true },
     parentPhone: { type: String, required: true, trim: true },
-    status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
+    status: { type: String, enum: ["Active", "Inactive", "Graduated"], default: "Active" },
     feesPaid: { type: Boolean, default: false },
     passportImage: { type: String, default: "" },
     customFields: {
