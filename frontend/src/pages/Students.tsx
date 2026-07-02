@@ -55,7 +55,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { User, Phone, Mail, Home, ShieldCheck, GraduationCap, FileText, Wallet, Save } from "lucide-react";
+import { User, Phone, Mail, Home, ShieldCheck, GraduationCap, FileText, Wallet, Save, CreditCard } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 const Students = () => {
@@ -326,6 +326,9 @@ const Students = () => {
   const [latestReceipt, setLatestReceipt] = useState<any | null>(null);
   const [amountPayingNow, setAmountPayingNow] = useState(0);
   const [activeProfileTab, setActiveProfileTab] = useState("receipt");
+  const [promotedReceipt, setPromotedReceipt] = useState<any | null>(null);
+  const [amountPayingNowPromoted, setAmountPayingNowPromoted] = useState(0);
+  const [isGeneratingPromotedPDF, setIsGeneratingPromotedPDF] = useState(false);
   
   // Custom Fields State
   const [newFieldName, setNewFieldName] = useState("");
@@ -612,10 +615,139 @@ const Students = () => {
     }
   };
 
+  const handlePromotedInputChange = (field: string, value: any) => {
+    setPromotedReceipt((prev: any) => {
+      if (!prev) return null;
+      return { ...prev, [field]: value };
+    });
+  };
+
+  const handlePromotedFeeNameChange = (index: number, newName: string) => {
+    setPromotedReceipt((prev: any) => {
+      if (!prev) return null;
+      const updated = [...(prev.feeItems || [])];
+      updated[index] = { ...updated[index], name: newName };
+      return { ...prev, feeItems: updated };
+    });
+  };
+
+  const handlePromotedFeeValueChange = (index: number, newValue: string) => {
+    setPromotedReceipt((prev: any) => {
+      if (!prev) return null;
+      const updated = [...(prev.feeItems || [])];
+      updated[index] = { ...updated[index], value: Number(newValue) || 0 };
+      return { ...prev, feeItems: updated };
+    });
+  };
+
+  const handleAddPromotedFeeItem = () => {
+    setPromotedReceipt((prev: any) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        feeItems: [...(prev.feeItems || []), { name: "NEW PARTICULAR", value: 0 }]
+      };
+    });
+  };
+
+  const handleRemovePromotedFeeItem = (index: number) => {
+    setPromotedReceipt((prev: any) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        feeItems: (prev.feeItems || []).filter((_: any, idx: number) => idx !== index)
+      };
+    });
+  };
+
+  const calculatePromotedTotal = () => {
+    if (!promotedReceipt || !promotedReceipt.feeItems) return 0;
+    return promotedReceipt.feeItems.reduce((sum: number, item: any) => sum + (Number(item.value) || 0), 0);
+  };
+
+  const calculatePromotedDue = () => {
+    if (!promotedReceipt) return 0;
+    const total = calculatePromotedTotal();
+    const paid = Number(promotedReceipt.amountPaid) || 0;
+    return Math.max(0, total - paid);
+  };
+
+  const handleSavePromotedChanges = async () => {
+    if (!promotedReceipt) return;
+    try {
+      const newAmountPaid = Number(promotedReceipt.amountPaid || 0) + amountPayingNowPromoted;
+      const totalFee = calculatePromotedTotal();
+      const dueAmount = Math.max(0, totalFee - newAmountPaid);
+      const payload = {
+        ...promotedReceipt,
+        amountPaid: newAmountPaid,
+        totalFee,
+        dueAmount,
+      };
+
+      const response = await authFetch(`${API_BASE_URL}/fees/${promotedReceipt._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast.success("Promoted receipt changes and payment saved successfully!");
+        setAmountPayingNowPromoted(0);
+        fetchStudents();
+        handleViewProfile(selectedStudent);
+      } else {
+        toast.error("Failed to save promoted receipt changes.");
+      }
+    } catch (error) {
+      console.error("Error saving promoted receipt changes:", error);
+      toast.error("An error occurred while saving.");
+    }
+  };
+
+  const downloadPromotedReceiptPDF = () => {
+    setIsGeneratingPromotedPDF(true);
+    const element = document.getElementById("student-promoted-receipt-content");
+    if (!element) return;
+
+    const opt = {
+      margin: 0,
+      filename: `${selectedStudent?.name}_Promoted_Fee_Receipt.pdf`,
+      image: { type: "jpeg" as const, quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowWidth: 794 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+    };
+
+    setTimeout(() => {
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .outputPdf("blob")
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${selectedStudent?.name}_Promoted_Fee_Receipt.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          toast.success("Promoted Fee Receipt downloaded successfully!");
+          setIsGeneratingPromotedPDF(false);
+        })
+        .catch((error) => {
+          console.error("Error generating PDF:", error);
+          toast.error("Failed to generate PDF");
+          setIsGeneratingPromotedPDF(false);
+        });
+    }, 150);
+  };
+
   const handleViewProfile = async (student: any) => {
     setSelectedStudent(student);
     setIsProfileOpen(true);
     setLatestReceipt(null);
+    setPromotedReceipt(null);
     setActiveProfileTab("receipt");
 
     try {
@@ -631,34 +763,51 @@ const Students = () => {
           .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         if (studentTrans.length > 0) {
-          const latest = studentTrans[0];
-          
-          // PRIORITY 1: Use snapshot from payment record if exists
-          let feeItems = latest.feeItems || [];
-          
-          // PRIORITY 2: Fallback to current structure if snapshot is missing (legacy records)
-          if (feeItems.length === 0 && structRes.ok) {
-            const structData = await structRes.json();
-            if (structData && structData.feeItems) {
-              feeItems = structData.feeItems;
+          // 1. Find admission transaction
+          const admissionTrans = studentTrans.find((f: any) => f.feeType === "Fee Receipt Payment" || f.feeType === "Fee Receipt");
+          const finalAdmissionTrans = admissionTrans || studentTrans.find((f: any) => f.feeType !== "Promoted Fee Payment");
+
+          if (finalAdmissionTrans) {
+            let feeItems = finalAdmissionTrans.feeItems || [];
+            if (feeItems.length === 0 && structRes.ok) {
+              const structData = await structRes.json();
+              if (structData && structData.feeItems) {
+                feeItems = structData.feeItems;
+              }
             }
-          }
-          
-          // PRIORITY 3: Fallback to Institutional Defaults (Image 3)
-          if (feeItems.length === 0) {
-            feeItems = institutionalItems.map((item, idx) => 
-              idx === 13 ? { ...item, value: Number(latest.amountPaid) || 0 } : item
-            );
+            if (feeItems.length === 0) {
+              feeItems = institutionalItems.map((item, idx) => 
+                idx === 13 ? { ...item, value: Number(finalAdmissionTrans.amountPaid) || 0 } : item
+              );
+            }
+            const totalCalculated = Number(finalAdmissionTrans.totalFee) || (Number(finalAdmissionTrans.amountPaid) + Number(finalAdmissionTrans.dueAmount));
+            
+            setLatestReceipt({
+              ...finalAdmissionTrans,
+              feeItems,
+              totalFee: totalCalculated,
+              dateStr: new Date(finalAdmissionTrans.date).toLocaleDateString("en-GB")
+            });
           }
 
-          const totalCalculated = Number(latest.totalFee) || (Number(latest.amountPaid) + Number(latest.dueAmount));
-          
-          setLatestReceipt({
-            ...latest,
-            feeItems,
-            totalFee: totalCalculated,
-            dateStr: new Date(latest.date).toLocaleDateString("en-GB")
-          });
+          // 2. Find promoted transaction
+          const promotedTrans = studentTrans.find((f: any) => f.feeType === "Promoted Fee Payment");
+          if (promotedTrans) {
+            let feeItems = promotedTrans.feeItems || [];
+            if (feeItems.length === 0) {
+              feeItems = institutionalItems.map((item, idx) => 
+                idx === 13 ? { ...item, value: Number(promotedTrans.amountPaid) || 0 } : item
+              );
+            }
+            const totalCalculated = Number(promotedTrans.totalFee) || (Number(promotedTrans.amountPaid) + Number(promotedTrans.dueAmount));
+            
+            setPromotedReceipt({
+              ...promotedTrans,
+              feeItems,
+              totalFee: totalCalculated,
+              dateStr: new Date(promotedTrans.date).toLocaleDateString("en-GB")
+            });
+          }
         }
       }
     } catch (error) {
@@ -994,9 +1143,12 @@ const Students = () => {
 
           {selectedStudent && (
             <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
-              <TabsList className="mb-4 grid w-full grid-cols-4 max-w-2xl mx-auto no-print bg-slate-100 p-1">
+              <TabsList className="mb-4 grid w-full grid-cols-5 max-w-3xl mx-auto no-print bg-slate-100 p-1">
                 <TabsTrigger value="receipt" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
                    <FileText className="h-4 w-4" /> Latest Receipt
+                </TabsTrigger>
+                <TabsTrigger value="promoted-receipt" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
+                   <CreditCard className="h-4 w-4" /> Promoted Fee (2nd Yr)
                 </TabsTrigger>
                 <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-900">
                    <User className="h-4 w-4" /> Student Details
@@ -1364,6 +1516,369 @@ const Students = () => {
                 ) : (
                   <div className="py-20 text-center w-full bg-white rounded-xl border border-dashed border-gray-200">
                     <p className="text-muted-foreground italic text-lg">No fee history found for this student.</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="promoted-receipt" className="space-y-6 animate-in fade-in duration-300">
+                {promotedReceipt ? (
+                  <div className="flex flex-col xl:flex-row gap-6 items-start justify-center">
+                     {/* Payment Details Panel (left side, no-print) */}
+                     <Card className="w-full xl:w-[320px] h-fit no-print shadow-sm border-blue-100 bg-white shrink-0">
+                       <CardContent className="p-4 space-y-4">
+                         <h3 className="font-bold text-base text-blue-900 border-b pb-2 flex items-center gap-2">
+                           <Wallet className="h-4 w-4" /> Payment Details (Promoted)
+                         </h3>
+                         
+                         <div className="space-y-2">
+                           <Label className="text-xs">Payment Method</Label>
+                           <Select
+                             value={promotedReceipt.paymentMethod || "Cash"}
+                             onValueChange={(val) => handlePromotedInputChange("paymentMethod", val)}
+                           >
+                             <SelectTrigger className="h-9 text-xs">
+                               <SelectValue placeholder="Select method" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="Cash">Cash</SelectItem>
+                               <SelectItem value="Card">Card</SelectItem>
+                               <SelectItem value="UPI">UPI</SelectItem>
+                               <SelectItem value="Cheque">Cheque</SelectItem>
+                               <SelectItem value="Other">Other</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+
+                         <div className="space-y-2">
+                           <Label className="text-xs">Amount Paying Now (₹)</Label>
+                           <Input
+                             type="number"
+                             value={amountPayingNowPromoted || ""}
+                             onChange={(e) => setAmountPayingNowPromoted(Number(e.target.value) || 0)}
+                             className="h-9 text-sm font-bold border-blue-300"
+                             placeholder="0"
+                           />
+                         </div>
+
+                         <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-2 text-xs">
+                           <div className="flex justify-between">
+                             <span className="text-slate-500">Total Course Fee:</span>
+                             <span className="font-bold">₹{calculatePromotedTotal().toLocaleString()}</span>
+                           </div>
+                           <div className="flex justify-between">
+                             <span className="text-slate-500">Previously Paid:</span>
+                             <span className="font-bold text-green-600">₹{Number(promotedReceipt.amountPaid || 0).toLocaleString()}</span>
+                           </div>
+                           <div className="flex justify-between text-blue-600 border-t pt-1.5 mt-1.5">
+                             <span className="font-semibold">New Total Paid:</span>
+                             <span className="font-bold">₹{(Number(promotedReceipt.amountPaid || 0) + amountPayingNowPromoted).toLocaleString()}</span>
+                           </div>
+                           <div className="flex justify-between text-red-600 border-t pt-1.5 mt-1.5">
+                             <span className="font-semibold">Remaining Due:</span>
+                             <span className="font-bold">₹{Math.max(0, calculatePromotedTotal() - (Number(promotedReceipt.amountPaid || 0) + amountPayingNowPromoted)).toLocaleString()}</span>
+                           </div>
+                         </div>
+
+                         <div className="pt-2 flex flex-col gap-2">
+                           <Button onClick={handleSavePromotedChanges} className="w-full bg-blue-900 text-white font-bold h-10 uppercase text-xs tracking-wider">
+                              <Save className="h-4 w-4 mr-2" /> Save & Pay
+                           </Button>
+                           <Button variant="outline" onClick={downloadPromotedReceiptPDF} className="w-full font-bold h-10 uppercase text-xs tracking-wider border-blue-900 text-blue-900">
+                              <Download className="h-4 w-4 mr-2" /> Download PDF
+                           </Button>
+                         </div>
+                       </CardContent>
+                     </Card>
+
+                     {/* Receipt Preview */}
+                     <div
+                       id="student-promoted-receipt-content"
+                       className="bg-white text-black px-12 py-10 w-[794px] h-[1050px] shadow-2xl flex flex-col relative border border-gray-100 shrink-0 select-none overflow-hidden"
+                       style={{ fontFamily: "'Times New Roman', serif", boxSizing: "border-box" }}
+                     >
+                    {/* Institutional Header Box */}
+                    <div className="border border-blue-900 p-2 flex flex-col items-center relative mb-2">
+                       <div className="flex items-center w-full gap-4 mb-2">
+                          {/* Logo Section */}
+                          <div className="flex items-center gap-3 shrink-0 border-r border-blue-900 pr-5 h-20">
+                             <div className="flex flex-col text-[11px] font-black text-blue-900 leading-[0.8] py-1 uppercase tracking-tighter self-center">
+                               <span>S</span><span>S</span><span>S</span><span>C</span><span>P</span>
+                             </div>
+                             <img
+                               src="/college_logo.png"
+                               alt="College Logo"
+                               className="h-16 w-auto object-contain"
+                               onError={(e) => {
+                                 const target = e.target as HTMLImageElement;
+                                 target.src = "/ssscp_logo.png";
+                               }}
+                             />
+                          </div>
+
+                          <div className="flex-1 text-center pr-10">
+                             <h1 className="text-2xl font-bold tracking-tight text-blue-900 leading-none mb-1">
+                               S.S.S. College of Pharmacy
+                             </h1>
+                             <p className="text-[9px] font-extrabold leading-tight uppercase text-gray-800 tracking-tight">
+                               AKSHARA CAMPUS, AKSHARA NAGAR, OPP. JNNCE, SAVALANGA ROAD,
+                             </p>
+                             <p className="text-[9px] font-extrabold leading-tight uppercase text-gray-800">
+                               SHIVAMOGGA - 577 204.
+                             </p>
+                             <p className="text-[9px] font-bold leading-tight mt-1 text-gray-800">
+                               Mob. +91 94481 27880, 56329 17880
+                             </p>
+                          </div>
+                       </div>
+
+                       <div className="w-full flex justify-center mt-1 border-t border-blue-900 pt-1">
+                          <span className="font-bold text-base underline underline-offset-4 decoration-1 uppercase tracking-widest text-[#1e3a8a]">
+                             PAYMENT RECEIPT (2nd YEAR)
+                          </span>
+                       </div>
+
+                       {/* Meta Info Inside Box */}
+                       <div className="w-full flex justify-between px-2 mt-1 text-[13px] font-bold">
+                          <div className="flex gap-2 items-baseline">
+                             No. {isGeneratingPromotedPDF ? (
+                               <span className="text-red-600 font-bold text-lg ml-6">{promotedReceipt.receiptNo || ""}</span>
+                             ) : (
+                               <input
+                                 type="text"
+                                 style={{ ...inlineInputStyle, width: "120px" }}
+                                 className="text-red-600 font-bold text-lg ml-6"
+                                 value={promotedReceipt.receiptNo || ""}
+                                 onChange={(e) => handlePromotedInputChange("receiptNo", e.target.value)}
+                               />
+                             )}
+                          </div>
+                          <div className="flex gap-2 items-baseline">
+                             Dt. {isGeneratingPromotedPDF ? (
+                               <span className="font-bold ml-10">{promotedReceipt.dateStr || ""}</span>
+                             ) : (
+                               <input
+                                 type="text"
+                                 style={{ ...inlineInputStyle, width: "120px" }}
+                                 className="font-bold ml-10"
+                                 value={promotedReceipt.dateStr || ""}
+                                 onChange={(e) => handlePromotedInputChange("dateStr", e.target.value)}
+                               />
+                             )}
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Student Info */}
+                    <div className="space-y-4 px-2 mb-4 text-sm">
+                       <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
+                          {isGeneratingPromotedPDF ? (
+                            <span className="shrink-0 font-bold whitespace-nowrap text-xs inline-block pb-0.5 leading-normal align-bottom">{promotedReceipt.genderPrefix || "Sri /Miss"}</span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "70px" }}
+                              className="shrink-0 font-bold whitespace-nowrap text-xs"
+                              value={promotedReceipt.genderPrefix || "Sri /Miss"}
+                              onChange={(e) => handlePromotedInputChange("genderPrefix", e.target.value)}
+                            />
+                          )}
+                          {isGeneratingPromotedPDF ? (
+                            <span className="ml-8 font-bold text-xl italic text-[#1e3a8a] flex-1 px-1 uppercase inline-block pb-0.5 leading-normal align-bottom">
+                               {promotedReceipt.studentName || selectedStudent.name}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={inlineInputStyle}
+                              className="ml-8 font-bold text-xl italic text-[#1e3a8a] flex-1 px-1 uppercase leading-none"
+                              value={promotedReceipt.studentName || selectedStudent.name}
+                              onChange={(e) => handlePromotedInputChange("studentName", e.target.value)}
+                              placeholder="STUDENT NAME"
+                            />
+                          )}
+                       </div>
+
+                       <div className="flex items-end w-full font-bold gap-4 border-b border-gray-400 pb-0.5">
+                          {isGeneratingPromotedPDF ? (
+                            <span className="shrink-0 uppercase text-[9px] inline-block pb-0.5 leading-normal align-bottom">{promotedReceipt.course || "D. PHARMA COURSE"} - ACADEMIC YEAR</span>
+                          ) : (
+                            <div className="flex gap-1 items-center shrink-0">
+                              <input
+                                type="text"
+                                style={{ ...inlineInputStyle, width: "120px" }}
+                                className="uppercase text-[9px]"
+                                value={promotedReceipt.course || "D. PHARMA COURSE"}
+                                onChange={(e) => handlePromotedInputChange("course", e.target.value)}
+                              />
+                              <span className="uppercase text-[9px]">- ACADEMIC YEAR</span>
+                            </div>
+                          )}
+                          {isGeneratingPromotedPDF ? (
+                            <span className="font-bold text-sm px-2 inline-block pb-0.5 leading-normal align-bottom">{promotedReceipt.academicYear || "2025-26"}</span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "80px" }}
+                              className="font-bold text-sm px-2"
+                              value={promotedReceipt.academicYear || "2025-26"}
+                              onChange={(e) => handlePromotedInputChange("academicYear", e.target.value)}
+                            />
+                          )}
+                          <div className="flex gap-6 ml-auto items-end">
+                             <div className="flex gap-1 items-end">
+                                 <span className="uppercase text-[8px] text-gray-500">ADM NO:</span>
+                                 {isGeneratingPromotedPDF ? (
+                                   <span className="text-[#1e3a8a] text-base inline-block pb-0.5 leading-normal border-b border-blue-900 px-1 text-center min-w-[80px]">{promotedReceipt.admissionNumber || selectedStudent.admissionNumber || ""}</span>
+                                 ) : (
+                                   <input
+                                     type="text"
+                                     style={{ ...inlineInputStyle, width: "100px", textAlign: "center" }}
+                                     className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1 text-center"
+                                     value={promotedReceipt.admissionNumber || selectedStudent.admissionNumber || ""}
+                                     onChange={(e) => handlePromotedInputChange("admissionNumber", e.target.value)}
+                                   />
+                                 )}
+                             </div>
+                             <div className="flex gap-1 items-end">
+                                 <span className="uppercase text-[8px] text-gray-500">ROLL NO:</span>
+                                 {isGeneratingPromotedPDF ? (
+                                   <span className="text-[#1e3a8a] text-base inline-block pb-0.5 leading-normal border-b border-blue-900 px-1 text-center min-w-[40px]">{promotedReceipt.rollNo || selectedStudent.rollNo || ""}</span>
+                                 ) : (
+                                   <input
+                                     type="text"
+                                     style={{ ...inlineInputStyle, width: "60px", textAlign: "center" }}
+                                     className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1 text-center"
+                                     value={promotedReceipt.rollNo || selectedStudent.rollNo || ""}
+                                     onChange={(e) => handlePromotedInputChange("rollNo", e.target.value)}
+                                   />
+                                 )}
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Table Area */}
+                    <div className="mb-4 bg-white flex-grow relative">
+                       <table className="w-full text-xs font-bold border border-blue-900 border-collapse table-fixed">
+                          <thead>
+                             <tr className="border-b border-blue-900 bg-blue-50/5">
+                                <th className="border-r border-blue-900 p-1 w-[10%] text-center uppercase">No.</th>
+                                <th className="border-r border-blue-900 p-1 w-[60%] text-left pl-6 uppercase">PARTICULARS</th>
+                                <th className="p-1 w-[30%] text-center uppercase">AMOUNT</th>
+                             </tr>
+                          </thead>
+                          <tbody>
+                             {promotedReceipt.feeItems && promotedReceipt.feeItems.length > 0 ? (
+                                promotedReceipt.feeItems.map((item: any, idx: number) => (
+                                   <tr key={idx} className="border-b border-blue-900/20 h-7 group">
+                                      <td className="border-r-blue-900 border-r p-1.5 text-center font-normal relative">
+                                         {idx + 1}.
+                                         {!isGeneratingPromotedPDF && (
+                                            <button
+                                               type="button"
+                                               onClick={() => handleRemovePromotedFeeItem(idx)}
+                                               className="absolute left-1 top-1 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full h-5 w-5 flex items-center justify-center border font-sans font-bold"
+                                               title="Delete Row"
+                                            >
+                                               ✕
+                                            </button>
+                                         )}
+                                      </td>
+                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">
+                                         {isGeneratingPromotedPDF ? (
+                                            <span>{item.name}</span>
+                                         ) : (
+                                            <input
+                                               type="text"
+                                               style={inlineInputStyle}
+                                               className="w-full font-semibold uppercase"
+                                               value={item.name}
+                                               onChange={(e) => handlePromotedFeeNameChange(idx, e.target.value)}
+                                            />
+                                         )}
+                                      </td>
+                                      <td className="p-1.5 text-right pr-6 font-semibold">
+                                         {isGeneratingPromotedPDF ? (
+                                            <span>{item.value > 0 ? Number(item.value).toLocaleString("en-IN") + "/-" : ""}</span>
+                                         ) : (
+                                            <input
+                                               type="text"
+                                               style={{ ...inlineInputStyle, textAlign: "right" }}
+                                               className="w-full font-semibold"
+                                               value={item.value}
+                                               onChange={(e) => handlePromotedFeeValueChange(idx, e.target.value)}
+                                            />
+                                         )}
+                                      </td>
+                                   </tr>
+                                ))
+                             ) : (
+                                <tr>
+                                   <td colSpan={3} className="text-center py-4 text-slate-400 italic">No particulars defined.</td>
+                                </tr>
+                             )}
+                          </tbody>
+                       </table>
+                       {!isGeneratingPromotedPDF && (
+                          <div className="mt-2 flex justify-start">
+                             <Button
+                                size="sm"
+                                variant="outline"
+                                type="button"
+                                onClick={handleAddPromotedFeeItem}
+                                className="h-7 text-xs border border-dashed border-blue-900 text-blue-900 hover:bg-blue-50"
+                             >
+                                + Add Field
+                             </Button>
+                          </div>
+                       )}
+                    </div>
+
+                    {/* Words */}
+                    <div className="px-2 mb-10 flex flex-col gap-2 border-b border-gray-300 pb-2 mt-6">
+                       <div className="flex items-center w-full text-base font-bold border-b border-gray-100 pb-0.5 mb-2">
+                          <span className="shrink-0 uppercase text-[10px] mr-3">Balance Due:</span>
+                          <span className="font-bold text-lg text-red-600 px-2">
+                             ₹{calculatePromotedDue().toLocaleString("en-IN")}/-
+                          </span>
+                       </div>
+                       <div className="flex items-baseline w-full">
+                          <span className="shrink-0 uppercase text-[10px] font-black mr-6">RUPEES IN WORDS:</span>
+                          {isGeneratingPromotedPDF ? (
+                             <span className="font-bold text-lg italic capitalize flex-1 text-gray-800">
+                                {promotedReceipt.wordsOverride || (toWords.convert(Number(promotedReceipt.amountPaid || 0) + amountPayingNowPromoted) + " Only")}
+                             </span>
+                          ) : (
+                             <input
+                               type="text"
+                               style={inlineInputStyle}
+                               className="font-bold text-lg italic capitalize flex-1 text-gray-800"
+                               value={promotedReceipt.wordsOverride || (toWords.convert(Number(promotedReceipt.amountPaid || 0) + amountPayingNowPromoted) + " Only")}
+                               onChange={(e) => handlePromotedInputChange("wordsOverride", e.target.value)}
+                             />
+                          )}
+                       </div>
+                    </div>
+
+                    <div className="mt-auto w-full">
+                       {/* Footer - Seal and Signatories */}
+                       <div className="px-2 flex justify-between items-end w-full mb-10 pb-4 font-bold">
+                          <div className="w-[45%] flex flex-col items-start">
+                             <div className="w-full border-t border-black mb-2"></div>
+                             <p className="text-[11px] uppercase font-bold tracking-tight text-black">INSTITUTIONAL SEAL</p>
+                          </div>
+                          <div className="w-[48%] flex flex-col items-center">
+                             <div className="w-full border-t border-blue-900 mb-2"></div>
+                             <p className="text-[12px] uppercase font-bold text-blue-900 tracking-tight">SIGNATURE OF THE RECEIVER</p>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+                 </div>
+                ) : (
+                  <div className="py-20 text-center w-full bg-white rounded-xl border border-dashed border-gray-200">
+                    <p className="text-muted-foreground italic text-lg mb-2">No promoted/2nd year fee structure found for this student.</p>
+                    <p className="text-xs text-slate-400">You can register their promoted fee from the <span className="font-bold text-blue-900">Promoted Fee</span> page in the sidebar.</p>
                   </div>
                 )}
               </TabsContent>

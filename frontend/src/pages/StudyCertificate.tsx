@@ -22,7 +22,7 @@ interface StudyCertificateProps {
   onStudentUpdate?: (updatedStudent: any) => void;
 }
 
-const StudyCertificate = ({ prefilledData, isEmbedded = false }: StudyCertificateProps) => {
+const StudyCertificate = ({ prefilledData, isEmbedded = false, onStudentUpdate }: StudyCertificateProps) => {
   const printRef = useRef(null);
   const [certType, setCertType] = useState<"bonafide" | "council">("bonafide");
 

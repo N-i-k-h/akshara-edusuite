@@ -22,6 +22,7 @@ import Classes from "./pages/Classes";
 import Assignments from "./pages/Assignments";
 import Fees from "./pages/Fees";
 import FeesRegistration from "./pages/FeesRegistration";
+import PromotedFees from "./pages/PromotedFees";
 import FeesEstimation from "./pages/FeesEstimation";
 import Reports from "./pages/Reports";
 import TransferCertificate from "./pages/TransferCertificate";
@@ -91,6 +92,7 @@ const App = () => (
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/fees" element={<Fees />} />
               <Route path="/fees-registration" element={<FeesRegistration />} />
+              <Route path="/promoted-fees" element={<PromotedFees />} />
               <Route path="/fees-estimation" element={<FeesEstimation />} />
               <Route
                 path="/transfer-certificate"

@@ -161,6 +161,8 @@ const feeSchema = new mongoose.Schema(
     dueAmount: { type: Number, required: true, min: 0 },
     totalFee: { type: Number, min: 0 },
     receiptNo: { type: String, trim: true },
+    academicYear: { type: String, trim: true },
+    wordsOverride: { type: String, trim: true },
     feeItems: [
       {
         name: { type: String, required: true },
@@ -552,6 +554,7 @@ app.get("/api/students", async (req, res) => {
     const students = await Student.find();
     res.json(students);
   } catch (error) {
+    console.error("GET /api/students error:", error);
     res.status(500).json({ message: "Error fetching students" });
   }
 });
@@ -913,6 +916,7 @@ app.get("/api/classes", async (req, res) => {
     const classes = await Class.find();
     res.json(classes);
   } catch (error) {
+    console.error("GET /api/classes error:", error);
     res.status(500).json({ message: "Error fetching classes" });
   }
 });
