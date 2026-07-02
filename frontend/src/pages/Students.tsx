@@ -932,7 +932,7 @@ const Students = () => {
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto bg-white p-6">
             <DialogHeader>
               <DialogTitle>{editingStudentId ? "Edit Student Details" : "Add New Student"}</DialogTitle>
             </DialogHeader>
