@@ -92,14 +92,28 @@ const PromotedFees = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [studentsRes, classesRes] = await Promise.all([
+        const [studentsRes, classesRes, feesRes] = await Promise.all([
           authFetch(`${API_BASE_URL}/students`),
-          authFetch(`${API_BASE_URL}/classes`)
+          authFetch(`${API_BASE_URL}/classes`),
+          authFetch(`${API_BASE_URL}/fees`)
         ]);
+
+        let promotedStudentIds = new Set<string>();
+        if (feesRes.ok) {
+          const feesData = await feesRes.json();
+          feesData.forEach((f: any) => {
+            if (f.feeType === "Promoted Fee Payment" && f.studentId) {
+              promotedStudentIds.add(f.studentId.toString());
+            }
+          });
+        }
 
         if (studentsRes.ok) {
           const studentsData = await studentsRes.json();
-          const activeStudents = studentsData.filter((s: any) => s.status === "Active");
+          const activeStudents = studentsData.filter((s: any) => {
+            const sid = (s._id || s.id || "").toString();
+            return s.status === "Active" && !promotedStudentIds.has(sid);
+          });
           setStudentsList(activeStudents);
         }
 
@@ -290,6 +304,15 @@ const PromotedFees = () => {
 
       // Download PDF receipt
       handleDownloadPDF();
+
+      // Remove student from dropdown list locally
+      setStudentsList((prev) =>
+        prev.filter(
+          (s) =>
+            (s._id || s.id) !== selectedStudent._id &&
+            (s._id || s.id) !== selectedStudent.id
+        )
+      );
 
       // Clear selection and form
       setTimeout(() => {
