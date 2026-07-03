@@ -574,7 +574,7 @@ app.get("/api/students/:id", async (req, res) => {
   }
 });
 
-app.post("/api/students", async (req, res) => {
+app.post("/api/students", requireAdmin, async (req, res) => {
   try {
     const { admissionNumber } = req.body;
     if (!admissionNumber) {
@@ -602,7 +602,7 @@ app.post("/api/students", async (req, res) => {
   }
 });
 
-app.put("/api/students/bulk/promote", async (req, res) => {
+app.put("/api/students/bulk/promote", requireAdmin, async (req, res) => {
   try {
     const { studentIds, targetClass, status } = req.body;
     if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
@@ -629,7 +629,7 @@ app.put("/api/students/bulk/promote", async (req, res) => {
   }
 });
 
-app.put("/api/students/:id", async (req, res) => {
+app.put("/api/students/:id", requireAdmin, async (req, res) => {
   try {
     const studentId = req.params.id;
     if (!isValidObjectId(studentId)) {
@@ -672,7 +672,7 @@ app.put("/api/students/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/students/:id", async (req, res) => {
+app.delete("/api/students/:id", requireAdmin, async (req, res) => {
   try {
     const studentId = req.params.id;
     if (!isValidObjectId(studentId)) {
@@ -712,7 +712,7 @@ app.get("/api/fees", async (req, res) => {
   }
 });
 
-app.post("/api/fees", async (req, res) => {
+app.post("/api/fees", requireAdmin, async (req, res) => {
   try {
     const newFee = new Fee(req.body);
     await newFee.save();
@@ -725,7 +725,7 @@ app.post("/api/fees", async (req, res) => {
   }
 });
 
-app.put("/api/fees/:id", async (req, res) => {
+app.put("/api/fees/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
@@ -760,7 +760,7 @@ app.get("/api/staff", async (req, res) => {
   }
 });
 
-app.post("/api/staff", async (req, res) => {
+app.post("/api/staff", requireAdmin, async (req, res) => {
   try {
     const {
       email,
@@ -831,7 +831,7 @@ app.post("/api/staff", async (req, res) => {
   }
 });
 
-app.put("/api/staff/:id", async (req, res) => {
+app.put("/api/staff/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
@@ -886,7 +886,7 @@ app.put("/api/staff/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/staff/:id", async (req, res) => {
+app.delete("/api/staff/:id", requireAdmin, async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ message: "Invalid staff ID" });
@@ -923,7 +923,7 @@ app.get("/api/classes", async (req, res) => {
   }
 });
 
-app.post("/api/classes", async (req, res) => {
+app.post("/api/classes", requireAdmin, async (req, res) => {
   try {
     const newClass = new Class(req.body);
     await newClass.save();
@@ -935,7 +935,7 @@ app.post("/api/classes", async (req, res) => {
   }
 });
 
-app.put("/api/classes/:id", async (req, res) => {
+app.put("/api/classes/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
@@ -956,7 +956,7 @@ app.put("/api/classes/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/classes/:id", async (req, res) => {
+app.delete("/api/classes/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
@@ -1172,7 +1172,7 @@ app.get("/api/exams", async (req, res) => {
   }
 });
 
-app.post("/api/exams", async (req, res) => {
+app.post("/api/exams", requireAdmin, async (req, res) => {
   try {
     const newExam = new Exam(req.body);
     await newExam.save();
@@ -1184,7 +1184,7 @@ app.post("/api/exams", async (req, res) => {
   }
 });
 
-app.delete("/api/exams/:id", async (req, res) => {
+app.delete("/api/exams/:id", requireAdmin, async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ message: "Invalid exam ID" });
@@ -1303,7 +1303,7 @@ app.get("/api/timetable", async (req, res) => {
   }
 });
 
-app.post("/api/timetable", async (req, res) => {
+app.post("/api/timetable", requireAdmin, async (req, res) => {
   try {
     const { className, day, period, subject, teacher } = req.body;
 
@@ -1332,7 +1332,7 @@ app.post("/api/timetable", async (req, res) => {
   }
 });
 
-app.put("/api/timetable/:id/assign-faculty", async (req, res) => {
+app.put("/api/timetable/:id/assign-faculty", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
@@ -1542,7 +1542,7 @@ app.get("/api/fee-structures/student/:studentId", async (req, res) => {
   }
 });
 
-app.post("/api/fee-structures", async (req, res) => {
+app.post("/api/fee-structures", requireAdmin, async (req, res) => {
   try {
     const newStructure = new FeeStructure(req.body);
     await newStructure.save();
@@ -1734,7 +1734,7 @@ app.get("/api/faculty/:facultyId/attendance", async (req, res) => {
   }
 });
 
-app.put("/api/staff/:id/assign-classes", async (req, res) => {
+app.put("/api/staff/:id/assign-classes", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {

@@ -51,6 +51,16 @@ const ProtectedRoute = () => {
   return <Outlet />;
 };
 
+const AdminRoute = () => {
+  const userStr = localStorage.getItem("user");
+  if (!userStr) return <Navigate to="/login" replace />;
+  const user = JSON.parse(userStr);
+  if (user.role !== "admin") {
+    return <Navigate to="/faculty-dashboard" replace />;
+  }
+  return <Outlet />;
+};
+
 const RoleBasedDashboard = () => {
   const userStr = localStorage.getItem("user");
   if (!userStr) return <Navigate to="/login" replace />;
@@ -84,23 +94,25 @@ const App = () => (
               />
               <Route path="/faculty/exams" element={<FacultyExams />} /> */}
               <Route path="/profile" element={<Profile />} />
-              <Route path="/students" element={<Students />} />
-              <Route path="/staff" element={<Staff />} />
-              <Route path="/classes" element={<Classes />} />
-              {/* <Route path="/timetable" element={<Timetable />} />
-              <Route path="/exams" element={<Exams />} /> */}
-              <Route path="/assignments" element={<Assignments />} />
-              <Route path="/fees" element={<Fees />} />
-              <Route path="/fees-registration" element={<FeesRegistration />} />
-              <Route path="/promoted-fees" element={<PromotedFees />} />
-              <Route path="/fees-estimation" element={<FeesEstimation />} />
-              <Route
-                path="/transfer-certificate"
-                element={<TransferCertificate />}
-              />
-              <Route path="/study-certificate" element={<StudyCertificate />} />
-              <Route path="/expenditure" element={<Expenditure />} />
-              <Route path="/reports" element={<Reports />} />
+
+              {/* Admin-Only Protected Routes */}
+              <Route element={<AdminRoute />}>
+                <Route path="/students" element={<Students />} />
+                <Route path="/staff" element={<Staff />} />
+                <Route path="/classes" element={<Classes />} />
+                <Route path="/assignments" element={<Assignments />} />
+                <Route path="/fees" element={<Fees />} />
+                <Route path="/fees-registration" element={<FeesRegistration />} />
+                <Route path="/promoted-fees" element={<PromotedFees />} />
+                <Route path="/fees-estimation" element={<FeesEstimation />} />
+                <Route
+                  path="/transfer-certificate"
+                  element={<TransferCertificate />}
+                />
+                <Route path="/study-certificate" element={<StudyCertificate />} />
+                <Route path="/expenditure" element={<Expenditure />} />
+                <Route path="/reports" element={<Reports />} />
+              </Route>
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
