@@ -13,6 +13,7 @@ import {
   Trash2,
   Eye,
   Download,
+  Calendar,
 } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { ToWords } from "to-words";
@@ -81,6 +82,7 @@ const Students = () => {
   const [loading, setLoading] = useState(true);
   const [classesList, setClassesList] = useState<any[]>([]);
   const [classFilter, setClassFilter] = useState("all");
+  const [academicYearFilter, setAcademicYearFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [allFees, setAllFees] = useState<any[]>([]);
   const pageSize = 10;
@@ -109,6 +111,7 @@ const Students = () => {
     fatherName: "",
     motherName: "",
     passingYear: "",
+    academicYear: "",
   });
 
   useEffect(() => {
@@ -174,6 +177,7 @@ const Students = () => {
       fatherName: student.fatherName || "",
       motherName: student.motherName || "",
       passingYear: student.passingYear || "",
+      academicYear: student.academicYear || "",
     });
     setIsAddDialogOpen(true);
   };
@@ -196,6 +200,7 @@ const Students = () => {
       fatherName: "",
       motherName: "",
       passingYear: "",
+      academicYear: "",
     });
     setIsAddDialogOpen(true);
   };
@@ -233,6 +238,7 @@ const Students = () => {
           fatherName: "",
           motherName: "",
           passingYear: "",
+          academicYear: "",
         });
       } else {
         const errorData = await response.json();
@@ -282,6 +288,23 @@ const Students = () => {
     }
   };
 
+  const getStudentAcademicYear = (student: any) => {
+    if (student.academicYear) return student.academicYear;
+    
+    // Fallback: Find the class in classesList where full name matches student.class
+    const matchingClass = classesList.find((cls: any) => {
+      const className = cls.grade.startsWith("D.")
+        ? `${cls.grade} - ${cls.section}`
+        : `Grade ${cls.grade} - ${cls.section}`;
+      return className === student.class;
+    });
+
+    if (matchingClass && matchingClass.academicYear) {
+      return matchingClass.academicYear;
+    }
+    return "";
+  };
+
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -290,7 +313,12 @@ const Students = () => {
       statusFilter === "all" || student.status === statusFilter;
     const matchesClass =
       classFilter === "all" || student.class === classFilter;
-    return matchesSearch && matchesStatus && matchesClass;
+      
+    const studentYear = student.academicYear || getStudentAcademicYear(student);
+    const matchesAcademicYear =
+      academicYearFilter === "all" || studentYear === academicYearFilter;
+      
+    return matchesSearch && matchesStatus && matchesClass && matchesAcademicYear;
   });
 
   const getStudentFeeSummary = (studentId: string) => {
@@ -318,7 +346,7 @@ const Students = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, classFilter]);
+  }, [searchQuery, statusFilter, classFilter, academicYearFilter]);
 
   // Profile State
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -425,6 +453,7 @@ const Students = () => {
           fatherName: selectedStudent.fatherName,
           motherName: selectedStudent.motherName,
           passingYear: selectedStudent.passingYear,
+          academicYear: selectedStudent.academicYear || "",
           customFields: selectedStudent.customFields || [],
         }),
       });
@@ -1113,6 +1142,30 @@ const Students = () => {
                       <SelectItem value="Active">Active</SelectItem>
                       <SelectItem value="Inactive">Inactive</SelectItem>
                       <SelectItem value="Graduated">Graduated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Academic Year</Label>
+                  <Select
+                    onValueChange={(val) => setFormData({ ...formData, academicYear: val })}
+                    value={formData.academicYear}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Academic Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2025-26">2025-26</SelectItem>
+                      <SelectItem value="2026-27">2026-27</SelectItem>
+                      <SelectItem value="2027-28">2027-28</SelectItem>
+                      <SelectItem value="2028-29">2028-29</SelectItem>
+                      <SelectItem value="2029-30">2029-30</SelectItem>
+                      <SelectItem value="2030-31">2030-31</SelectItem>
+                      <SelectItem value="2031-32">2031-32</SelectItem>
+                      <SelectItem value="2032-33">2032-33</SelectItem>
+                      <SelectItem value="2033-34">2033-34</SelectItem>
+                      <SelectItem value="2034-35">2034-35</SelectItem>
+                      <SelectItem value="2035-36">2035-36</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1970,15 +2023,43 @@ const Students = () => {
                                   onChange={(e) => handleStudentFieldChange("joiningDate", e.target.value)}
                                   className="h-8 text-xs bg-slate-50 border-slate-200"
                                 />
-                             </div>
-                             <div className="space-y-1">
-                                <Label className="text-xs text-slate-500 font-medium">Passing Year</Label>
-                                <Input
-                                  value={selectedStudent.passingYear || ""}
-                                  onChange={(e) => handleStudentFieldChange("passingYear", e.target.value)}
-                                  className="h-8 text-xs bg-slate-50 border-slate-200"
-                                  placeholder="e.g. 2026"
-                                />
+                              </div>
+                              <div className="space-y-1">
+                                  <Label className="text-xs text-slate-500 font-medium">Passing Year</Label>
+                                  <Input
+                                    value={selectedStudent.passingYear || ""}
+                                    onChange={(e) => handleStudentFieldChange("passingYear", e.target.value)}
+                                    className="h-8 text-xs bg-slate-50 border-slate-200"
+                                    placeholder="e.g. 2026"
+                                  />
+                               </div>
+                               <div className="space-y-1">
+                                  <Label className="text-xs text-slate-500 font-medium">Academic Year</Label>
+                                  <Select
+                                    value={selectedStudent.academicYear || ""}
+                                    onValueChange={(val) => handleStudentFieldChange("academicYear", val)}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs bg-slate-50 border-slate-200">
+                                      <SelectValue placeholder="Select Academic Year" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="2025-26">2025-26</SelectItem>
+                                      <SelectItem value="2026-27">2026-27</SelectItem>
+                                      <SelectItem value="2027-28">2027-28</SelectItem>
+                                      <SelectItem value="2028-29">2028-29</SelectItem>
+                                      <SelectItem value="2029-30">2029-30</SelectItem>
+                                      <SelectItem value="2030-31">2030-31</SelectItem>
+                                      <SelectItem value="2031-32">2031-32</SelectItem>
+                                      <SelectItem value="2032-33">2032-33</SelectItem>
+                                      <SelectItem value="2033-34">2033-34</SelectItem>
+                                      <SelectItem value="2034-35">2034-35</SelectItem>
+                                      <SelectItem value="2035-36">2035-36</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                               </div>
+                             <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                                <span className="text-sm text-slate-500 font-medium">Academic Year</span>
+                                <span className="font-bold text-blue-900">{getStudentAcademicYear(selectedStudent) || "N/A"}</span>
                              </div>
                           </CardContent>
                         </Card>
@@ -2405,6 +2486,26 @@ const Students = () => {
             <SelectItem value="Active">Active</SelectItem>
             <SelectItem value="Inactive">Inactive</SelectItem>
             <SelectItem value="Graduated">Graduated</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
+          <SelectTrigger className="w-48">
+            <Calendar className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="Academic Year" />
+          </SelectTrigger>
+          <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+            <SelectItem value="all">All Academic Years</SelectItem>
+            <SelectItem value="2025-26">2025-26</SelectItem>
+            <SelectItem value="2026-27">2026-27</SelectItem>
+            <SelectItem value="2027-28">2027-28</SelectItem>
+            <SelectItem value="2028-29">2028-29</SelectItem>
+            <SelectItem value="2029-30">2029-30</SelectItem>
+            <SelectItem value="2030-31">2030-31</SelectItem>
+            <SelectItem value="2031-32">2031-32</SelectItem>
+            <SelectItem value="2032-33">2032-33</SelectItem>
+            <SelectItem value="2033-34">2033-34</SelectItem>
+            <SelectItem value="2034-35">2034-35</SelectItem>
+            <SelectItem value="2035-36">2035-36</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -178,6 +178,7 @@ const FeesRegistration = () => {
         parentName: formData.parentName,
         parentPhone: formData.parentPhone,
         class: formData.class,
+        academicYear: formData.academicYear,
         status: "Active"
       };
 

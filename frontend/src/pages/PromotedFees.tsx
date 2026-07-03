@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
-import { Printer, Download, Calculator, Plus, Trash2, Save, Search, User } from "lucide-react";
+import { Printer, Download, Calculator, Plus, Trash2, Save, Search, User, Calendar } from "lucide-react";
 import { API_BASE_URL, authFetch } from "@/config";
 import { ToWords } from "to-words";
 
@@ -43,6 +43,7 @@ const PromotedFees = () => {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [classesList, setClassesList] = useState<any[]>([]);
   const [classFilter, setClassFilter] = useState("all");
+  const [academicYearFilter, setAcademicYearFilter] = useState("all");
 
   const [formData, setFormData] = useState({
     receiptNo: "0",
@@ -129,7 +130,24 @@ const PromotedFees = () => {
     generateReceiptNumber();
   }, []);
 
-  // Sync filtered students when search query or class filter changes
+  const getStudentAcademicYear = (student: any) => {
+    if (student.academicYear) return student.academicYear;
+    
+    // Fallback: Find the class in classesList where full name matches student.class
+    const matchingClass = classesList.find((cls: any) => {
+      const className = cls.grade.startsWith("D.")
+        ? `${cls.grade} - ${cls.section}`
+        : `Grade ${cls.grade} - ${cls.section}`;
+      return className === student.class;
+    });
+
+    if (matchingClass && matchingClass.academicYear) {
+      return matchingClass.academicYear;
+    }
+    return "";
+  };
+
+  // Sync filtered students when search query, class filter, or academic year filter changes
   useEffect(() => {
     const query = searchQuery.toLowerCase();
     const filtered = studentsList.filter((s) => {
@@ -138,10 +156,15 @@ const PromotedFees = () => {
         s.admissionNumber.toLowerCase().includes(query);
       const matchesClass =
         classFilter === "all" || s.class === classFilter;
-      return matchesSearch && matchesClass;
+      
+      const studentYear = s.academicYear || getStudentAcademicYear(s);
+      const matchesAcademicYear =
+        academicYearFilter === "all" || studentYear === academicYearFilter;
+        
+      return matchesSearch && matchesClass && matchesAcademicYear;
     });
     setFilteredStudents(filtered);
-  }, [searchQuery, classFilter, studentsList]);
+  }, [searchQuery, classFilter, academicYearFilter, studentsList, classesList]);
 
   // Handle outside click for searchable dropdown
   useEffect(() => {
@@ -434,7 +457,7 @@ const PromotedFees = () => {
                 <SelectTrigger className="border-blue-200">
                   <SelectValue placeholder="All Classes" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
                   <SelectItem value="all">All Classes</SelectItem>
                   {classesList.map((cls: any) => {
                     const className = cls.grade.startsWith("D.")
@@ -446,6 +469,39 @@ const PromotedFees = () => {
                       </SelectItem>
                     );
                   })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Academic Year Filter */}
+            <div className="space-y-2">
+              <Label className="font-bold text-blue-900">Filter by Academic Year</Label>
+              <Select value={academicYearFilter} onValueChange={(val) => {
+                setAcademicYearFilter(val);
+                if (selectedStudent && val !== "all") {
+                  const studentYear = selectedStudent.academicYear || getStudentAcademicYear(selectedStudent);
+                  if (studentYear !== val) {
+                    setSelectedStudent(null);
+                    setSearchQuery("");
+                  }
+                }
+              }}>
+                <SelectTrigger className="border-blue-200">
+                  <SelectValue placeholder="All Academic Years" />
+                </SelectTrigger>
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                  <SelectItem value="all">All Academic Years</SelectItem>
+                  <SelectItem value="2025-26">2025-26</SelectItem>
+                  <SelectItem value="2026-27">2026-27</SelectItem>
+                  <SelectItem value="2027-28">2027-28</SelectItem>
+                  <SelectItem value="2028-29">2028-29</SelectItem>
+                  <SelectItem value="2029-30">2029-30</SelectItem>
+                  <SelectItem value="2030-31">2030-31</SelectItem>
+                  <SelectItem value="2031-32">2031-32</SelectItem>
+                  <SelectItem value="2032-33">2032-33</SelectItem>
+                  <SelectItem value="2033-34">2033-34</SelectItem>
+                  <SelectItem value="2034-35">2034-35</SelectItem>
+                  <SelectItem value="2035-36">2035-36</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -540,10 +596,18 @@ const PromotedFees = () => {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2024-25">2024-25</SelectItem>
+                  <SelectContent position="popper" className="max-h-60 overflow-y-auto">
                     <SelectItem value="2025-26">2025-26</SelectItem>
                     <SelectItem value="2026-27">2026-27</SelectItem>
+                    <SelectItem value="2027-28">2027-28</SelectItem>
+                    <SelectItem value="2028-29">2028-29</SelectItem>
+                    <SelectItem value="2029-30">2029-30</SelectItem>
+                    <SelectItem value="2030-31">2030-31</SelectItem>
+                    <SelectItem value="2031-32">2031-32</SelectItem>
+                    <SelectItem value="2032-33">2032-33</SelectItem>
+                    <SelectItem value="2033-34">2033-34</SelectItem>
+                    <SelectItem value="2034-35">2034-35</SelectItem>
+                    <SelectItem value="2035-36">2035-36</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

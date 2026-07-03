@@ -9,6 +9,8 @@ import {
   Calendar,
   BookOpen,
   Clock,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,8 +45,9 @@ interface ClassData {
   _id: string;
   grade: string;
   section: string;
-  room: string;
-  classTeacher: string;
+  room?: string;
+  classTeacher?: string;
+  academicYear?: string;
   studentsCount: number;
 }
 
@@ -99,7 +102,10 @@ const Classes = () => {
     section: "",
     room: "",
     classTeacher: "",
+    academicYear: "",
   });
+
+  const [editingClass, setEditingClass] = useState<ClassData | null>(null);
 
   const fetchData = async () => {
     try {
@@ -134,10 +140,9 @@ const Classes = () => {
     if (
       !newClass.grade ||
       !newClass.section ||
-      !newClass.room ||
-      !newClass.classTeacher
+      !newClass.academicYear
     ) {
-      toast.error("Please fill in all details");
+      toast.error("Please fill in Grade, Section, and Academic Year");
       return;
     }
 
@@ -152,13 +157,73 @@ const Classes = () => {
         toast.success("Class added successfully");
         setIsAddDialogOpen(false);
         fetchData();
-        setNewClass({ grade: "", section: "", room: "", classTeacher: "" });
+        setNewClass({ grade: "", section: "", room: "", classTeacher: "", academicYear: "" });
       } else {
         toast.error("Failed to add class");
       }
     } catch (error) {
       console.error("Error adding class", error);
       toast.error("Failed to add class");
+    }
+  };
+
+  const handleUpdateClass = async () => {
+    if (!editingClass) return;
+    if (
+      !editingClass.grade ||
+      !editingClass.section ||
+      !editingClass.academicYear
+    ) {
+      toast.error("Please fill in Grade, Section, and Academic Year");
+      return;
+    }
+
+    try {
+      const response = await authFetch(`${API_BASE_URL}/classes/${editingClass._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          grade: editingClass.grade,
+          section: editingClass.section,
+          room: editingClass.room,
+          academicYear: editingClass.academicYear,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Class updated successfully");
+        setEditingClass(null);
+        fetchData();
+      } else {
+        toast.error("Failed to update class");
+      }
+    } catch (error) {
+      console.error("Error updating class", error);
+      toast.error("Failed to update class");
+    }
+  };
+
+  const [classToDelete, setClassToDelete] = useState<string | null>(null);
+
+  const handleDeleteClass = (id: string) => {
+    setClassToDelete(id);
+  };
+
+  const executeDeleteClass = async (id: string) => {
+    try {
+      const response = await authFetch(`${API_BASE_URL}/classes/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        toast.success("Class deleted successfully");
+        setClassToDelete(null);
+        fetchData();
+      } else {
+        toast.error("Failed to delete class");
+      }
+    } catch (error) {
+      console.error("Error deleting class:", error);
+      toast.error("Failed to delete class");
     }
   };
 
@@ -352,7 +417,7 @@ const Classes = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="room">Room Number</Label>
+                <Label htmlFor="room">Room Number (Optional)</Label>
                 <Input
                   id="room"
                   value={newClass.room}
@@ -361,22 +426,25 @@ const Classes = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="teacher">Class Teacher</Label>
+                <Label htmlFor="academicYear">Academic Year</Label>
                 <Select
-                  value={newClass.classTeacher}
-                  onValueChange={(val) =>
-                    handleInputChange("classTeacher", val)
-                  }
+                  value={newClass.academicYear}
+                  onValueChange={(val) => handleInputChange("academicYear", val)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select teacher" />
+                    <SelectValue placeholder="Select Academic Year" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher._id} value={teacher.name}>
-                        {teacher.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="2026-27">2026-27</SelectItem>
+                    <SelectItem value="2027-28">2027-28</SelectItem>
+                    <SelectItem value="2028-29">2028-29</SelectItem>
+                    <SelectItem value="2029-30">2029-30</SelectItem>
+                    <SelectItem value="2030-31">2030-31</SelectItem>
+                    <SelectItem value="2031-32">2031-32</SelectItem>
+                    <SelectItem value="2032-33">2032-33</SelectItem>
+                    <SelectItem value="2033-34">2033-34</SelectItem>
+                    <SelectItem value="2034-35">2034-35</SelectItem>
+                    <SelectItem value="2035-36">2035-36</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -411,31 +479,67 @@ const Classes = () => {
               className="cursor-pointer transition-shadow hover:shadow-md"
             >
               <CardHeader className="pb-3">
-                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
                   <span className="text-lg">
                     {cls.grade.startsWith("D.")
                       ? cls.grade
                       : `Grade ${cls.grade}`}{" "}
                     - {cls.section}
                   </span>
-                  <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                    {cls.room}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {cls.room && (
+                      <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                        {cls.room}
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingClass(cls);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClass(cls._id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="h-4 w-4" />
-                  <span>Class Teacher: {cls.classTeacher}</span>
-                </div>
+                {cls.academicYear && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>Academic Year: {cls.academicYear}</span>
+                  </div>
+                )}
+                {cls.classTeacher && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    <span>Class Teacher: {cls.classTeacher}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Users className="h-4 w-4" />
                   <span>{cls.studentsCount || 0} Students</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{cls.room}</span>
-                </div>
+                {cls.room && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{cls.room}</span>
+                  </div>
+                )}
                 <div className="flex gap-2 pt-2">
                   <Button
                     variant="outline"
@@ -651,6 +755,117 @@ const Classes = () => {
                 Cancel
               </Button>
               <Button onClick={handleSaveSlot}>Save Slot</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: EDIT CLASS */}
+      <Dialog open={!!editingClass} onOpenChange={(open) => !open && setEditingClass(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Class</DialogTitle>
+          </DialogHeader>
+          {editingClass && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-grade">Grade</Label>
+                <Select
+                  value={editingClass.grade}
+                  onValueChange={(val) => setEditingClass({ ...editingClass, grade: val })}
+                >
+                  <SelectTrigger id="edit-grade">
+                    <SelectValue placeholder="Select Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="D.Pharm 1">D.Pharm 1st Year</SelectItem>
+                    <SelectItem value="D.Pharm 2">D.Pharm 2nd Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-section">Section</Label>
+                <Input
+                  id="edit-section"
+                  value={editingClass.section}
+                  onChange={(e) => setEditingClass({ ...editingClass, section: e.target.value })}
+                  placeholder="e.g., A, B, C"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-room">Room Number (Optional)</Label>
+                <Input
+                  id="edit-room"
+                  value={editingClass.room || ""}
+                  onChange={(e) => setEditingClass({ ...editingClass, room: e.target.value })}
+                  placeholder="e.g., Room 101"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-academicYear">Academic Year</Label>
+                <Select
+                  value={editingClass.academicYear || ""}
+                  onValueChange={(val) => setEditingClass({ ...editingClass, academicYear: val })}
+                >
+                  <SelectTrigger id="edit-academicYear">
+                    <SelectValue placeholder="Select Academic Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2026-27">2026-27</SelectItem>
+                    <SelectItem value="2027-28">2027-28</SelectItem>
+                    <SelectItem value="2028-29">2028-29</SelectItem>
+                    <SelectItem value="2029-30">2029-30</SelectItem>
+                    <SelectItem value="2030-31">2030-31</SelectItem>
+                    <SelectItem value="2031-32">2031-32</SelectItem>
+                    <SelectItem value="2032-33">2032-33</SelectItem>
+                    <SelectItem value="2033-34">2033-34</SelectItem>
+                    <SelectItem value="2034-35">2034-35</SelectItem>
+                    <SelectItem value="2035-36">2035-36</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingClass(null)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateClass}>Save Changes</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: CONFIRM DELETE */}
+      <Dialog open={!!classToDelete} onOpenChange={(open) => !open && setClassToDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 font-bold">Delete Class</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this class? This action cannot be undone and will affect associated student and timetable records.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setClassToDelete(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  if (classToDelete) {
+                    executeDeleteClass(classToDelete);
+                  }
+                }}
+              >
+                Delete
+              </Button>
             </div>
           </div>
         </DialogContent>

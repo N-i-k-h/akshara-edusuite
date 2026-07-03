@@ -135,6 +135,7 @@ const studentSchema = new mongoose.Schema(
     fatherName: { type: String, trim: true, default: "" },
     motherName: { type: String, trim: true, default: "" },
     passingYear: { type: String, trim: true, default: "" },
+    academicYear: { type: String, trim: true, default: "" },
     customFields: {
       type: [
         {
@@ -210,8 +211,9 @@ const Staff = mongoose.model("Staff", staffSchema);
 const classSchema = new mongoose.Schema({
   grade: { type: String, required: true, trim: true },
   section: { type: String, required: true, trim: true },
-  room: { type: String, required: true, trim: true },
-  classTeacher: { type: String, required: true, trim: true },
+  room: { type: String, trim: true },
+  classTeacher: { type: String, trim: true },
+  academicYear: { type: String, trim: true },
   studentsCount: { type: Number, default: 0, min: 0 },
 });
 
@@ -930,6 +932,45 @@ app.post("/api/classes", async (req, res) => {
     res
       .status(400)
       .json({ message: "Error creating class", error: error.message });
+  }
+});
+
+app.put("/api/classes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid class ID" });
+    }
+    const updatedClass = await Class.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updatedClass) {
+      return res.status(404).json({ message: "Class not found" });
+    }
+    res.json(updatedClass);
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Error updating class", error: error.message });
+  }
+});
+
+app.delete("/api/classes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid class ID" });
+    }
+    const deletedClass = await Class.findByIdAndDelete(id);
+    if (!deletedClass) {
+      return res.status(404).json({ message: "Class not found" });
+    }
+    res.json({ message: "Class deleted successfully" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error deleting class", error: error.message });
   }
 });
 

@@ -30,7 +30,7 @@ const navigation = [
   { name: "Classes", href: "/classes", icon: GraduationCap },
 
 
-  { name: "Fee Receipt", href: "/fees-registration", icon: FileText },
+  { name: "Admission", href: "/fees-registration", icon: FileText },
   { name: "Promoted Fee", href: "/promoted-fees", icon: CreditCard },
   { name: "Fees Payment", href: "/fees", icon: CreditCard },
   { name: "Estimation", href: "/fees-estimation", icon: Calculator },
