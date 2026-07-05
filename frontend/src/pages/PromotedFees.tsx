@@ -93,15 +93,17 @@ const PromotedFees = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [studentsRes, classesRes, feesRes] = await Promise.all([
+        const [studentsRes, classesRes, feesRes, structuresRes] = await Promise.all([
           authFetch(`${API_BASE_URL}/students`),
           authFetch(`${API_BASE_URL}/classes`),
-          authFetch(`${API_BASE_URL}/fees`)
+          authFetch(`${API_BASE_URL}/fees`),
+          authFetch(`${API_BASE_URL}/fee-structures`)
         ]);
 
         let promotedStudentIds = new Set<string>();
+        let feesData: any[] = [];
         if (feesRes.ok) {
-          const feesData = await feesRes.json();
+          feesData = await feesRes.json();
           feesData.forEach((f: any) => {
             if (f.feeType === "Promoted Fee Payment" && f.studentId) {
               promotedStudentIds.add(f.studentId.toString());
@@ -109,11 +111,30 @@ const PromotedFees = () => {
           });
         }
 
+        let structuresData: any[] = [];
+        if (structuresRes.ok) {
+          structuresData = await structuresRes.json();
+        }
+
         if (studentsRes.ok) {
           const studentsData = await studentsRes.json();
           const activeStudents = studentsData.filter((s: any) => {
             const sid = (s._id || s.id || "").toString();
-            return s.status === "Active" && !promotedStudentIds.has(sid);
+            const isExcluded = promotedStudentIds.has(sid);
+            if (isExcluded || s.status !== "Active") return false;
+
+            // Check if student has a fee structure or payment for a different class/grade (indicating promotion)
+            const hasDifferentClassStructure = structuresData.some(
+              (fs: any) => String(fs.studentId) === sid && 
+                           (fs.grade || "").toLowerCase().trim() !== (s.class || "").toLowerCase().trim()
+            );
+
+            const hasDifferentClassFee = feesData.some(
+              (f: any) => String(f.studentId) === sid && 
+                          (f.grade || "").toLowerCase().trim() !== (s.class || "").toLowerCase().trim()
+            );
+
+            return hasDifferentClassStructure || hasDifferentClassFee;
           });
           setStudentsList(activeStudents);
         }
@@ -586,47 +607,29 @@ const PromotedFees = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Academic Year</Label>
-                <Select
-                  value={formData.academicYear}
-                  onValueChange={(val) => handleInputChange("academicYear", val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="max-h-60 overflow-y-auto">
-                    <SelectItem value="2025-26">2025-26</SelectItem>
-                    <SelectItem value="2026-27">2026-27</SelectItem>
-                    <SelectItem value="2027-28">2027-28</SelectItem>
-                    <SelectItem value="2028-29">2028-29</SelectItem>
-                    <SelectItem value="2029-30">2029-30</SelectItem>
-                    <SelectItem value="2030-31">2030-31</SelectItem>
-                    <SelectItem value="2031-32">2031-32</SelectItem>
-                    <SelectItem value="2032-33">2032-33</SelectItem>
-                    <SelectItem value="2033-34">2033-34</SelectItem>
-                    <SelectItem value="2034-35">2034-35</SelectItem>
-                    <SelectItem value="2035-36">2035-36</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Year (I / II)</Label>
-                <Select
-                  value={formData.yearPrefix}
-                  onValueChange={(val) => handleInputChange("yearPrefix", val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="I">I</SelectItem>
-                    <SelectItem value="II">II</SelectItem>
-                    <SelectItem value="I / II">I / II</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Academic Year</Label>
+              <Select
+                value={formData.academicYear}
+                onValueChange={(val) => handleInputChange("academicYear", val)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                  <SelectItem value="2025-26">2025-26</SelectItem>
+                  <SelectItem value="2026-27">2026-27</SelectItem>
+                  <SelectItem value="2027-28">2027-28</SelectItem>
+                  <SelectItem value="2028-29">2028-29</SelectItem>
+                  <SelectItem value="2029-30">2029-30</SelectItem>
+                  <SelectItem value="2030-31">2030-31</SelectItem>
+                  <SelectItem value="2031-32">2031-32</SelectItem>
+                  <SelectItem value="2032-33">2032-33</SelectItem>
+                  <SelectItem value="2033-34">2033-34</SelectItem>
+                  <SelectItem value="2034-35">2034-35</SelectItem>
+                  <SelectItem value="2035-36">2035-36</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

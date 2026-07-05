@@ -416,8 +416,14 @@ const seedAdmin = async () => {
 // Update student fee status
 const updateStudentFeeStatus = async (studentId) => {
   try {
-    // Find all fees for the student, sorted by date descending to get the most recent one
-    const latestFee = await Fee.findOne({ studentId }).sort({ date: -1 });
+    const student = await Student.findById(studentId);
+    if (!student) return;
+
+    // Find the latest fee record for the student's current class/grade
+    const latestFee = await Fee.findOne({ 
+      studentId, 
+      grade: student.class 
+    }).sort({ date: -1 });
     
     // If there's a record and its dueAmount is 0 or less, then it's paid
     const isPaid = latestFee && latestFee.dueAmount <= 0;
@@ -614,6 +620,7 @@ app.put("/api/students/bulk/promote", requireAdmin, async (req, res) => {
       updatePayload.status = status;
     } else if (targetClass) {
       updatePayload.class = targetClass;
+      updatePayload.feesPaid = false;
     } else {
       return res.status(400).json({ message: "Target class or status is required" });
     }
@@ -916,7 +923,32 @@ app.delete("/api/staff/:id", requireAdmin, async (req, res) => {
 app.get("/api/classes", async (req, res) => {
   try {
     const classes = await Class.find();
-    res.json(classes);
+    
+    // For each class, dynamically count the active students
+    const classesWithCounts = await Promise.all(
+      classes.map(async (cls) => {
+        // Construct the full class name format: "D.Pharm 1 - A" or "Grade 10 - A"
+        const classNameFull = cls.grade.startsWith("D.")
+          ? `${cls.grade} - ${cls.section}`
+          : `Grade ${cls.grade} - ${cls.section}`;
+
+        // Find how many active students belong to this class string
+        const count = await Student.countDocuments({
+          status: "Active",
+          $or: [
+            { class: classNameFull },
+            { class: cls.grade }
+          ]
+        });
+
+        // Convert Mongoose document to plain object and add/override studentsCount
+        const classObj = cls.toObject();
+        classObj.studentsCount = count;
+        return classObj;
+      })
+    );
+
+    res.json(classesWithCounts);
   } catch (error) {
     console.error("GET /api/classes error:", error);
     res.status(500).json({ message: "Error fetching classes" });

@@ -34,12 +34,6 @@ const navigation = [
   { name: "Promoted Fee", href: "/promoted-fees", icon: CreditCard },
   { name: "Fees Payment", href: "/fees", icon: CreditCard },
   { name: "Estimation", href: "/fees-estimation", icon: Calculator },
-  {
-    name: "Transfer Certificate",
-    href: "/transfer-certificate",
-    icon: FileText,
-  },
-  { name: "Study Certificate", href: "/study-certificate", icon: BookOpen },
   { name: "Expenditure", href: "/expenditure", icon: Wallet },
   { name: "Reports", href: "/reports", icon: BarChart },
 ];

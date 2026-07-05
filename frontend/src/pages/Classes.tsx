@@ -239,41 +239,42 @@ const Classes = () => {
     setIsLoadingStudents(true);
 
     try {
-      const response = await authFetch(`${API_BASE_URL}/students`);
-      if (response.ok) {
-        const allStudents = await response.json();
+      const [studentsRes, feesRes, structuresRes] = await Promise.all([
+        authFetch(`${API_BASE_URL}/students`),
+        authFetch(`${API_BASE_URL}/fees`),
+        authFetch(`${API_BASE_URL}/fee-structures`),
+      ]);
+
+      if (studentsRes.ok && feesRes.ok && structuresRes.ok) {
+        const allStudents = await studentsRes.json();
+        const feesData = await feesRes.json();
+        const structuresData = await structuresRes.json();
 
         // Filter students belonging to this class
-        // Match exact class string OR match grade if loose matching needed (but prefer exact)
         const filtered = allStudents.filter(
           (s: any) => s.class === classNameFull || s.class === cls.grade,
         );
 
-        // Fetch real attendance stats for each student
-        const studentsWithStats = await Promise.all(
-          filtered.map(async (student: any) => {
-            let attendancePercentage = 0; // Default
-            try {
-              const statsRes = await authFetch(
-                `${API_BASE_URL}/attendance/student/${student._id}`,
-              );
-              if (statsRes.ok) {
-                const stats = await statsRes.json();
-                attendancePercentage = stats.attendancePercentage || 0;
-              }
-            } catch (e) {
-              console.error(
-                `Error fetching stats for student ${student._id}`,
-                e,
-              );
-            }
+        const studentsWithStats = filtered.map((student: any) => {
+          const sid = (student._id || student.id || "").toString();
 
-            return {
-              ...student,
-              attendancePercentage,
-            };
-          }),
-        );
+          const hasDifferentClassStructure = structuresData.some(
+            (fs: any) => String(fs.studentId) === sid && 
+                         (fs.grade || "").toLowerCase().trim() !== (student.class || "").toLowerCase().trim()
+          );
+
+          const hasDifferentClassFee = feesData.some(
+            (f: any) => String(f.studentId) === sid && 
+                        (f.grade || "").toLowerCase().trim() !== (student.class || "").toLowerCase().trim()
+          );
+
+          const isPromoted = hasDifferentClassStructure || hasDifferentClassFee;
+
+          return {
+            ...student,
+            isPromoted,
+          };
+        });
 
         setSelectedClassStudents(studentsWithStats);
       }
@@ -585,7 +586,7 @@ const Classes = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Parent Name</TableHead>
                     <TableHead>Fees Status</TableHead>
-                    <TableHead>Attendance</TableHead>
+                    <TableHead>Promotion Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -609,22 +610,12 @@ const Classes = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`font-bold ${student.attendancePercentage < 75 ? "text-red-500" : "text-green-600"}`}
-                          >
-                            {student.attendancePercentage}%
-                          </span>
-                          {/* Simple Progress Bar Visual */}
-                          <div className="h-2 w-16 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full ${student.attendancePercentage < 75 ? "bg-red-500" : "bg-green-500"}`}
-                              style={{
-                                width: `${student.attendancePercentage}%`,
-                              }}
-                            ></div>
-                          </div>
-                        </div>
+                        <Badge
+                          variant={student.isPromoted ? "default" : "secondary"}
+                          className={student.isPromoted ? "bg-blue-100 text-blue-800 hover:bg-blue-100" : ""}
+                        >
+                          {student.isPromoted ? "Promoted" : "Not Promoted"}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}

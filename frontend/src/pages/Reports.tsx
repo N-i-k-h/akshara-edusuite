@@ -110,7 +110,8 @@ const Reports = () => {
       const totalFee = Number(struct.totalFee) || 0;
 
       const studentPayments = fees
-        .filter((f) => String(f.studentId) === String(studentId))
+        .filter((f) => String(f.studentId) === String(studentId) &&
+                       (!f.grade || !struct.grade || (f.grade || "").toLowerCase().trim() === (struct.grade || "").toLowerCase().trim()))
         .reduce((sum, f) => sum + (Number(f.amountPaid) || 0), 0);
 
       const due = totalFee - studentPayments;

@@ -121,8 +121,11 @@ const Fees = () => {
     studentId: string,
     currentEditId: string | null,
   ) => {
+    const student = students.find((s) => (s._id || s.id) === studentId);
+
     const structure = feeStructures.find(
-      (fs) => String(fs.studentId) === String(studentId),
+      (fs) => String(fs.studentId) === String(studentId) &&
+              (!student || (fs.grade || "").toLowerCase().trim() === (student.class || "").toLowerCase().trim()),
     );
     let totalFee = structure ? Number(structure.totalFee) : 0;
 
@@ -130,7 +133,8 @@ const Fees = () => {
       .filter(
         (f) =>
           String(f.studentId) === String(studentId) &&
-          (currentEditId ? String(f._id) !== String(currentEditId) : true),
+          (currentEditId ? String(f._id) !== String(currentEditId) : true) &&
+          (!student || (f.grade || "").toLowerCase().trim() === (student.class || "").toLowerCase().trim()),
       )
       .reduce((sum, f) => sum + (Number(f.amountPaid) || 0), 0);
 

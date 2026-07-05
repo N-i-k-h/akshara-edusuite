@@ -322,18 +322,25 @@ const Students = () => {
   });
 
   const getStudentFeeSummary = (studentId: string) => {
+      const student = students.find((s) => (s._id || s.id) === studentId);
+      if (!student) return { total: 0, paid: 0, due: 0 };
+
       const studentTrans = allFees
           .filter((f: any) => String(f.studentId) === String(studentId))
           .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
           
       if (studentTrans.length > 0) {
-          const latest = studentTrans[0];
-          const totalFee = Number(latest.totalFee) || (Number(latest.amountPaid) + Number(latest.dueAmount));
-          return {
-              total: totalFee,
-              paid: latest.amountPaid,
-              due: latest.dueAmount
-          };
+          const currentClassTrans = studentTrans.find(
+              (f: any) => (f.grade || "").toLowerCase().trim() === (student.class || "").toLowerCase().trim()
+          );
+          if (currentClassTrans) {
+              const totalFee = Number(currentClassTrans.totalFee) || (Number(currentClassTrans.amountPaid) + Number(currentClassTrans.dueAmount));
+              return {
+                  total: totalFee,
+                  paid: currentClassTrans.amountPaid,
+                  due: currentClassTrans.dueAmount
+              };
+          }
       }
       return { total: 0, paid: 0, due: 0 };
   };
@@ -520,7 +527,7 @@ const Students = () => {
         const studentId = promotingStudent._id || promotingStudent.id;
         const payload = isGraduation
           ? { status: "Graduated" }
-          : { class: promoteTarget };
+          : { class: promoteTarget, feesPaid: false };
 
         const response = await authFetch(`${API_BASE_URL}/students/${studentId}`, {
           method: "PUT",
@@ -2124,7 +2131,7 @@ const Students = () => {
                                   placeholder="Student Email"
                                 />
                              </div>
-                             <div className="space-y-1">
+                  <div className="space-y-1">
                                 <Label className="text-xs text-slate-500 font-medium">Home Address</Label>
                                 <Input
                                   value={selectedStudent.address || ""}
@@ -2133,32 +2140,32 @@ const Students = () => {
                                   placeholder="Home Address"
                                 />
                              </div>
-                          </CardContent>
+                           </CardContent>
                         </Card>
                      </div>
 
                      {/* Column 2: Fee Summary & Custom Fields */}
                      <div className="space-y-4 w-full">
-                       <Card className="border-emerald-100 shadow-sm overflow-hidden bg-white">
-                         <div className="bg-emerald-600 text-white p-3 flex items-center gap-2">
-                            <Wallet className="h-5 w-5" />
-                            <h3 className="font-bold">Fee Summary</h3>
-                         </div>
-                         <CardContent className="p-4 space-y-4 pt-4">
-                            <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
-                               <span className="text-sm text-slate-500 font-medium">Total Course Fee</span>
-                               <span className="font-bold text-slate-900">₹{Number(latestReceipt?.totalFee || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
-                               <span className="text-sm text-slate-500 font-medium">Total Paid Amount</span>
-                               <span className="font-bold text-emerald-600">₹{Number(latestReceipt?.amountPaid || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                               <span className="text-sm text-slate-500 font-medium">Balance Due</span>
-                               <span className="font-bold text-rose-600">₹{Number(latestReceipt?.dueAmount || 0).toLocaleString()}</span>
-                            </div>
-                         </CardContent>
-                       </Card>
+                        <Card className="border-emerald-100 shadow-sm overflow-hidden bg-white">
+                          <div className="bg-emerald-600 text-white p-3 flex items-center gap-2">
+                             <Wallet className="h-5 w-5" />
+                             <h3 className="font-bold">Fee Summary</h3>
+                          </div>
+                          <CardContent className="p-4 space-y-4 pt-4">
+                             <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
+                                <span className="text-sm text-slate-500 font-medium">Total Course Fee</span>
+                                <span className="font-bold text-slate-900">₹{getStudentFeeSummary(selectedStudent._id || selectedStudent.id).total.toLocaleString()}</span>
+                             </div>
+                             <div className="flex justify-between items-center border-b border-emerald-50 pb-2">
+                                <span className="text-sm text-slate-500 font-medium">Total Paid Amount</span>
+                                <span className="font-bold text-emerald-600">₹{getStudentFeeSummary(selectedStudent._id || selectedStudent.id).paid.toLocaleString()}</span>
+                             </div>
+                             <div className="flex justify-between items-center">
+                                <span className="text-sm text-slate-500 font-medium">Balance Due</span>
+                                <span className="font-bold text-rose-600">₹{getStudentFeeSummary(selectedStudent._id || selectedStudent.id).due.toLocaleString()}</span>
+                             </div>
+                          </CardContent>
+                        </Card>
 
                        <Card className="border-violet-100 shadow-sm overflow-hidden bg-white">
                          <div className="bg-violet-600 text-white p-3 flex items-center gap-2">
