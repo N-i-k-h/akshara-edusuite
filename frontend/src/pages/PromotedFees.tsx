@@ -327,10 +327,26 @@ const PromotedFees = () => {
         return;
       }
 
+      // 3. Update the Student record in the database with the new academicYear, class, and rollNo
+      const studentUpdateRes = await authFetch(`${API_BASE_URL}/students/${selectedStudent._id || selectedStudent.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          academicYear: formData.academicYear,
+          class: formData.class,
+          rollNo: formData.rollNo,
+        }),
+      });
+
+      if (!studentUpdateRes.ok) {
+        toast.error("Fee saved, but failed to update student academic year/class in database.");
+        return;
+      }
+
       toast.success(
         dueAmount === 0
-          ? "Promoted Fee and Full Payment registered successfully!"
-          : `Promoted Fee registered with ₹${dueAmount} dues.`
+          ? "Promoted Fee, Payment, and Student Academic Year updated successfully!"
+          : `Promoted Fee registered with ₹${dueAmount} dues (Student Academic Year updated).`
       );
 
       // Download PDF receipt
