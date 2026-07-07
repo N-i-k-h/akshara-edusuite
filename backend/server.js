@@ -210,7 +210,7 @@ const Staff = mongoose.model("Staff", staffSchema);
 
 const classSchema = new mongoose.Schema({
   grade: { type: String, required: true, trim: true },
-  section: { type: String, required: true, trim: true },
+  section: { type: String, trim: true },
   room: { type: String, trim: true },
   classTeacher: { type: String, trim: true },
   academicYear: { type: String, trim: true },
@@ -408,8 +408,52 @@ const seedAdmin = async () => {
       await User.findByIdAndDelete(oldAdmin._id);
       console.log(`Removed old admin account: ${oldAdmin.email}`);
     }
+
+    // Ensure only 2 classes exist: D.Pharm 1 and D.Pharm 2 (without sections)
+    const classes = await Class.find();
+    const hasDPharm1 = classes.some(c => c.grade === "D.Pharm 1" && (!c.section || c.section === ""));
+    const hasDPharm2 = classes.some(c => c.grade === "D.Pharm 2" && (!c.section || c.section === ""));
+    
+    if (classes.length !== 2 || !hasDPharm1 || !hasDPharm2) {
+      console.log("Re-seeding classes to ensure only D.Pharm 1 and D.Pharm 2 exist (no section)...");
+      await Class.deleteMany({});
+      await Class.insertMany([
+        { grade: "D.Pharm 1", section: "", room: "101", academicYear: "2026-27" },
+        { grade: "D.Pharm 2", section: "", room: "201", academicYear: "2027-28" }
+      ]);
+      console.log("Default classes seeded successfully");
+    }
+
+    // Database Migration for Classes (remove section "- A" format)
+    console.log("Running class format migration for student, fee, timetable, attendance, exam records...");
+    
+    // Students
+    await Student.updateMany({ class: "D.Pharm 1 - A" }, { $set: { class: "D.Pharm 1" } });
+    await Student.updateMany({ class: "D.Pharm 2 - A" }, { $set: { class: "D.Pharm 2" } });
+    
+    // Fees
+    await Fee.updateMany({ grade: "D.Pharm 1 - A" }, { $set: { grade: "D.Pharm 1" } });
+    await Fee.updateMany({ grade: "D.Pharm 2 - A" }, { $set: { grade: "D.Pharm 2" } });
+    
+    // FeeStructures
+    await FeeStructure.updateMany({ grade: "D.Pharm 1 - A" }, { $set: { grade: "D.Pharm 1" } });
+    await FeeStructure.updateMany({ grade: "D.Pharm 2 - A" }, { $set: { grade: "D.Pharm 2" } });
+    
+    // Timetables
+    await Timetable.updateMany({ className: "D.Pharm 1 - A" }, { $set: { className: "D.Pharm 1" } });
+    await Timetable.updateMany({ className: "D.Pharm 2 - A" }, { $set: { className: "D.Pharm 2" } });
+    
+    // Attendance
+    await Attendance.updateMany({ className: "D.Pharm 1 - A" }, { $set: { className: "D.Pharm 1" } });
+    await Attendance.updateMany({ className: "D.Pharm 2 - A" }, { $set: { className: "D.Pharm 2" } });
+    
+    // Exams
+    await Exam.updateMany({ className: "D.Pharm 1 - A" }, { $set: { className: "D.Pharm 1" } });
+    await Exam.updateMany({ className: "D.Pharm 2 - A" }, { $set: { className: "D.Pharm 2" } });
+    
+    console.log("Migration complete!");
   } catch (error) {
-    console.error("Error seeding admin:", error.message);
+    console.error("Error seeding admin, classes, or running migration:", error.message);
   }
 };
 
@@ -929,8 +973,8 @@ app.get("/api/classes", async (req, res) => {
       classes.map(async (cls) => {
         // Construct the full class name format: "D.Pharm 1 - A" or "Grade 10 - A"
         const classNameFull = cls.grade.startsWith("D.")
-          ? `${cls.grade} - ${cls.section}`
-          : `Grade ${cls.grade} - ${cls.section}`;
+          ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+          : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
 
         // Find how many active students belong to this class string
         const count = await Student.countDocuments({

@@ -427,8 +427,8 @@ const Fees = () => {
                     {classesList.length > 0 ? (
                       classesList.map((cls: any) => {
                         const className = cls.grade.startsWith("D.")
-                          ? `${cls.grade} - ${cls.section}`
-                          : `Grade ${cls.grade} - ${cls.section}`;
+                          ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+                          : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
                         return (
                           <SelectItem key={cls._id} value={className}>
                             {className}

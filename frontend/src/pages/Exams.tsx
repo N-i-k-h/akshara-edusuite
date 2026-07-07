@@ -700,14 +700,17 @@ const Exams = () => {
                       <SelectValue placeholder="Select Class" />
                     </SelectTrigger>
                     <SelectContent>
-                      {classesList.map((cls) => (
-                        <SelectItem
-                          key={cls._id}
-                          value={`${cls.grade} ${cls.section}`.trim()}
-                        >
-                          {cls.grade} {cls.section}
-                        </SelectItem>
-                      ))}
+                      {classesList.map((cls) => {
+                        const className = cls.section ? `${cls.grade} ${cls.section}` : cls.grade;
+                        return (
+                          <SelectItem
+                            key={cls._id}
+                            value={className.trim()}
+                          >
+                            {className}
+                          </SelectItem>
+                        );
+                      })}
                       <SelectItem value="dpharma 1">dpharma 1</SelectItem>
                       <SelectItem value="dpharma 2">dpharma 2</SelectItem>
                     </SelectContent>

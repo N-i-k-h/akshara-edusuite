@@ -32,7 +32,6 @@ const navigation = [
 
   { name: "Admission", href: "/fees-registration", icon: FileText },
   { name: "Promoted Fee", href: "/promoted-fees", icon: CreditCard },
-  { name: "Fees Payment", href: "/fees", icon: CreditCard },
   { name: "Estimation", href: "/fees-estimation", icon: Calculator },
   { name: "Expenditure", href: "/expenditure", icon: Wallet },
   { name: "Reports", href: "/reports", icon: BarChart },

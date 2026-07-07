@@ -231,8 +231,8 @@ const Classes = () => {
   const handleViewStudents = async (cls: ClassData) => {
     // Construct class name format used in DB: "Grade X - Section" or "D.Pharm 1 - A"
     const classNameFull = cls.grade.startsWith("D.")
-      ? `${cls.grade} - ${cls.section}`
-      : `Grade ${cls.grade} - ${cls.section}`;
+      ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+      : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
 
     setSelectedClassForStudents(classNameFull);
     setIsViewStudentsOpen(true);
@@ -290,8 +290,8 @@ const Classes = () => {
   const handleViewTimetable = async (cls: ClassData) => {
     // Construct className to match how Timetable page saves it: "D.Pharm 1 - A" or "Grade 10 - A"
     const classNameStr = cls.grade.startsWith("D.")
-      ? `${cls.grade} - ${cls.section}`
-      : `Grade ${cls.grade} - ${cls.section}`;
+      ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+      : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
 
     setSelectedClassForTimetable(classNameStr);
     setIsViewTimetableOpen(true);
@@ -380,87 +380,6 @@ const Classes = () => {
           <h1 className="text-2xl font-bold text-foreground">Classes</h1>
           <p className="text-muted-foreground">Manage classes and sections</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Class
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            {/* ... (Keep existing Add Class Dialog Content) ... */}
-            <DialogHeader>
-              <DialogTitle>Add New Class</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="grade">Grade</Label>
-                <Select
-                  value={newClass.grade}
-                  onValueChange={(val) => handleInputChange("grade", val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="D.Pharm 1">D.Pharm 1st Year</SelectItem>
-                    <SelectItem value="D.Pharm 2">D.Pharm 2nd Year</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="section">Section</Label>
-                <Input
-                  id="section"
-                  value={newClass.section}
-                  onChange={(e) => handleInputChange("section", e.target.value)}
-                  placeholder="e.g., A, B, C"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="room">Room Number (Optional)</Label>
-                <Input
-                  id="room"
-                  value={newClass.room}
-                  onChange={(e) => handleInputChange("room", e.target.value)}
-                  placeholder="e.g., Room 101"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="academicYear">Academic Year</Label>
-                <Select
-                  value={newClass.academicYear}
-                  onValueChange={(val) => handleInputChange("academicYear", val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Academic Year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2026-27">2026-27</SelectItem>
-                    <SelectItem value="2027-28">2027-28</SelectItem>
-                    <SelectItem value="2028-29">2028-29</SelectItem>
-                    <SelectItem value="2029-30">2029-30</SelectItem>
-                    <SelectItem value="2030-31">2030-31</SelectItem>
-                    <SelectItem value="2031-32">2031-32</SelectItem>
-                    <SelectItem value="2032-33">2032-33</SelectItem>
-                    <SelectItem value="2033-34">2033-34</SelectItem>
-                    <SelectItem value="2034-35">2034-35</SelectItem>
-                    <SelectItem value="2035-36">2035-36</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveClass}>Save Class</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Class Cards Grid */}
@@ -484,8 +403,8 @@ const Classes = () => {
                   <span className="text-lg">
                     {cls.grade.startsWith("D.")
                       ? cls.grade
-                      : `Grade ${cls.grade}`}{" "}
-                    - {cls.section}
+                      : `Grade ${cls.grade}`}
+                    {cls.section ? ` - ${cls.section}` : ""}
                   </span>
                   <div className="flex items-center gap-2">
                     {cls.room && (
@@ -503,17 +422,6 @@ const Classes = () => {
                       }}
                     >
                       <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClass(cls._id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardTitle>

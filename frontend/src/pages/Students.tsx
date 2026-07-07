@@ -289,20 +289,7 @@ const Students = () => {
   };
 
   const getStudentAcademicYear = (student: any) => {
-    if (student.academicYear) return student.academicYear;
-    
-    // Fallback: Find the class in classesList where full name matches student.class
-    const matchingClass = classesList.find((cls: any) => {
-      const className = cls.grade.startsWith("D.")
-        ? `${cls.grade} - ${cls.section}`
-        : `Grade ${cls.grade} - ${cls.section}`;
-      return className === student.class;
-    });
-
-    if (matchingClass && matchingClass.academicYear) {
-      return matchingClass.academicYear;
-    }
-    return "";
+    return student.academicYear || "";
   };
 
   const filteredStudents = students.filter((student) => {
@@ -314,7 +301,7 @@ const Students = () => {
     const matchesClass =
       classFilter === "all" || student.class === classFilter;
       
-    const studentYear = student.academicYear || getStudentAcademicYear(student);
+    const studentYear = student.academicYear || "";
     const matchesAcademicYear =
       academicYearFilter === "all" || studentYear === academicYearFilter;
       
@@ -641,7 +628,10 @@ const Students = () => {
         toast.success("Receipt changes and payment saved successfully!");
         setAmountPayingNow(0);
         fetchStudents();
-        handleViewProfile(selectedStudent);
+        await handleViewProfile(selectedStudent);
+        setTimeout(() => {
+          downloadLatestReceiptPDF();
+        }, 300);
       } else {
         toast.error("Failed to save receipt changes.");
       }
@@ -731,7 +721,10 @@ const Students = () => {
         toast.success("Promoted receipt changes and payment saved successfully!");
         setAmountPayingNowPromoted(0);
         fetchStudents();
-        handleViewProfile(selectedStudent);
+        await handleViewProfile(selectedStudent);
+        setTimeout(() => {
+          downloadPromotedReceiptPDF();
+        }, 300);
       } else {
         toast.error("Failed to save promoted receipt changes.");
       }
@@ -775,6 +768,44 @@ const Students = () => {
           console.error("Error generating PDF:", error);
           toast.error("Failed to generate PDF");
           setIsGeneratingPromotedPDF(false);
+        });
+    }, 150);
+  };
+
+  const downloadLatestReceiptPDF = () => {
+    setIsGeneratingReceiptPDF(true);
+    const element = document.getElementById("student-receipt-content");
+    if (!element) return;
+
+    const opt = {
+      margin: 0,
+      filename: `${selectedStudent?.name}_Payment_Receipt.pdf`,
+      image: { type: "jpeg" as const, quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowWidth: 794 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+    };
+
+    setTimeout(() => {
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .outputPdf("blob")
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${selectedStudent?.name}_Payment_Receipt.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          toast.success("Receipt downloaded successfully!");
+          setIsGeneratingReceiptPDF(false);
+        })
+        .catch((error) => {
+          console.error("Error generating PDF:", error);
+          toast.error("Failed to generate PDF");
+          setIsGeneratingReceiptPDF(false);
         });
     }, 150);
   };
@@ -849,6 +880,89 @@ const Students = () => {
     } catch (error) {
       console.error("Error fetching latest receipt:", error);
       toast.error("Failed to load latest fee receipt");
+    }
+  };
+
+  const handlePaymentClick = async (student: any) => {
+    setSelectedStudent(student);
+    setIsProfileOpen(true);
+    setLatestReceipt(null);
+    setPromotedReceipt(null);
+    
+    // We will determine which tab to focus based on promotion and presence of promoted fee
+    let targetTab = "receipt"; 
+
+    try {
+      const [feesRes, structRes] = await Promise.all([
+        authFetch(`${API_BASE_URL}/fees`),
+        authFetch(`${API_BASE_URL}/fee-structures/student/${student._id || student.id}`)
+      ]);
+
+      if (feesRes.ok) {
+        const feesData = await feesRes.json();
+        const studentTrans = feesData
+          .filter((f: any) => String(f.studentId) === String(student._id || student.id))
+          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        if (studentTrans.length > 0) {
+          // 1. Find admission transaction
+          const admissionTrans = studentTrans.find((f: any) => f.feeType === "Fee Receipt Payment" || f.feeType === "Fee Receipt");
+          const finalAdmissionTrans = admissionTrans || studentTrans.find((f: any) => f.feeType !== "Promoted Fee Payment");
+
+          if (finalAdmissionTrans) {
+            let feeItems = finalAdmissionTrans.feeItems || [];
+            if (feeItems.length === 0 && structRes.ok) {
+              const structData = await structRes.json();
+              if (structData && structData.feeItems) {
+                feeItems = structData.feeItems;
+              }
+            }
+            if (feeItems.length === 0) {
+              feeItems = institutionalItems.map((item, idx) => 
+                idx === 13 ? { ...item, value: Number(finalAdmissionTrans.amountPaid) || 0 } : item
+              );
+            }
+            const totalCalculated = Number(finalAdmissionTrans.totalFee) || (Number(finalAdmissionTrans.amountPaid) + Number(finalAdmissionTrans.dueAmount));
+            
+            setLatestReceipt({
+              ...finalAdmissionTrans,
+              feeItems,
+              totalFee: totalCalculated,
+              dateStr: new Date(finalAdmissionTrans.date).toLocaleDateString("en-GB")
+            });
+          }
+
+          // 2. Find promoted transaction
+          const promotedTrans = studentTrans.find((f: any) => f.feeType === "Promoted Fee Payment");
+          if (promotedTrans) {
+            let feeItems = promotedTrans.feeItems || [];
+            if (feeItems.length === 0) {
+              feeItems = institutionalItems.map((item, idx) => 
+                idx === 13 ? { ...item, value: Number(promotedTrans.amountPaid) || 0 } : item
+              );
+            }
+            const totalCalculated = Number(promotedTrans.totalFee) || (Number(promotedTrans.amountPaid) + Number(promotedTrans.dueAmount));
+            
+            setPromotedReceipt({
+              ...promotedTrans,
+              feeItems,
+              totalFee: totalCalculated,
+              dateStr: new Date(promotedTrans.date).toLocaleDateString("en-GB")
+            });
+
+            // If student is promoted (e.g. class is D.Pharm 2) and promoted fee is added (promotedTrans exists)
+            const isStudentPromoted = student.class === "D.Pharm 2";
+            if (isStudentPromoted) {
+              targetTab = "promoted-receipt";
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching latest receipt:", error);
+      toast.error("Failed to load latest fee receipt");
+    } finally {
+      setActiveProfileTab(targetTab);
     }
   };
 
@@ -1037,8 +1151,8 @@ const Students = () => {
                       {classesList.length > 0 ? (
                         classesList.map((cls: any) => {
                           const className = cls.grade.startsWith("D.")
-                            ? `${cls.grade} - ${cls.section}`
-                            : `Grade ${cls.grade} - ${cls.section}`;
+                            ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+                            : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
                           return (
                             <SelectItem key={cls._id} value={className}>
                               {className}
@@ -1278,6 +1392,15 @@ const Students = () => {
                              <span className="font-semibold">Remaining Due:</span>
                              <span className="font-bold">₹{Math.max(0, calculateReceiptTotal() - (Number(latestReceipt.amountPaid || 0) + amountPayingNow)).toLocaleString()}</span>
                            </div>
+                         </div>
+
+                         <div className="pt-2 flex flex-col gap-2">
+                           <Button onClick={handleSaveReceiptChanges} className="w-full bg-blue-900 text-white font-bold h-10 uppercase text-xs tracking-wider">
+                              <Save className="h-4 w-4 mr-2" /> Save & Pay
+                           </Button>
+                           <Button variant="outline" onClick={downloadLatestReceiptPDF} className="w-full font-bold h-10 uppercase text-xs tracking-wider border-blue-900 text-blue-900">
+                              <Download className="h-4 w-4 mr-2" /> Download PDF
+                           </Button>
                          </div>
                        </CardContent>
                      </Card>
@@ -2288,46 +2411,7 @@ const Students = () => {
             <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
               Close
             </Button>
-            {latestReceipt && activeProfileTab === "receipt" && (
-              <>
-                <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  onClick={handleSaveReceiptChanges}
-                >
-                  Save Changes
-                </Button>
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => {
-                    const el = document.getElementById("student-receipt-content");
-                    if (el) {
-                      setIsGeneratingReceiptPDF(true);
-                      setTimeout(() => {
-                        html2pdf()
-                          .set({
-                            margin: 0,
-                            filename: `${selectedStudent.name}_Payment_Receipt.pdf`,
-                            image: { type: "jpeg", quality: 1 },
-                            html2canvas: { scale: 2 },
-                            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                          })
-                          .from(el)
-                          .save()
-                          .then(() => {
-                            setIsGeneratingReceiptPDF(false);
-                          })
-                          .catch(() => {
-                            setIsGeneratingReceiptPDF(false);
-                          });
-                      }, 150);
-                    }
-                  }}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PDF Receipt
-                </Button>
-              </>
-            )}
+
           </div>
         </DialogContent>
       </Dialog>
@@ -2373,8 +2457,8 @@ const Students = () => {
                   <SelectContent>
                     {classesList.map((cls: any) => {
                       const className = cls.grade.startsWith("D.")
-                        ? `${cls.grade} - ${cls.section}`
-                        : `Grade ${cls.grade} - ${cls.section}`;
+                        ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+                        : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
                       return (
                         <SelectItem key={cls._id} value={className}>
                           {className} (Promote)
@@ -2422,8 +2506,8 @@ const Students = () => {
                   <SelectContent>
                     {classesList.map((cls: any) => {
                       const className = cls.grade.startsWith("D.")
-                        ? `${cls.grade} - ${cls.section}`
-                        : `Grade ${cls.grade} - ${cls.section}`;
+                        ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+                        : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
                       return (
                         <SelectItem key={cls._id} value={className}>
                           {className} (Promote All)
@@ -2473,8 +2557,8 @@ const Students = () => {
             <SelectItem value="all">All Classes</SelectItem>
             {classesList.map((cls: any) => {
               const className = cls.grade.startsWith("D.")
-                ? `${cls.grade} - ${cls.section}`
-                : `Grade ${cls.grade} - ${cls.section}`;
+                ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+                : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
               return (
                 <SelectItem key={cls._id} value={className}>
                   {className}
@@ -2656,6 +2740,12 @@ const Students = () => {
                         >
                           <GraduationCap className="mr-2 h-4 w-4" />
                           Promote / Graduate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handlePaymentClick(student)}
+                        >
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Payment
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"

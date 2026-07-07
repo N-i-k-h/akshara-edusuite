@@ -103,7 +103,7 @@ const Timetable = () => {
         setTeachers(staffData);
 
         if (classesData.length > 0 && !selectedClass) {
-          const firstName = `${classesData[0].grade} - ${classesData[0].section}`;
+          const firstName = classesData[0].section ? `${classesData[0].grade} - ${classesData[0].section}` : classesData[0].grade;
           setSelectedClass(firstName);
         }
       }
@@ -169,7 +169,7 @@ const Timetable = () => {
         setNewClass({ grade: "", section: "", room: "", classTeacher: "" });
         await fetchData(); // Refresh classes list
         // Select the newly added class
-        setSelectedClass(`${newClass.grade} - ${newClass.section}`);
+        setSelectedClass(newClass.section ? `${newClass.grade} - ${newClass.section}` : newClass.grade);
       } else {
         toast.error("Failed to add class");
       }
@@ -222,9 +222,8 @@ const Timetable = () => {
 
   // Helper to get formatted class name
   const getClassName = (cls: ClassData) => {
-    // Handle "Grade 9" vs "D.Pharm 1" logic if needed from previous step, but simple concatenation is fine usually
-    if (cls.grade.startsWith("D.")) return `${cls.grade} - ${cls.section}`;
-    return `Grade ${cls.grade} - ${cls.section}`;
+    if (cls.grade.startsWith("D.")) return cls.section ? `${cls.grade} - ${cls.section}` : cls.grade;
+    return cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`;
   };
 
   return (

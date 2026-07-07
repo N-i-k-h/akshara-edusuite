@@ -432,6 +432,30 @@ const FeesRegistration = () => {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label>Class / Course</Label>
+              <Select
+                value={formData.class}
+                onValueChange={(val) => handleInputChange("class", val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classesList.map((cls: any) => {
+                    const className = cls.grade.startsWith("D.")
+                      ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+                      : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
+                    return (
+                      <SelectItem key={cls._id || className} value={className}>
+                        {className}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Roll No.</Label>
@@ -475,38 +499,7 @@ const FeesRegistration = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Class / Course</Label>
-              <Select
-                value={formData.class}
-                onValueChange={(val) => handleInputChange("class", val)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classesList.map((cls: any) => {
-                    const className = cls.grade.startsWith("D.")
-                      ? `${cls.grade} - ${cls.section}`
-                      : `Grade ${cls.grade} - ${cls.section}`;
-                    return (
-                      <SelectItem key={cls._id || className} value={className}>
-                        {className}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div className="space-y-2">
-              <Label>Course Name</Label>
-              <Input
-                value={formData.course}
-                onChange={(e) => handleInputChange("course", e.target.value)}
-                placeholder="e.g. D. Pharma"
-              />
-            </div>
 
             <div className="grid grid-cols-2 gap-4 pt-2 border-t border-dotted">
               <div className="space-y-2">

@@ -152,20 +152,7 @@ const PromotedFees = () => {
   }, []);
 
   const getStudentAcademicYear = (student: any) => {
-    if (student.academicYear) return student.academicYear;
-    
-    // Fallback: Find the class in classesList where full name matches student.class
-    const matchingClass = classesList.find((cls: any) => {
-      const className = cls.grade.startsWith("D.")
-        ? `${cls.grade} - ${cls.section}`
-        : `Grade ${cls.grade} - ${cls.section}`;
-      return className === student.class;
-    });
-
-    if (matchingClass && matchingClass.academicYear) {
-      return matchingClass.academicYear;
-    }
-    return "";
+    return student.academicYear || "";
   };
 
   // Sync filtered students when search query, class filter, or academic year filter changes
@@ -178,7 +165,7 @@ const PromotedFees = () => {
       const matchesClass =
         classFilter === "all" || s.class === classFilter;
       
-      const studentYear = s.academicYear || getStudentAcademicYear(s);
+      const studentYear = s.academicYear || "";
       const matchesAcademicYear =
         academicYearFilter === "all" || studentYear === academicYearFilter;
         
@@ -482,8 +469,8 @@ const PromotedFees = () => {
                   <SelectItem value="all">All Classes</SelectItem>
                   {classesList.map((cls: any) => {
                     const className = cls.grade.startsWith("D.")
-                      ? `${cls.grade} - ${cls.section}`
-                      : `Grade ${cls.grade} - ${cls.section}`;
+                      ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
+                      : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
                     return (
                       <SelectItem key={cls._id || className} value={className}>
                         {className}
@@ -500,7 +487,7 @@ const PromotedFees = () => {
               <Select value={academicYearFilter} onValueChange={(val) => {
                 setAcademicYearFilter(val);
                 if (selectedStudent && val !== "all") {
-                  const studentYear = selectedStudent.academicYear || getStudentAcademicYear(selectedStudent);
+                  const studentYear = selectedStudent.academicYear || "";
                   if (studentYear !== val) {
                     setSelectedStudent(null);
                     setSearchQuery("");
@@ -632,6 +619,17 @@ const PromotedFees = () => {
               </Select>
             </div>
 
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label>Class / Course</Label>
+                <Input
+                  value={formData.class}
+                  onChange={(e) => handleInputChange("class", e.target.value)}
+                  disabled
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Roll No.</Label>
@@ -647,24 +645,6 @@ const PromotedFees = () => {
                   value={formData.admissionNumber}
                   onChange={(e) => handleInputChange("admissionNumber", e.target.value)}
                   disabled
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Class / Course</Label>
-                <Input
-                  value={formData.class}
-                  onChange={(e) => handleInputChange("class", e.target.value)}
-                  disabled
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Course Name</Label>
-                <Input
-                  value={formData.course}
-                  onChange={(e) => handleInputChange("course", e.target.value)}
                 />
               </div>
             </div>
