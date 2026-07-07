@@ -27,7 +27,6 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Students", href: "/students", icon: Users },
   { name: "Staff & HR", href: "/staff", icon: UserCog },
-  { name: "Classes", href: "/classes", icon: GraduationCap },
 
 
   { name: "Admission", href: "/fees-registration", icon: FileText },

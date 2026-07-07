@@ -144,3 +144,14 @@ All colors MUST be HSL.
     print-color-adjust: exact !important;
   }
 }
+
+/* Disable spin buttons (spinners) for number inputs */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}

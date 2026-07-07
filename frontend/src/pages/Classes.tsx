@@ -230,9 +230,10 @@ const Classes = () => {
   // --- View Students Logic ---
   const handleViewStudents = async (cls: ClassData) => {
     // Construct class name format used in DB: "Grade X - Section" or "D.Pharm 1 - A"
+    const hasSec = cls.section && cls.section !== "." && cls.section !== "-";
     const classNameFull = cls.grade.startsWith("D.")
-      ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
-      : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
+      ? (hasSec ? `${cls.grade} - ${cls.section}` : cls.grade)
+      : (hasSec ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
 
     setSelectedClassForStudents(classNameFull);
     setIsViewStudentsOpen(true);
@@ -289,9 +290,10 @@ const Classes = () => {
   // --- View Timetable Logic ---
   const handleViewTimetable = async (cls: ClassData) => {
     // Construct className to match how Timetable page saves it: "D.Pharm 1 - A" or "Grade 10 - A"
+    const hasSec = cls.section && cls.section !== "." && cls.section !== "-";
     const classNameStr = cls.grade.startsWith("D.")
-      ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
-      : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
+      ? (hasSec ? `${cls.grade} - ${cls.section}` : cls.grade)
+      : (hasSec ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
 
     setSelectedClassForTimetable(classNameStr);
     setIsViewTimetableOpen(true);
@@ -404,7 +406,7 @@ const Classes = () => {
                     {cls.grade.startsWith("D.")
                       ? cls.grade
                       : `Grade ${cls.grade}`}
-                    {cls.section ? ` - ${cls.section}` : ""}
+                    {cls.section && cls.section !== "." && cls.section !== "-" ? ` - ${cls.section}` : ""}
                   </span>
                   <div className="flex items-center gap-2">
                     {cls.room && (
@@ -682,15 +684,7 @@ const Classes = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-section">Section</Label>
-                <Input
-                  id="edit-section"
-                  value={editingClass.section}
-                  onChange={(e) => setEditingClass({ ...editingClass, section: e.target.value })}
-                  placeholder="e.g., A, B, C"
-                />
-              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="edit-room">Room Number (Optional)</Label>
                 <Input

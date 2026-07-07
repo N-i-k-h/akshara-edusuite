@@ -2421,7 +2421,7 @@ const Students = () => {
         <DialogContent className="max-w-md bg-white p-6 rounded-lg shadow-xl">
           <DialogHeader className="border-b pb-3 mb-4">
             <DialogTitle className="text-xl font-bold text-blue-900 flex items-center gap-2">
-              <User className="h-5 w-5" /> Promote / Graduate Student
+              <User className="h-5 w-5" /> {promotingStudent?.class === "D.Pharm 2" ? "Graduate Student" : "Promote Student"}
             </DialogTitle>
           </DialogHeader>
 
@@ -2447,29 +2447,14 @@ const Students = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="promoteTarget" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                   Target Destination / Action
                 </Label>
-                <Select value={promoteTarget} onValueChange={setPromoteTarget}>
-                  <SelectTrigger id="promoteTarget" className="w-full">
-                    <SelectValue placeholder="Select class or graduate option" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classesList.map((cls: any) => {
-                      const className = cls.grade.startsWith("D.")
-                        ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
-                        : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
-                      return (
-                        <SelectItem key={cls._id} value={className}>
-                          {className} (Promote)
-                        </SelectItem>
-                      );
-                    })}
-                    <SelectItem value="Graduated" className="text-emerald-700 font-bold hover:bg-emerald-50">
-                      ★ Pass Out (Graduate Student)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 flex items-center justify-between">
+                  <span>
+                    {promoteTarget === "Graduated" ? "★ Pass Out (Graduate Student)" : `Promote to ${promoteTarget}`}
+                  </span>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t mt-6">
@@ -2496,29 +2481,14 @@ const Students = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="promoteTargetBulk" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                   Target Destination / Action for all selected
                 </Label>
-                <Select value={promoteTarget} onValueChange={setPromoteTarget}>
-                  <SelectTrigger id="promoteTargetBulk" className="w-full">
-                    <SelectValue placeholder="Select class or graduate option" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classesList.map((cls: any) => {
-                      const className = cls.grade.startsWith("D.")
-                        ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
-                        : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
-                      return (
-                        <SelectItem key={cls._id} value={className}>
-                          {className} (Promote All)
-                        </SelectItem>
-                      );
-                    })}
-                    <SelectItem value="Graduated" className="text-emerald-700 font-bold hover:bg-emerald-50">
-                      ★ Pass Out (Graduate All)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 flex items-center justify-between">
+                  <span>
+                    {promoteTarget === "Graduated" ? "★ Pass Out (Graduate All)" : `Promote All to ${promoteTarget}`}
+                  </span>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t mt-6">
@@ -2613,8 +2583,34 @@ const Students = () => {
             <Button
               size="sm"
               onClick={() => {
+                const selectedStudents = students.filter((s: any) =>
+                  selectedStudentIds.includes(s._id || s.id)
+                );
+
+                const dpharm1Students = selectedStudents.filter((s: any) => s.class === "D.Pharm 1");
+                const dpharm2Students = selectedStudents.filter((s: any) => s.class === "D.Pharm 2");
+                const graduatedStudents = selectedStudents.filter((s: any) => s.class === "Graduated" || s.status === "Graduated");
+
+                // Check for mix of classes
+                if (dpharm1Students.length > 0 && dpharm2Students.length > 0) {
+                  // If we have a mix, identify which is the primary action and alert the discrepancy
+                  if (dpharm1Students.length >= dpharm2Students.length) {
+                    toast.error(`Cannot perform bulk action: ${dpharm2Students.length} student(s) are already promoted (D.Pharm 2). Please select only D.Pharm 1 students.`);
+                  } else {
+                    toast.error(`Cannot perform bulk action: ${dpharm1Students.length} student(s) are not yet promoted (D.Pharm 1). Please select only D.Pharm 2 students.`);
+                  }
+                  return;
+                }
+
+                if (graduatedStudents.length > 0) {
+                  toast.error(`Cannot perform bulk action: ${graduatedStudents.length} student(s) are already graduated.`);
+                  return;
+                }
+
                 setPromotingStudent(null);
-                setPromoteTarget("");
+                const firstStudent = selectedStudents[0];
+                const target = firstStudent && firstStudent.class === "D.Pharm 2" ? "Graduated" : "D.Pharm 2";
+                setPromoteTarget(target);
                 setIsPromoteDialogOpen(true);
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-8 text-xs flex items-center gap-1.5"
@@ -2734,12 +2730,13 @@ const Students = () => {
                         <DropdownMenuItem
                           onClick={() => {
                             setPromotingStudent(student);
-                            setPromoteTarget(student.class || "");
+                            const defaultTarget = student.class === "D.Pharm 2" ? "Graduated" : "D.Pharm 2";
+                            setPromoteTarget(defaultTarget);
                             setIsPromoteDialogOpen(true);
                           }}
                         >
                           <GraduationCap className="mr-2 h-4 w-4" />
-                          Promote / Graduate
+                          {student.class === "D.Pharm 2" ? "Graduate" : "Promote"}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handlePaymentClick(student)}

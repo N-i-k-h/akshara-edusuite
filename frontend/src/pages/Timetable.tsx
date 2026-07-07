@@ -148,7 +148,6 @@ const Timetable = () => {
   const handleSaveClass = async () => {
     if (
       !newClass.grade ||
-      !newClass.section ||
       !newClass.room ||
       !newClass.classTeacher
     ) {
@@ -273,17 +272,7 @@ const Timetable = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="section">Section</Label>
-                  <Input
-                    id="section"
-                    value={newClass.section}
-                    onChange={(e) =>
-                      handleClassInputChange("section", e.target.value)
-                    }
-                    placeholder="e.g., A, B, C"
-                  />
-                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="room">Room Number</Label>
                   <Input

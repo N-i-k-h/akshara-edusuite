@@ -410,6 +410,9 @@ const seedAdmin = async () => {
     }
 
     // Ensure only 2 classes exist: D.Pharm 1 and D.Pharm 2 (without sections)
+    // Clean up class sections that are "." or "-" in DB first
+    await Class.updateMany({ section: { $in: [".", "-"] } }, { $set: { section: "" } });
+
     const classes = await Class.find();
     const hasDPharm1 = classes.some(c => c.grade === "D.Pharm 1" && (!c.section || c.section === ""));
     const hasDPharm2 = classes.some(c => c.grade === "D.Pharm 2" && (!c.section || c.section === ""));
@@ -424,32 +427,35 @@ const seedAdmin = async () => {
       console.log("Default classes seeded successfully");
     }
 
-    // Database Migration for Classes (remove section "- A" format)
+    // Database Migration for Classes (remove section "- A", "- .", "- -" formats)
     console.log("Running class format migration for student, fee, timetable, attendance, exam records...");
     
-    // Students
-    await Student.updateMany({ class: "D.Pharm 1 - A" }, { $set: { class: "D.Pharm 1" } });
-    await Student.updateMany({ class: "D.Pharm 2 - A" }, { $set: { class: "D.Pharm 2" } });
-    
-    // Fees
-    await Fee.updateMany({ grade: "D.Pharm 1 - A" }, { $set: { grade: "D.Pharm 1" } });
-    await Fee.updateMany({ grade: "D.Pharm 2 - A" }, { $set: { grade: "D.Pharm 2" } });
-    
-    // FeeStructures
-    await FeeStructure.updateMany({ grade: "D.Pharm 1 - A" }, { $set: { grade: "D.Pharm 1" } });
-    await FeeStructure.updateMany({ grade: "D.Pharm 2 - A" }, { $set: { grade: "D.Pharm 2" } });
-    
-    // Timetables
-    await Timetable.updateMany({ className: "D.Pharm 1 - A" }, { $set: { className: "D.Pharm 1" } });
-    await Timetable.updateMany({ className: "D.Pharm 2 - A" }, { $set: { className: "D.Pharm 2" } });
-    
-    // Attendance
-    await Attendance.updateMany({ className: "D.Pharm 1 - A" }, { $set: { className: "D.Pharm 1" } });
-    await Attendance.updateMany({ className: "D.Pharm 2 - A" }, { $set: { className: "D.Pharm 2" } });
-    
-    // Exams
-    await Exam.updateMany({ className: "D.Pharm 1 - A" }, { $set: { className: "D.Pharm 1" } });
-    await Exam.updateMany({ className: "D.Pharm 2 - A" }, { $set: { className: "D.Pharm 2" } });
+    const oldSuffixes = [" - A", " - .", " - -"];
+    for (const suffix of oldSuffixes) {
+      // Students
+      await Student.updateMany({ class: `D.Pharm 1${suffix}` }, { $set: { class: "D.Pharm 1" } });
+      await Student.updateMany({ class: `D.Pharm 2${suffix}` }, { $set: { class: "D.Pharm 2" } });
+      
+      // Fees
+      await Fee.updateMany({ grade: `D.Pharm 1${suffix}` }, { $set: { grade: "D.Pharm 1" } });
+      await Fee.updateMany({ grade: `D.Pharm 2${suffix}` }, { $set: { grade: "D.Pharm 2" } });
+      
+      // FeeStructures
+      await FeeStructure.updateMany({ grade: `D.Pharm 1${suffix}` }, { $set: { grade: "D.Pharm 1" } });
+      await FeeStructure.updateMany({ grade: `D.Pharm 2${suffix}` }, { $set: { grade: "D.Pharm 2" } });
+      
+      // Timetables
+      await Timetable.updateMany({ className: `D.Pharm 1${suffix}` }, { $set: { className: "D.Pharm 1" } });
+      await Timetable.updateMany({ className: `D.Pharm 2${suffix}` }, { $set: { className: "D.Pharm 2" } });
+      
+      // Attendance
+      await Attendance.updateMany({ className: `D.Pharm 1${suffix}` }, { $set: { className: "D.Pharm 1" } });
+      await Attendance.updateMany({ className: `D.Pharm 2${suffix}` }, { $set: { className: "D.Pharm 2" } });
+      
+      // Exams
+      await Exam.updateMany({ className: `D.Pharm 1${suffix}` }, { $set: { className: "D.Pharm 1" } });
+      await Exam.updateMany({ className: `D.Pharm 2${suffix}` }, { $set: { className: "D.Pharm 2" } });
+    }
     
     console.log("Migration complete!");
   } catch (error) {

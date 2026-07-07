@@ -711,8 +711,8 @@ const Exams = () => {
                           </SelectItem>
                         );
                       })}
-                      <SelectItem value="dpharma 1">dpharma 1</SelectItem>
-                      <SelectItem value="dpharma 2">dpharma 2</SelectItem>
+                      <SelectItem value="D.Pharm 1">D.Pharm 1</SelectItem>
+                      <SelectItem value="D.Pharm 2">D.Pharm 2</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
