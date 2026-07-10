@@ -817,29 +817,31 @@ const Fees = () => {
 
             {/* Student Details Section */}
             <div className="space-y-3 px-2 mb-2 text-base">
-              <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
+              <div className="flex items-baseline w-full border-b border-gray-400 pb-0.5">
                 <span className="shrink-0 font-bold whitespace-nowrap text-sm">Sri /Miss</span>
                 <span className="ml-3 font-bold text-xl italic text-blue-900 flex-1 px-1 uppercase">
                   {receiptData.studentName || ""}
                 </span>
               </div>
               
-              <div className="flex items-end w-full leading-tight font-bold gap-3 border-b border-gray-400 pb-0.5">
-                <span className="shrink-0 uppercase text-[10px]">D. Pharma Course- academic year</span>
-                <span className="font-bold text-sm text-center px-2">
-                  2025-26
+              <div className="flex items-baseline w-full leading-tight font-bold border-b border-gray-400 pb-0.5">
+                <span className="shrink-0 uppercase text-[11px] mr-6">D. PHARMA</span>
+                <span className="shrink-0 uppercase text-[12px] mr-6">I</span>
+                <span className="shrink-0 uppercase text-[9px] mr-4">COURSE- ACADEMIC YEAR</span>
+                <span className="font-bold text-sm text-center px-2 mr-auto">
+                  {students.find(s => s._id === receiptData.studentId)?.academicYear || "2025-26"}
                 </span>
-                <div className="flex gap-4 ml-auto items-end">
-                  <div className="flex gap-1 items-end">
+                <div className="flex gap-6 items-baseline shrink-0">
+                  <div className="flex gap-1 items-baseline">
                     <span className="uppercase text-[9px] font-bold text-gray-800">ADM NO:</span>
                     <span className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[80px] text-center">
-                      {students.find(s => s._id === receiptData.studentId)?.admissionNumber || ""}
+                      {students.find(s => s._id === receiptData.studentId)?.admissionNumber || "\u00A0"}
                     </span>
                   </div>
-                  <div className="flex gap-1 items-end">
+                  <div className="flex gap-1 items-baseline">
                     <span className="uppercase text-[9px] font-bold text-gray-800">Roll No:</span>
                     <span className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[40px] text-center">
-                      {students.find(s => s._id === receiptData.studentId)?.rollNo || ""}
+                      {students.find(s => s._id === receiptData.studentId)?.rollNo || "\u00A0"}
                     </span>
                   </div>
                 </div>

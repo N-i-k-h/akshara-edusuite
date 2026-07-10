@@ -698,7 +698,7 @@ const FeesRegistration = () => {
 
             {/* Student Details Section */}
             <div className="space-y-3 px-2 mb-2 text-base">
-              <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
+              <div className="flex items-baseline w-full border-b border-gray-400 pb-0.5">
                 {isGeneratingPDF ? (
                   <span className="shrink-0 font-bold whitespace-nowrap text-sm inline-block pb-0.5 leading-normal align-bottom">{formData.genderPrefix}</span>
                 ) : (
@@ -726,43 +726,43 @@ const FeesRegistration = () => {
                 )}
               </div>
               
-              <div className="flex items-end w-full leading-tight font-bold gap-3 border-b border-gray-400 pb-0.5">
+              <div className="flex items-baseline w-full leading-tight font-bold border-b border-gray-400 pb-0.5">
                 {isGeneratingPDF ? (
-                  <span className="shrink-0 uppercase text-[10px] inline-block pb-0.5 leading-normal align-bottom">{formData.yearPrefix}</span>
+                  <span className="shrink-0 uppercase text-[11px] mr-6 inline-block pb-0.5 leading-normal align-bottom">{formData.course}</span>
                 ) : (
                   <input
                     type="text"
-                    style={{ ...inlineInputStyle, width: "40px" }}
-                    className="uppercase text-[10px]"
-                    value={formData.yearPrefix}
-                    onChange={(e) => handleInputChange("yearPrefix", e.target.value)}
-                  />
-                )}
-                {isGeneratingPDF ? (
-                  <span className="shrink-0 uppercase text-[10px] ml-1 inline-block pb-0.5 leading-normal align-bottom">{formData.course}</span>
-                ) : (
-                  <input
-                    type="text"
-                    style={{ ...inlineInputStyle, width: "120px" }}
-                    className="uppercase text-[10px]"
+                    style={{ ...inlineInputStyle, width: "80px" }}
+                    className="uppercase text-[11px]"
                     value={formData.course}
                     onChange={(e) => handleInputChange("course", e.target.value)}
                   />
                 )}
-                <span className="uppercase text-[10px] whitespace-nowrap inline-block pb-0.5 leading-normal align-bottom">Course- academic year</span>
                 {isGeneratingPDF ? (
-                  <span className="font-bold text-sm text-center px-2 inline-block pb-0.5 leading-normal align-bottom">{formData.academicYear}</span>
+                  <span className="shrink-0 uppercase text-[12px] mr-6 inline-block pb-0.5 leading-normal align-bottom">{formData.yearPrefix}</span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle, width: "30px", textAlign: "center" }}
+                    className="uppercase text-[12px]"
+                    value={formData.yearPrefix}
+                    onChange={(e) => handleInputChange("yearPrefix", e.target.value)}
+                  />
+                )}
+                <span className="uppercase text-[9px] mr-4 whitespace-nowrap inline-block pb-0.5 leading-normal align-bottom">COURSE- ACADEMIC YEAR</span>
+                {isGeneratingPDF ? (
+                  <span className="font-bold text-sm text-center px-2 mr-auto inline-block pb-0.5 leading-normal align-bottom">{formData.academicYear}</span>
                 ) : (
                   <input
                     type="text"
                     style={{ ...inlineInputStyle, width: "80px", textAlign: "center" }}
-                    className="font-bold text-sm text-center"
+                    className="font-bold text-sm text-center mr-auto"
                     value={formData.academicYear}
                     onChange={(e) => handleInputChange("academicYear", e.target.value)}
                   />
                 )}
-                <div className="flex gap-4 ml-auto items-end">
-                  <div className="flex gap-1 items-end">
+                <div className="flex gap-6 items-baseline shrink-0">
+                  <div className="flex gap-1 items-baseline">
                     <span className="uppercase text-[9px] font-bold text-gray-800">ADM NO:</span>
                     {isGeneratingPDF ? (
                       <span className="inline-block font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[80px] text-center leading-normal">
@@ -778,7 +778,7 @@ const FeesRegistration = () => {
                       />
                     )}
                   </div>
-                  <div className="flex gap-1 items-end">
+                  <div className="flex gap-1 items-baseline">
                     <span className="uppercase text-[9px] font-bold text-gray-800">Roll No:</span>
                     {isGeneratingPDF ? (
                       <span className="inline-block font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[40px] text-center leading-normal">
