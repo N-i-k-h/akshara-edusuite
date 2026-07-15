@@ -230,17 +230,26 @@ const FeesRegistration = () => {
       }
 
       // 3. Register the payment record
+      const isSecondYear = (formData.class || "").startsWith("D.Pharm 2") || 
+                           (formData.class || "").includes("2") || 
+                           formData.yearPrefix === "II";
+
       const paymentPayload = {
         studentId: newStudent._id,
         studentName: newStudent.name,
         admissionNumber: newStudent.admissionNumber,
         grade: newStudent.class,
-        feeType: "Fee Receipt Payment",
+        feeType: isSecondYear ? "Promoted Fee Payment" : "Fee Receipt Payment",
         amountPaid: payingAmount,
         dueAmount: dueAmount,
+        totalFee: totalFee,
+        receiptNo: formData.receiptNo,
+        academicYear: formData.academicYear,
+        wordsOverride: formData.wordsOverride || (payingAmount > 0 ? toWords.convert(payingAmount) + " Only" : ""),
         paymentMethod: formData.paymentMethod === "Cheque" ? "Other" : formData.paymentMethod, 
         date: new Date(),
-        status: dueAmount === 0 ? "Paid" : "Pending"
+        status: dueAmount === 0 ? "Paid" : "Pending",
+        feeItems: feeItemsPayload
       };
 
       await authFetch(`${API_BASE_URL}/fees`, {

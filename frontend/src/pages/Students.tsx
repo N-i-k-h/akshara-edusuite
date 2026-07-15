@@ -815,7 +815,8 @@ const Students = () => {
     setIsProfileOpen(true);
     setLatestReceipt(null);
     setPromotedReceipt(null);
-    setActiveProfileTab("receipt");
+    const isStudentPromoted = student.class === "D.Pharm 2" || (student.class && student.class.startsWith("D.Pharm 2"));
+    setActiveProfileTab(isStudentPromoted ? "promoted-receipt" : "receipt");
 
     try {
       const [feesRes, structRes] = await Promise.all([
@@ -951,7 +952,7 @@ const Students = () => {
             });
 
             // If student is promoted (e.g. class is D.Pharm 2) and promoted fee is added (promotedTrans exists)
-            const isStudentPromoted = student.class === "D.Pharm 2";
+            const isStudentPromoted = student.class === "D.Pharm 2" || (student.class && student.class.startsWith("D.Pharm 2"));
             if (isStudentPromoted) {
               targetTab = "promoted-receipt";
             }
