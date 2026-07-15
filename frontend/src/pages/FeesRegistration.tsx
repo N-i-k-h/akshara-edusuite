@@ -114,7 +114,12 @@ const FeesRegistration = () => {
   }, []);
 
   const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+    const updated = { ...formData, [field]: value };
+    if (field === "class") {
+      const isSecondYear = value.toLowerCase().includes("2") || value.toLowerCase().includes("ii");
+      updated.yearPrefix = isSecondYear ? "II" : "I";
+    }
+    setFormData(updated);
   };
 
   const addCustomFee = () => {
