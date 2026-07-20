@@ -81,7 +81,7 @@ const Students = () => {
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [classesList, setClassesList] = useState<any[]>([]);
-  const [classFilter, setClassFilter] = useState("all");
+  const [classFilter, setClassFilter] = useState("D.Pharm 1");
   const [academicYearFilter, setAcademicYearFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [allFees, setAllFees] = useState<any[]>([]);
@@ -360,6 +360,7 @@ const Students = () => {
   const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
   const [promotingStudent, setPromotingStudent] = useState<any | null>(null);
   const [promoteTarget, setPromoteTarget] = useState<string>("");
+  const [promoteAcademicYear, setPromoteAcademicYear] = useState<string>("");
 
   // Bulk Selection State
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -477,6 +478,11 @@ const Students = () => {
       return;
     }
 
+    if (!promoteAcademicYear.trim()) {
+      toast.error("Please enter the target Academic Year before confirming.");
+      return;
+    }
+
     const toastId = toast.loading("Processing student promotion/graduation...");
     try {
       const isGraduation = promoteTarget === "Graduated";
@@ -484,8 +490,8 @@ const Students = () => {
       if (isBulk) {
         // Bulk Promotion logic
         const payload = isGraduation
-          ? { studentIds: selectedStudentIds, status: "Graduated" }
-          : { studentIds: selectedStudentIds, targetClass: promoteTarget };
+          ? { studentIds: selectedStudentIds, status: "Graduated", academicYear: promoteAcademicYear }
+          : { studentIds: selectedStudentIds, targetClass: promoteTarget, academicYear: promoteAcademicYear };
 
         const response = await authFetch(`${API_BASE_URL}/students/bulk/promote`, {
           method: "PUT",
@@ -505,6 +511,7 @@ const Students = () => {
           setSelectedStudentIds([]);
           setIsPromoteDialogOpen(false);
           setPromoteTarget("");
+          setPromoteAcademicYear("");
         } else {
           const err = await response.json();
           toast.error(err.message || "Failed to promote students in bulk", { id: toastId });
@@ -513,8 +520,8 @@ const Students = () => {
         // Single Student Promotion logic
         const studentId = promotingStudent._id || promotingStudent.id;
         const payload = isGraduation
-          ? { status: "Graduated" }
-          : { class: promoteTarget, feesPaid: false };
+          ? { status: "Graduated", academicYear: promoteAcademicYear }
+          : { class: promoteTarget, feesPaid: false, academicYear: promoteAcademicYear };
 
         const response = await authFetch(`${API_BASE_URL}/students/${studentId}`, {
           method: "PUT",
@@ -537,6 +544,7 @@ const Students = () => {
           setIsPromoteDialogOpen(false);
           setPromotingStudent(null);
           setPromoteTarget("");
+          setPromoteAcademicYear("");
         } else {
           const err = await response.json();
           toast.error(err.message || "Failed to promote student", { id: toastId });
@@ -1449,7 +1457,7 @@ const Students = () => {
 
                        <div className="w-full flex justify-center mt-1 border-t border-blue-900 pt-1">
                           <span className="font-bold text-base underline underline-offset-4 decoration-1 uppercase tracking-widest text-[#1e3a8a]">
-                            PAYMENT RECEIPT
+                            FEE RECEIPT
                           </span>
                        </div>
 
@@ -1514,74 +1522,91 @@ const Students = () => {
                           )}
                        </div>
 
-                       <div className="flex items-baseline w-full font-bold border-b border-gray-400 pb-0.5">
+                        {/* Course Info Row */}
+                        <div style={{ display: "flex", alignItems: "baseline", width: "100%", marginTop: "16px", borderBottom: "1px solid #9ca3af", paddingBottom: "3px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+
+                          {/* Course Name */}
                           {isGeneratingReceiptPDF ? (
-                            <>
-                              <span className="shrink-0 uppercase text-[11px] mr-6 inline-block pb-0.5 leading-normal align-bottom">{latestReceipt.course || "D. PHARMA"}</span>
-                              <span className="shrink-0 uppercase text-[12px] mr-6 inline-block pb-0.5 leading-normal align-bottom">{latestReceipt.yearPrefix || "I"}</span>
-                              <span className="shrink-0 uppercase text-[9px] mr-4 inline-block pb-0.5 leading-normal align-bottom">COURSE- ACADEMIC YEAR</span>
-                            </>
-                          ) : (
-                            <div className="flex gap-4 items-baseline shrink-0 mr-4">
-                              <input
-                                type="text"
-                                style={{ ...inlineInputStyle, width: "80px" }}
-                                className="uppercase text-[11px]"
-                                value={latestReceipt.course || "D. PHARMA"}
-                                onChange={(e) => handleReceiptInputChange("course", e.target.value)}
-                              />
-                              <input
-                                type="text"
-                                style={{ ...inlineInputStyle, width: "30px", textAlign: "center" }}
-                                className="uppercase text-[12px]"
-                                value={latestReceipt.yearPrefix || "I"}
-                                onChange={(e) => handleReceiptInputChange("yearPrefix", e.target.value)}
-                              />
-                              <span className="uppercase text-[9px]">COURSE- ACADEMIC YEAR</span>
-                            </div>
-                          )}
-                          {isGeneratingReceiptPDF ? (
-                            <span className="font-bold text-sm px-2 mr-auto inline-block pb-0.5 leading-normal align-bottom">{latestReceipt.academicYear || selectedStudent?.academicYear || ""}</span>
+                            <span style={{ flexShrink: 0, textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                              {latestReceipt.course || "D. PHARMA"}
+                            </span>
                           ) : (
                             <input
                               type="text"
-                              style={{ ...inlineInputStyle, width: "80px" }}
-                              className="font-bold text-sm px-2 mr-auto"
+                              style={{ ...inlineInputStyle, width: "85px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", textTransform: "uppercase" }}
+                              value={latestReceipt.course || "D. PHARMA"}
+                              onChange={(e) => handleReceiptInputChange("course", e.target.value)}
+                            />
+                          )}
+
+                          {/* Year Prefix */}
+                          {isGeneratingReceiptPDF ? (
+                            <span style={{ flexShrink: 0, textTransform: "uppercase", marginLeft: "8px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                              {latestReceipt.yearPrefix || "1"}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "20px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", textTransform: "uppercase", marginLeft: "8px" }}
+                              value={latestReceipt.yearPrefix || "1"}
+                              onChange={(e) => handleReceiptInputChange("yearPrefix", e.target.value)}
+                            />
+                          )}
+
+                          {/* Label: COURSE - ACADEMIC YEAR */}
+                          <span style={{ flexShrink: 0, textTransform: "uppercase", marginLeft: "24px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                            Course - Academic Year
+                          </span>
+
+                          {/* Academic Year Value */}
+                          {isGeneratingReceiptPDF ? (
+                            <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                              {latestReceipt.academicYear || selectedStudent?.academicYear || ""}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "60px", textAlign: "center", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
                               value={latestReceipt.academicYear || selectedStudent?.academicYear || ""}
                               onChange={(e) => handleReceiptInputChange("academicYear", e.target.value)}
                             />
                           )}
-                          <div className="flex gap-6 items-baseline shrink-0">
-                             <div className="flex gap-1 items-baseline">
-                                <span className="uppercase text-[8px] text-gray-500">ADM NO:</span>
-                                {isGeneratingReceiptPDF ? (
-                                  <span className="text-[#1e3a8a] text-base inline-block pb-0.5 leading-normal border-b border-blue-900 px-1 text-center min-w-[80px]">{latestReceipt.admissionNumber || selectedStudent.admissionNumber || "\u00A0"}</span>
-                                ) : (
-                                  <input
-                                    type="text"
-                                    style={{ ...inlineInputStyle, width: "100px", textAlign: "center" }}
-                                    className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1 text-center"
-                                    value={latestReceipt.admissionNumber || selectedStudent.admissionNumber || ""}
-                                    onChange={(e) => handleReceiptInputChange("admissionNumber", e.target.value)}
-                                  />
-                                )}
-                             </div>
-                             <div className="flex gap-1 items-baseline">
-                                <span className="uppercase text-[8px] text-gray-500">ROLL NO:</span>
-                                {isGeneratingReceiptPDF ? (
-                                  <span className="text-[#1e3a8a] text-base inline-block pb-0.5 leading-normal border-b border-blue-900 px-1 text-center min-w-[40px]">{latestReceipt.rollNo || selectedStudent.rollNo || "\u00A0"}</span>
-                                ) : (
-                                  <input
-                                    type="text"
-                                    style={{ ...inlineInputStyle, width: "60px", textAlign: "center" }}
-                                    className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1 text-center"
-                                    value={latestReceipt.rollNo || selectedStudent.rollNo || ""}
-                                    onChange={(e) => handleReceiptInputChange("rollNo", e.target.value)}
-                                  />
-                                )}
-                             </div>
-                          </div>
-                       </div>
+
+                          {/* ADM NO label + value */}
+                          <span style={{ flexShrink: 0, marginLeft: "20px", textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                            ADM NO:
+                          </span>
+                          {isGeneratingReceiptPDF ? (
+                            <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", display: "inline-block" }}>
+                              {latestReceipt.admissionNumber || selectedStudent?.admissionNumber || ""}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "75px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
+                              value={latestReceipt.admissionNumber || selectedStudent?.admissionNumber || ""}
+                              onChange={(e) => handleReceiptInputChange("admissionNumber", e.target.value)}
+                            />
+                          )}
+
+                          {/* ROLL NO label + value */}
+                          <span style={{ flexShrink: 0, marginLeft: "20px", textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                            Roll No:
+                          </span>
+                          {isGeneratingReceiptPDF ? (
+                            <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", display: "inline-block" }}>
+                              {latestReceipt.rollNo || selectedStudent?.rollNo || ""}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "45px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
+                              value={latestReceipt.rollNo || selectedStudent?.rollNo || ""}
+                              onChange={(e) => handleReceiptInputChange("rollNo", e.target.value)}
+                            />
+                          )}
+
+                        </div>
                     </div>
 
                     {/* Table Area */}
@@ -1589,7 +1614,7 @@ const Students = () => {
                        <table className="w-full text-xs font-bold border border-blue-900 border-collapse table-fixed">
                           <thead>
                              <tr className="border-b border-blue-900 bg-blue-50/5">
-                                <th className="border-r border-blue-900 p-1 w-[10%] text-center uppercase">No.</th>
+                                <th className="border-r border-blue-900 p-1 w-[10%] text-center">No.</th>
                                 <th className="border-r border-blue-900 p-1 w-[60%] text-left pl-6 uppercase">PARTICULARS</th>
                                 <th className="p-1 w-[30%] text-center uppercase">AMOUNT</th>
                              </tr>
@@ -1611,14 +1636,14 @@ const Students = () => {
                                             </button>
                                          )}
                                       </td>
-                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">
+                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold">
                                          {isGeneratingReceiptPDF ? (
                                             <span>{item.name}</span>
                                          ) : (
                                             <input
                                                type="text"
                                                style={inlineInputStyle}
-                                               className="w-full font-semibold uppercase"
+                                               className="w-full font-semibold"
                                                value={item.name}
                                                onChange={(e) => handleReceiptFeeNameChange(idx, e.target.value)}
                                             />
@@ -1828,7 +1853,7 @@ const Students = () => {
 
                        <div className="w-full flex justify-center mt-1 border-t border-blue-900 pt-1">
                           <span className="font-bold text-base underline underline-offset-4 decoration-1 uppercase tracking-widest text-[#1e3a8a]">
-                             PAYMENT RECEIPT (2nd YEAR)
+                             FEE RECEIPT (2nd YEAR)
                           </span>
                        </div>
 
@@ -1891,84 +1916,100 @@ const Students = () => {
                               placeholder="STUDENT NAME"
                             />
                           )}
-                       </div>
+                        </div>
+                        {/* Course Info Row */}
+                        <div style={{ display: "flex", alignItems: "baseline", width: "100%", marginTop: "16px", borderBottom: "1px solid #9ca3af", paddingBottom: "3px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
 
-                       <div className="flex items-baseline w-full font-bold border-b border-gray-400 pb-0.5">
+                          {/* Course Name */}
                           {isGeneratingPromotedPDF ? (
-                            <>
-                              <span className="shrink-0 uppercase text-[11px] mr-6 inline-block pb-0.5 leading-normal align-bottom">{promotedReceipt.course || "D. PHARMA"}</span>
-                              <span className="shrink-0 uppercase text-[12px] mr-6 inline-block pb-0.5 leading-normal align-bottom">{promotedReceipt.yearPrefix || "II"}</span>
-                              <span className="shrink-0 uppercase text-[9px] mr-4 inline-block pb-0.5 leading-normal align-bottom">COURSE- ACADEMIC YEAR</span>
-                            </>
-                          ) : (
-                            <div className="flex gap-4 items-baseline shrink-0 mr-4">
-                              <input
-                                type="text"
-                                style={{ ...inlineInputStyle, width: "80px" }}
-                                className="uppercase text-[11px]"
-                                value={promotedReceipt.course || "D. PHARMA"}
-                                onChange={(e) => handlePromotedInputChange("course", e.target.value)}
-                              />
-                              <input
-                                type="text"
-                                style={{ ...inlineInputStyle, width: "30px", textAlign: "center" }}
-                                className="uppercase text-[12px]"
-                                value={promotedReceipt.yearPrefix || "II"}
-                                onChange={(e) => handlePromotedInputChange("yearPrefix", e.target.value)}
-                              />
-                              <span className="uppercase text-[9px]">COURSE- ACADEMIC YEAR</span>
-                            </div>
-                          )}
-                          {isGeneratingPromotedPDF ? (
-                            <span className="font-bold text-sm px-2 mr-auto inline-block pb-0.5 leading-normal align-bottom">{promotedReceipt.academicYear || selectedStudent?.academicYear || ""}</span>
+                            <span style={{ flexShrink: 0, textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                              {promotedReceipt.course || "D. PHARMA"}
+                            </span>
                           ) : (
                             <input
                               type="text"
-                              style={{ ...inlineInputStyle, width: "80px" }}
-                              className="font-bold text-sm px-2 mr-auto"
+                              style={{ ...inlineInputStyle, width: "85px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", textTransform: "uppercase" }}
+                              value={promotedReceipt.course || "D. PHARMA"}
+                              onChange={(e) => handlePromotedInputChange("course", e.target.value)}
+                            />
+                          )}
+
+                          {/* Year Prefix */}
+                          {isGeneratingPromotedPDF ? (
+                            <span style={{ flexShrink: 0, textTransform: "uppercase", marginLeft: "8px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                              {promotedReceipt.yearPrefix || "2"}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "20px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", textTransform: "uppercase", marginLeft: "8px" }}
+                              value={promotedReceipt.yearPrefix || "2"}
+                              onChange={(e) => handlePromotedInputChange("yearPrefix", e.target.value)}
+                            />
+                          )}
+
+                          {/* Label: COURSE - ACADEMIC YEAR */}
+                          <span style={{ flexShrink: 0, textTransform: "uppercase", marginLeft: "24px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                            Course - Academic Year
+                          </span>
+
+                          {/* Academic Year Value */}
+                          {isGeneratingPromotedPDF ? (
+                            <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                              {promotedReceipt.academicYear || selectedStudent?.academicYear || ""}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "60px", textAlign: "center", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
                               value={promotedReceipt.academicYear || selectedStudent?.academicYear || ""}
                               onChange={(e) => handlePromotedInputChange("academicYear", e.target.value)}
                             />
                           )}
-                          <div className="flex gap-6 items-baseline shrink-0">
-                             <div className="flex gap-1 items-baseline">
-                                 <span className="uppercase text-[8px] text-gray-500">ADM NO:</span>
-                                 {isGeneratingPromotedPDF ? (
-                                   <span className="text-[#1e3a8a] text-base inline-block pb-0.5 leading-normal border-b border-blue-900 px-1 text-center min-w-[80px]">{promotedReceipt.admissionNumber || selectedStudent.admissionNumber || "\u00A0"}</span>
-                                 ) : (
-                                   <input
-                                     type="text"
-                                     style={{ ...inlineInputStyle, width: "100px", textAlign: "center" }}
-                                     className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1 text-center"
-                                     value={promotedReceipt.admissionNumber || selectedStudent.admissionNumber || ""}
-                                     onChange={(e) => handlePromotedInputChange("admissionNumber", e.target.value)}
-                                   />
-                                 )}
-                             </div>
-                             <div className="flex gap-1 items-baseline">
-                                 <span className="uppercase text-[8px] text-gray-500">ROLL NO:</span>
-                                 {isGeneratingPromotedPDF ? (
-                                   <span className="text-[#1e3a8a] text-base inline-block pb-0.5 leading-normal border-b border-blue-900 px-1 text-center min-w-[40px]">{promotedReceipt.rollNo || selectedStudent.rollNo || "\u00A0"}</span>
-                                 ) : (
-                                   <input
-                                     type="text"
-                                     style={{ ...inlineInputStyle, width: "60px", textAlign: "center" }}
-                                     className="text-[#1e3a8a] text-base leading-none border-b border-blue-900 px-1 text-center"
-                                     value={promotedReceipt.rollNo || selectedStudent.rollNo || ""}
-                                     onChange={(e) => handlePromotedInputChange("rollNo", e.target.value)}
-                                   />
-                                 )}
-                             </div>
-                          </div>
-                       </div>
-                    </div>
+
+                          {/* ADM NO label + value */}
+                          <span style={{ flexShrink: 0, marginLeft: "20px", textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                            ADM NO:
+                          </span>
+                          {isGeneratingPromotedPDF ? (
+                            <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", display: "inline-block" }}>
+                              {promotedReceipt.admissionNumber || selectedStudent?.admissionNumber || ""}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "75px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
+                              value={promotedReceipt.admissionNumber || selectedStudent?.admissionNumber || ""}
+                              onChange={(e) => handlePromotedInputChange("admissionNumber", e.target.value)}
+                            />
+                          )}
+
+                          {/* ROLL NO label + value */}
+                          <span style={{ flexShrink: 0, marginLeft: "20px", textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                            Roll No:
+                          </span>
+                          {isGeneratingPromotedPDF ? (
+                            <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", display: "inline-block" }}>
+                              {promotedReceipt.rollNo || selectedStudent?.rollNo || ""}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              style={{ ...inlineInputStyle, width: "45px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
+                              value={promotedReceipt.rollNo || selectedStudent?.rollNo || ""}
+                              onChange={(e) => handlePromotedInputChange("rollNo", e.target.value)}
+                            />
+                          )}
+
+                        </div>
+                     </div>
 
                     {/* Table Area */}
                     <div className="mb-4 bg-white flex-grow relative">
                        <table className="w-full text-xs font-bold border border-blue-900 border-collapse table-fixed">
                           <thead>
                              <tr className="border-b border-blue-900 bg-blue-50/5">
-                                <th className="border-r border-blue-900 p-1 w-[10%] text-center uppercase">No.</th>
+                                <th className="border-r border-blue-900 p-1 w-[10%] text-center">No.</th>
                                 <th className="border-r border-blue-900 p-1 w-[60%] text-left pl-6 uppercase">PARTICULARS</th>
                                 <th className="p-1 w-[30%] text-center uppercase">AMOUNT</th>
                              </tr>
@@ -1990,14 +2031,14 @@ const Students = () => {
                                             </button>
                                          )}
                                       </td>
-                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold uppercase">
+                                      <td className="border-r border-blue-900 p-1.5 pl-6 font-semibold">
                                          {isGeneratingPromotedPDF ? (
                                             <span>{item.name}</span>
                                          ) : (
                                             <input
                                                type="text"
                                                style={inlineInputStyle}
-                                               className="w-full font-semibold uppercase"
+                                               className="w-full font-semibold"
                                                value={item.name}
                                                onChange={(e) => handlePromotedFeeNameChange(idx, e.target.value)}
                                             />
@@ -2440,7 +2481,7 @@ const Students = () => {
       </Dialog>
 
       {/* Promote Student Dialog */}
-      <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+      <Dialog open={isPromoteDialogOpen} onOpenChange={(open) => { setIsPromoteDialogOpen(open); if (!open) { setPromoteAcademicYear(""); } }}>
         <DialogContent className="max-w-md bg-white p-6 rounded-lg shadow-xl">
           <DialogHeader className="border-b pb-3 mb-4">
             <DialogTitle className="text-xl font-bold text-blue-900 flex items-center gap-2">
@@ -2480,13 +2521,32 @@ const Students = () => {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <Calendar className="inline h-3.5 w-3.5 mr-1 mb-0.5" />
+                  Target Academic Year <span className="text-red-500">*</span>
+                </Label>
+                <Select value={promoteAcademicYear} onValueChange={setPromoteAcademicYear}>
+                  <SelectTrigger className="w-full border-slate-200">
+                    <SelectValue placeholder="Select Academic Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["2023-24","2024-25","2025-26","2026-27","2027-28","2028-29","2029-30"].map((yr) => (
+                      <SelectItem key={yr} value={yr}>{yr}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400">This will be saved to the student and auto-filled in Promoted Fees.</p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4 border-t mt-6">
                 <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button 
                   onClick={handlePromoteStudent}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                  disabled={!promoteAcademicYear.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Confirm Action
                 </Button>
@@ -2514,13 +2574,32 @@ const Students = () => {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <Calendar className="inline h-3.5 w-3.5 mr-1 mb-0.5" />
+                  Target Academic Year <span className="text-red-500">*</span>
+                </Label>
+                <Select value={promoteAcademicYear} onValueChange={setPromoteAcademicYear}>
+                  <SelectTrigger className="w-full border-slate-200">
+                    <SelectValue placeholder="Select Academic Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["2023-24","2024-25","2025-26","2026-27","2027-28","2028-29","2029-30"].map((yr) => (
+                      <SelectItem key={yr} value={yr}>{yr}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400">This will be saved to all selected students and auto-filled in Promoted Fees.</p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4 border-t mt-6">
                 <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button 
                   onClick={handlePromoteStudent}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                  disabled={!promoteAcademicYear.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Confirm Bulk Action
                 </Button>
@@ -2531,7 +2610,7 @@ const Students = () => {
       </Dialog>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -2541,25 +2620,33 @@ const Students = () => {
             className="pl-10"
           />
         </div>
-        <Select value={classFilter} onValueChange={setClassFilter}>
-          <SelectTrigger className="w-56">
-            <GraduationCap className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="All Classes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Classes</SelectItem>
-            {classesList.map((cls: any) => {
-              const className = cls.grade.startsWith("D.")
-                ? (cls.section ? `${cls.grade} - ${cls.section}` : cls.grade)
-                : (cls.section ? `Grade ${cls.grade} - ${cls.section}` : `Grade ${cls.grade}`);
-              return (
-                <SelectItem key={cls._id} value={className}>
-                  {className}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+
+        {/* Class Toggle Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setClassFilter(classFilter === "D.Pharm 1" ? "all" : "D.Pharm 1")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-200 ${
+              classFilter === "D.Pharm 1"
+                ? "bg-blue-900 border-blue-900 text-white shadow-md"
+                : "bg-white border-blue-200 text-blue-900 hover:border-blue-900 hover:bg-blue-50"
+            }`}
+          >
+            <GraduationCap className="h-3.5 w-3.5" />
+            D.Pharm 1
+          </button>
+          <button
+            onClick={() => setClassFilter(classFilter === "D.Pharm 2" ? "all" : "D.Pharm 2")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-200 ${
+              classFilter === "D.Pharm 2"
+                ? "bg-blue-900 border-blue-900 text-white shadow-md"
+                : "bg-white border-blue-200 text-blue-900 hover:border-blue-900 hover:bg-blue-50"
+            }`}
+          >
+            <GraduationCap className="h-3.5 w-3.5" />
+            D.Pharm 2
+          </button>
+        </div>
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40">
             <Filter className="mr-2 h-4 w-4" />

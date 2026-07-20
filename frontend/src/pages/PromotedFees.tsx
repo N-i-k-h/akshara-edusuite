@@ -54,7 +54,7 @@ const PromotedFees = () => {
     class: "",
     course: "D. Pharma",
     academicYear: "2025-26",
-    yearPrefix: "II",
+    yearPrefix: "2",
     rollNo: "",
     admissionNumber: "",
     email: "",
@@ -200,6 +200,7 @@ const PromotedFees = () => {
     setSelectedStudent(student);
     setSearchQuery(student.name);
     setIsDropdownOpen(false);
+    const isSecondYear = student.class?.includes("2");
     setFormData((prev) => ({
       ...prev,
       studentName: student.name,
@@ -209,7 +210,9 @@ const PromotedFees = () => {
       parentPhone: student.parentPhone || "",
       class: student.class || "",
       email: student.email || "",
-      course: student.class?.startsWith("D.") ? "D. Pharma" : "Pharmacy Course",
+      course: student.class?.startsWith("D.") ? "D. PHARMA" : "Pharmacy Course",
+      yearPrefix: isSecondYear ? "2" : "1",
+      academicYear: student.academicYear || prev.academicYear,
     }));
   };
 
@@ -600,68 +603,97 @@ const PromotedFees = () => {
                     <SelectItem value="Kum/Mr.">Kum/Mr.</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input
-                  className="flex-1"
-                  value={formData.studentName}
-                  onChange={(e) => handleInputChange("studentName", e.target.value)}
-                  placeholder="Student Name"
-                  disabled
-                />
+                {selectedStudent ? (
+                  <div className="flex-1 flex items-center px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 cursor-not-allowed select-none">
+                    {formData.studentName || <span className="text-slate-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    className="flex-1"
+                    value={formData.studentName}
+                    onChange={(e) => handleInputChange("studentName", e.target.value)}
+                    placeholder="Student Name"
+                  />
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>Academic Year</Label>
-              <Select
-                value={formData.academicYear}
-                onValueChange={(val) => handleInputChange("academicYear", val)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
-                  <SelectItem value="2025-26">2025-26</SelectItem>
-                  <SelectItem value="2026-27">2026-27</SelectItem>
-                  <SelectItem value="2027-28">2027-28</SelectItem>
-                  <SelectItem value="2028-29">2028-29</SelectItem>
-                  <SelectItem value="2029-30">2029-30</SelectItem>
-                  <SelectItem value="2030-31">2030-31</SelectItem>
-                  <SelectItem value="2031-32">2031-32</SelectItem>
-                  <SelectItem value="2032-33">2032-33</SelectItem>
-                  <SelectItem value="2033-34">2033-34</SelectItem>
-                  <SelectItem value="2034-35">2034-35</SelectItem>
-                  <SelectItem value="2035-36">2035-36</SelectItem>
-                </SelectContent>
-              </Select>
+              {selectedStudent ? (
+                <div className="flex items-center px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 cursor-not-allowed select-none">
+                  {formData.academicYear || <span className="text-slate-400">—</span>}
+                </div>
+              ) : (
+                <Select
+                  value={formData.academicYear}
+                  onValueChange={(val) => handleInputChange("academicYear", val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                    <SelectItem value="2023-24">2023-24</SelectItem>
+                    <SelectItem value="2024-25">2024-25</SelectItem>
+                    <SelectItem value="2025-26">2025-26</SelectItem>
+                    <SelectItem value="2026-27">2026-27</SelectItem>
+                    <SelectItem value="2027-28">2027-28</SelectItem>
+                    <SelectItem value="2028-29">2028-29</SelectItem>
+                    <SelectItem value="2029-30">2029-30</SelectItem>
+                    <SelectItem value="2030-31">2030-31</SelectItem>
+                    <SelectItem value="2031-32">2031-32</SelectItem>
+                    <SelectItem value="2032-33">2032-33</SelectItem>
+                    <SelectItem value="2033-34">2033-34</SelectItem>
+                    <SelectItem value="2034-35">2034-35</SelectItem>
+                    <SelectItem value="2035-36">2035-36</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label>Class / Course</Label>
-                <Input
-                  value={formData.class}
-                  onChange={(e) => handleInputChange("class", e.target.value)}
-                  disabled
-                />
+                {selectedStudent ? (
+                  <div className="flex items-center px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 cursor-not-allowed select-none">
+                    {formData.class || <span className="text-slate-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    value={formData.class}
+                    onChange={(e) => handleInputChange("class", e.target.value)}
+                  />
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Roll No.</Label>
-                <Input
-                  value={formData.rollNo}
-                  onChange={(e) => handleInputChange("rollNo", e.target.value)}
-                  placeholder="Roll No"
-                />
+                {selectedStudent ? (
+                  <div className="flex items-center px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 cursor-not-allowed select-none">
+                    {formData.rollNo || <span className="text-slate-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    value={formData.rollNo}
+                    onChange={(e) => handleInputChange("rollNo", e.target.value)}
+                    placeholder="Roll No"
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Admission No.</Label>
-                <Input
-                  value={formData.admissionNumber}
-                  onChange={(e) => handleInputChange("admissionNumber", e.target.value)}
-                  disabled
-                />
+                {selectedStudent ? (
+                  <div className="flex items-center px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 cursor-not-allowed select-none">
+                    {formData.admissionNumber || <span className="text-slate-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    value={formData.admissionNumber}
+                    onChange={(e) => handleInputChange("admissionNumber", e.target.value)}
+                  />
+                )}
               </div>
             </div>
 
@@ -874,29 +906,27 @@ const PromotedFees = () => {
 
             {/* Student Details Section */}
             <div className="space-y-3 px-2 mb-2 text-base">
-              <div className="flex items-end w-full border-b border-gray-400 pb-0.5">
+              <div style={{ display: "flex", alignItems: "baseline", width: "100%", borderBottom: "1px solid #9ca3af", paddingBottom: "2px" }}>
                 {isGeneratingPDF ? (
-                  <span className="shrink-0 font-bold whitespace-nowrap text-sm inline-block pb-0.5 leading-normal align-bottom">
+                  <span style={{ fontWeight: "bold", whiteSpace: "nowrap", fontSize: "14px", lineHeight: "1.4", flexShrink: 0 }}>
                     {formData.genderPrefix}
                   </span>
                 ) : (
                   <input
                     type="text"
-                    style={{ ...inlineInputStyle, width: "70px" }}
-                    className="shrink-0 font-bold whitespace-nowrap text-sm"
+                    style={{ ...inlineInputStyle, width: "70px", fontSize: "14px", fontWeight: "bold", flexShrink: 0 }}
                     value={formData.genderPrefix}
                     onChange={(e) => handleInputChange("genderPrefix", e.target.value)}
                   />
                 )}
                 {isGeneratingPDF ? (
-                  <span className="ml-3 font-bold text-xl italic text-blue-900 flex-1 px-1 uppercase inline-block pb-0.5 leading-normal align-bottom">
+                  <span style={{ marginLeft: "12px", fontWeight: "bold", fontSize: "20px", fontStyle: "italic", color: "#1e3a8a", textTransform: "uppercase", flex: 1, lineHeight: "1.4" }}>
                     {formData.studentName || ""}
                   </span>
                 ) : (
                   <input
                     type="text"
-                    style={{ ...inlineInputStyle }}
-                    className="ml-3 font-bold text-xl italic text-blue-900 flex-1 px-1 uppercase"
+                    style={{ ...inlineInputStyle, marginLeft: "12px", fontWeight: "bold", fontSize: "20px", fontStyle: "italic", color: "#1e3a8a", textTransform: "uppercase", flex: 1 }}
                     value={formData.studentName}
                     onChange={(e) => handleInputChange("studentName", e.target.value)}
                     placeholder="STUDENT NAME"
@@ -905,90 +935,95 @@ const PromotedFees = () => {
                 )}
               </div>
 
-              <div className="flex items-end w-full leading-tight font-bold gap-3 border-b border-gray-400 pb-0.5">
+              {/* Course Info Row */}
+              <div style={{ display: "flex", alignItems: "baseline", width: "100%", marginTop: "16px", borderBottom: "1px solid #9ca3af", paddingBottom: "3px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+
+                {/* Course Name: D. PHARMA */}
                 {isGeneratingPDF ? (
-                  <span className="shrink-0 uppercase text-[10px] inline-block pb-0.5 leading-normal align-bottom">
-                    {formData.yearPrefix}
-                  </span>
-                ) : (
-                  <input
-                    type="text"
-                    style={{ ...inlineInputStyle, width: "40px" }}
-                    className="uppercase text-[10px]"
-                    value={formData.yearPrefix}
-                    onChange={(e) => handleInputChange("yearPrefix", e.target.value)}
-                  />
-                )}
-                {isGeneratingPDF ? (
-                  <span className="shrink-0 uppercase text-[10px] ml-1 inline-block pb-0.5 leading-normal align-bottom">
+                  <span style={{ flexShrink: 0, textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
                     {formData.course}
                   </span>
                 ) : (
                   <input
                     type="text"
-                    style={{ ...inlineInputStyle, width: "120px" }}
-                    className="uppercase text-[10px]"
+                    style={{ ...inlineInputStyle, width: "85px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", textTransform: "uppercase" }}
                     value={formData.course}
                     onChange={(e) => handleInputChange("course", e.target.value)}
                   />
                 )}
-                <span className="uppercase text-[10px] whitespace-nowrap inline-block pb-0.5 leading-normal align-bottom">
-                  Course - academic year
-                </span>
+
+                {/* Year Prefix: 1 or 2 */}
                 {isGeneratingPDF ? (
-                  <span className="font-bold text-sm text-center px-2 inline-block pb-0.5 leading-normal align-bottom">
+                  <span style={{ flexShrink: 0, textTransform: "uppercase", marginLeft: "8px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                    {formData.yearPrefix}
+                  </span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle, width: "20px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", textTransform: "uppercase", marginLeft: "8px" }}
+                    value={formData.yearPrefix}
+                    onChange={(e) => handleInputChange("yearPrefix", e.target.value)}
+                  />
+                )}
+
+                {/* Label: COURSE - ACADEMIC YEAR */}
+                <span style={{ flexShrink: 0, textTransform: "uppercase", marginLeft: "24px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                  Course - Academic Year
+                </span>
+
+                {/* Academic Year Value */}
+                {isGeneratingPDF ? (
+                  <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
                     {formData.academicYear}
                   </span>
                 ) : (
                   <input
                     type="text"
-                    style={{ ...inlineInputStyle, width: "80px", textAlign: "center" }}
-                    className="font-bold text-sm text-center"
+                    style={{ ...inlineInputStyle, width: "60px", textAlign: "center", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
                     value={formData.academicYear}
                     onChange={(e) => handleInputChange("academicYear", e.target.value)}
                   />
                 )}
-                <div className="flex gap-4 ml-auto items-end">
-                  <div className="flex gap-1 items-end">
-                    <span className="uppercase text-[9px] font-bold text-gray-800 font-sans">
-                      ADM NO:
-                    </span>
-                    {isGeneratingPDF ? (
-                      <span className="inline-block font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[80px] text-center leading-normal">
-                        {formData.admissionNumber || ""}
-                      </span>
-                    ) : (
-                      <input
-                        type="text"
-                        style={{ ...inlineInputStyle, width: "100px", textAlign: "center" }}
-                        className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 text-center"
-                        value={formData.admissionNumber}
-                        onChange={(e) => handleInputChange("admissionNumber", e.target.value)}
-                        disabled
-                      />
-                    )}
-                  </div>
-                  <div className="flex gap-1 items-end">
-                    <span className="uppercase text-[9px] font-bold text-gray-800 font-sans">
-                      Roll No:
-                    </span>
-                    {isGeneratingPDF ? (
-                      <span className="inline-block font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[40px] text-center leading-normal">
-                        {formData.rollNo || ""}
-                      </span>
-                    ) : (
-                      <input
-                        type="text"
-                        style={{ ...inlineInputStyle, width: "60px", textAlign: "center" }}
-                        className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 text-center"
-                        value={formData.rollNo}
-                        onChange={(e) => handleInputChange("rollNo", e.target.value)}
-                      />
-                    )}
-                  </div>
-                </div>
+
+                {/* ADM NO label + value */}
+                <span style={{ flexShrink: 0, marginLeft: "20px", textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                  ADM NO:
+                </span>
+                {isGeneratingPDF ? (
+                  <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", display: "inline-block" }}>
+                    {formData.admissionNumber || ""}
+                  </span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle, width: "75px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
+                    value={formData.admissionNumber}
+                    onChange={(e) => handleInputChange("admissionNumber", e.target.value)}
+                    disabled
+                  />
+                )}
+
+                {/* ROLL NO label + value */}
+                <span style={{ flexShrink: 0, marginLeft: "20px", textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                  Roll No:
+                </span>
+                {isGeneratingPDF ? (
+                  <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", display: "inline-block" }}>
+                    {formData.rollNo || ""}
+                  </span>
+                ) : (
+                  <input
+                    type="text"
+                    style={{ ...inlineInputStyle, width: "45px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", marginLeft: "6px" }}
+                    value={formData.rollNo}
+                    onChange={(e) => handleInputChange("rollNo", e.target.value)}
+                  />
+                )}
+
               </div>
             </div>
+
+
 
             {/* Table Area */}
             <div className="mb-2 bg-white">

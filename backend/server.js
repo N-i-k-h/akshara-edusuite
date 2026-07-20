@@ -660,7 +660,7 @@ app.post("/api/students", requireAdmin, async (req, res) => {
 
 app.put("/api/students/bulk/promote", requireAdmin, async (req, res) => {
   try {
-    const { studentIds, targetClass, status } = req.body;
+    const { studentIds, targetClass, status, academicYear } = req.body;
     if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
       return res.status(400).json({ message: "Student IDs are required" });
     }
@@ -673,6 +673,10 @@ app.put("/api/students/bulk/promote", requireAdmin, async (req, res) => {
       updatePayload.feesPaid = false;
     } else {
       return res.status(400).json({ message: "Target class or status is required" });
+    }
+
+    if (academicYear) {
+      updatePayload.academicYear = academicYear;
     }
 
     const result = await Student.updateMany(

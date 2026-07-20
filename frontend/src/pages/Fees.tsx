@@ -800,7 +800,7 @@ const Fees = () => {
               
               <div className="w-full flex justify-center mt-0.5 border-t border-blue-900 pt-0.5">
                 <span className="font-bold text-base underline underline-offset-4 decoration-1">
-                  PAYMENT RECEIPT
+                  FEE RECEIPT
                 </span>
               </div>
               
@@ -824,29 +824,48 @@ const Fees = () => {
                 </span>
               </div>
               
-              <div className="flex items-baseline w-full leading-tight font-bold border-b border-gray-400 pb-0.5">
-                <span className="shrink-0 uppercase text-[11px] mr-6">D. PHARMA</span>
-                <span className="shrink-0 uppercase text-[12px] mr-6">I</span>
-                <span className="shrink-0 uppercase text-[9px] mr-4">COURSE- ACADEMIC YEAR</span>
-                <span className="font-bold text-sm text-center px-2 mr-auto">
+              {/* Course Info Row */}
+              <div style={{ display: "flex", alignItems: "baseline", width: "100%", marginTop: "16px", borderBottom: "1px solid #9ca3af", paddingBottom: "3px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+
+                {/* Course Name */}
+                <span style={{ flexShrink: 0, textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                  D. PHARMA
+                </span>
+
+                {/* Year Prefix */}
+                <span style={{ flexShrink: 0, textTransform: "uppercase", marginLeft: "8px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
+                  {students.find(s => s._id === receiptData.studentId)?.class?.includes("2") ? "2" : "1"}
+                </span>
+
+                {/* Label: COURSE - ACADEMIC YEAR */}
+                <span style={{ flexShrink: 0, textTransform: "uppercase", marginLeft: "24px", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                  Course - Academic Year
+                </span>
+
+                {/* Academic Year Value */}
+                <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px" }}>
                   {students.find(s => s._id === receiptData.studentId)?.academicYear || "2025-26"}
                 </span>
-                <div className="flex gap-6 items-baseline shrink-0">
-                  <div className="flex gap-1 items-baseline">
-                    <span className="uppercase text-[9px] font-bold text-gray-800">ADM NO:</span>
-                    <span className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[80px] text-center">
-                      {students.find(s => s._id === receiptData.studentId)?.admissionNumber || "\u00A0"}
-                    </span>
-                  </div>
-                  <div className="flex gap-1 items-baseline">
-                    <span className="uppercase text-[9px] font-bold text-gray-800">Roll No:</span>
-                    <span className="font-bold text-base px-2 text-blue-900 border-b-2 border-gray-400 pb-0.5 min-w-[40px] text-center">
-                      {students.find(s => s._id === receiptData.studentId)?.rollNo || "\u00A0"}
-                    </span>
-                  </div>
-                </div>
+
+                {/* ADM NO */}
+                <span style={{ flexShrink: 0, marginLeft: "20px", textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                  ADM NO:
+                </span>
+                <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", display: "inline-block" }}>
+                  {students.find(s => s._id === receiptData.studentId)?.admissionNumber || "\u00A0"}
+                </span>
+
+                {/* ROLL NO */}
+                <span style={{ flexShrink: 0, marginLeft: "20px", textTransform: "uppercase", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "11px", whiteSpace: "nowrap" }}>
+                  Roll No:
+                </span>
+                <span style={{ flexShrink: 0, marginLeft: "6px", textAlign: "center", color: "#1e3a8a", fontFamily: "'Times New Roman', serif", fontWeight: "bold", fontSize: "12px", display: "inline-block" }}>
+                  {students.find(s => s._id === receiptData.studentId)?.rollNo || "\u00A0"}
+                </span>
+
               </div>
             </div>
+
 
             {/* Table Area */}
             <div className="mb-2 bg-white">
