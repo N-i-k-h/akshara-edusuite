@@ -17,6 +17,10 @@ interface TransferCertificateProps {
     fatherName?: string;
     classLeft?: string;
     regNo?: string;
+    motherName?: string;
+    dob?: string;
+    dateOfAdmission?: string;
+    religionCaste?: string;
   };
   isEmbedded?: boolean;
 }
@@ -33,13 +37,13 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
     gender: prefilledData?.gender || "",
     nationality: "INDIAN",
     fatherName: prefilledData?.fatherName || "",
-    motherName: "",
-    religionCaste: "",
+    motherName: prefilledData?.motherName || "",
+    religionCaste: prefilledData?.religionCaste || "",
     casteCategory: "No", // SC/ST
-    dob: "",
+    dob: prefilledData?.dob || "",
     dobWords: "",
     placeOfBirth: "",
-    dateOfAdmission: "",
+    dateOfAdmission: prefilledData?.dateOfAdmission || "",
     dateOfLeaving: "",
     classLeft: prefilledData?.classLeft || "",
     promotionStatus: "YES", // Qualified for promotion
@@ -61,6 +65,10 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
         fatherName: prefilledData.fatherName || prev.fatherName || "",
         classLeft: prefilledData.classLeft || prev.classLeft || "",
         regNo: prefilledData.regNo || prev.regNo || "",
+        motherName: prefilledData.motherName || prev.motherName || "",
+        dob: prefilledData.dob || prev.dob || "",
+        dateOfAdmission: prefilledData.dateOfAdmission || prev.dateOfAdmission || "",
+        religionCaste: prefilledData.religionCaste || prev.religionCaste || "",
       }));
     }
   }, [prefilledData]);
@@ -296,15 +304,6 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Place of Birth</Label>
-              <Input
-                value={formData.placeOfBirth}
-                onChange={(e) =>
-                  handleInputChange("placeOfBirth", e.target.value)
-                }
-              />
-            </div>
 
             <div className="space-y-2">
               <Label>Date of Admission</Label>
@@ -541,18 +540,6 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
                     9
                   </div>
                   <div className="w-1/2 border-r-[1px] border-black p-2 font-bold">
-                    Place Birth :
-                  </div>
-                  <div className="flex-1 p-2 font-medium uppercase">
-                    {formData.placeOfBirth}
-                  </div>
-                </div>
-                {/* Row 10 */}
-                <div className="flex border-b-[1px] border-black">
-                  <div className="w-12 border-r-[1px] border-black p-2 text-center font-bold">
-                    10
-                  </div>
-                  <div className="w-1/2 border-r-[1px] border-black p-2 font-bold">
                     Date of Admission
                   </div>
                   <div className="flex-1 p-2 font-medium">
@@ -563,10 +550,10 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
                       : ""}
                   </div>
                 </div>
-                {/* Row 11 */}
+                {/* Row 10 */}
                 <div className="flex border-b-[1px] border-black">
                   <div className="w-12 border-r-[1px] border-black p-2 text-center font-bold">
-                    11
+                    10
                   </div>
                   <div className="w-1/2 border-r-[1px] border-black p-2 font-bold">
                     Date of Leaving
@@ -579,10 +566,10 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
                       : ""}
                   </div>
                 </div>
-                {/* Row 12 */}
+                {/* Row 11 */}
                 <div className="flex border-b-[1px] border-black">
                   <div className="w-12 border-r-[1px] border-black p-2 text-center font-bold">
-                    12
+                    11
                   </div>
                   <div className="w-1/2 border-r-[1px] border-black p-2 font-bold">
                     Class from which the pupil leaves the College
@@ -591,10 +578,10 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
                     {formData.classLeft}
                   </div>
                 </div>
-                {/* Row 13 */}
+                {/* Row 12 */}
                 <div className="flex border-b-[1px] border-black min-h-[50px]">
                   <div className="w-12 border-r-[1px] border-black p-2 text-center font-bold flex items-center justify-center">
-                    13
+                    12
                   </div>
                   <div className="w-1/2 border-r-[1px] border-black p-2 font-bold">
                     Whether qualified for promotion to the higher Class
@@ -606,7 +593,7 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
                     </div>
                     <div className="flex gap-4">
                       <span>
-                        Month : -{" "}
+                         Month : -{" "}
                         <span className="uppercase">{formData.examMonth}</span>
                       </span>
                       <span>
@@ -616,10 +603,10 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
                     </div>
                   </div>
                 </div>
-                {/* Row 14 */}
+                {/* Row 13 */}
                 <div className="flex border-b-[1px] border-black">
                   <div className="w-12 border-r-[1px] border-black p-2 text-center font-bold">
-                    14
+                    13
                   </div>
                   <div className="w-1/2 border-r-[1px] border-black p-2 font-bold">
                     Whether He/She paid all dues ?
@@ -628,10 +615,10 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
                     {formData.duesPaid}
                   </div>
                 </div>
-                {/* Row 15 */}
+                {/* Row 14 */}
                 <div className="flex">
                   <div className="w-12 border-r-[1px] border-black p-2 text-center font-bold">
-                    15
+                    14
                   </div>
                   <div className="w-1/2 border-r-[1px] border-black p-2 font-bold">
                     Character of the Student

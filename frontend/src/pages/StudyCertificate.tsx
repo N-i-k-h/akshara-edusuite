@@ -8,6 +8,44 @@ import html2pdf from "html2pdf.js";
 import { Printer, Download, FileText } from "lucide-react";
 import { API_BASE_URL, authFetch } from "@/config";
 
+const numberToOrdinalWord = (num: number): string => {
+  const ordinals = [
+    "", "FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH", "NINTH", "TENTH",
+    "ELEVENTH", "TWELFTH", "THIRTEENTH", "FOURTEENTH", "FIFTEENTH", "SIXTEENTH", "SEVENTEENTH", "EIGHTEENTH", "NINETEENTH", "TWENTIETH",
+    "TWENTY FIRST", "TWENTY SECOND", "TWENTY THIRD", "TWENTY FOURTH", "TWENTY FIFTH", "TWENTY SIXTH", "TWENTY SEVENTH", "TWENTY EIGHTH", "TWENTY NINTH", "THIRTIETH",
+    "THIRTY FIRST"
+  ];
+  return ordinals[num] || "";
+};
+
+const numberToWords = (num: number): string => {
+  const ones = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"];
+  const teens = ["TEN", "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN", "EIGHTEEN", "NINETEEN"];
+  const tens = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"];
+
+  if (num === 2000) return "TWO THOUSAND";
+  
+  if (num > 2000 && num < 2100) {
+    const rest = num - 2000;
+    if (rest < 10) return `TWO THOUSAND ${ones[rest]}`;
+    if (rest < 20) return `TWO THOUSAND ${teens[rest - 10]}`;
+    const ten = Math.floor(rest / 10);
+    const unit = rest % 10;
+    return `TWO THOUSAND ${tens[ten]}${unit ? " " + ones[unit] : ""}`;
+  }
+
+  if (num >= 1900 && num < 2000) {
+    const rest = num - 1900;
+    if (rest < 10) return `NINETEEN HUNDRED ${ones[rest]}`;
+    if (rest < 20) return `NINETEEN ${teens[rest - 10]}`;
+    const ten = Math.floor(rest / 10);
+    const unit = rest % 10;
+    return `NINETEEN ${tens[ten]}${unit ? " " + ones[unit] : ""}`;
+  }
+
+  return num.toString();
+};
+
 interface StudyCertificateProps {
   prefilledData?: {
     studentId?: string;
@@ -17,6 +55,10 @@ interface StudyCertificateProps {
     course?: string;
     regNo?: string;
     passportImage?: string;
+    motherName?: string;
+    dob?: string;
+    joiningDate?: string;
+    academicYear?: string;
   };
   isEmbedded?: boolean;
   onStudentUpdate?: (updatedStudent: any) => void;
@@ -40,7 +82,7 @@ const StudyCertificate = ({ prefilledData, isEmbedded = false, onStudentUpdate }
 
     // Council Specific
     refNo: "SSSCP/SC/2024-25",
-    motherName: "",
+    motherName: prefilledData?.motherName || "",
     dob: "24/09/2000",
     dobWords: "TWENTY FOURTH – SEPTEMBER – TWO THOUSAND",
     qualification: "D. Pharm",
@@ -76,15 +118,71 @@ const StudyCertificate = ({ prefilledData, isEmbedded = false, onStudentUpdate }
 
   useEffect(() => {
     if (prefilledData) {
-      setFormData((prev) => ({
-        ...prev,
-        studentName: prefilledData.studentName || prev.studentName || "",
-        admissionNo: prefilledData.admissionNo || prev.admissionNo || "",
-        parentName: prefilledData.parentName || prev.parentName || "",
-        course: prefilledData.course || prev.course || "D.PHARMA",
-        regNo: prefilledData.regNo || prev.regNo || "",
-        passportImage: prefilledData.passportImage || prev.passportImage || "",
-      }));
+      setFormData((prev) => {
+        let yearAdmission = prev.yearAdmission;
+        if (prefilledData.academicYear) {
+          const match = prefilledData.academicYear.match(/^(\d{4})/);
+          if (match) {
+            yearAdmission = match[1];
+          } else {
+            yearAdmission = prefilledData.academicYear;
+          }
+        } else if (prefilledData.joiningDate) {
+          const match = prefilledData.joiningDate.match(/^(\d{4})/);
+          if (match) yearAdmission = match[1];
+        }
+
+        let admissionDate = prev.admissionDate;
+        if (prefilledData.joiningDate) {
+          const parts = prefilledData.joiningDate.split("-");
+          if (parts.length === 3) {
+            admissionDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+          } else {
+            admissionDate = prefilledData.joiningDate;
+          }
+        }
+
+        let dob = prev.dob;
+        let dobWords = prev.dobWords;
+        if (prefilledData.dob) {
+          const parts = prefilledData.dob.split("-");
+          if (parts.length === 3) {
+            dob = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            
+            try {
+              const year = parseInt(parts[0], 10);
+              const monthIndex = parseInt(parts[1], 10) - 1;
+              const day = parseInt(parts[2], 10);
+              
+              const tempDate = new Date(year, monthIndex, day);
+              const month = tempDate.toLocaleString("default", { month: "long" }).toUpperCase();
+              
+              const dayWords = numberToOrdinalWord(day);
+              const yearWords = numberToWords(year);
+              dobWords = `${dayWords} – ${month} – ${yearWords}`;
+            } catch (e) {
+              console.error("Error formatting dob words", e);
+            }
+          } else {
+            dob = prefilledData.dob;
+          }
+        }
+
+        return {
+          ...prev,
+          studentName: prefilledData.studentName || prev.studentName || "",
+          admissionNo: prefilledData.admissionNo || prev.admissionNo || "",
+          parentName: prefilledData.parentName || prev.parentName || "",
+          course: prefilledData.course || prev.course || "D.PHARMA",
+          regNo: prefilledData.regNo || prev.regNo || "",
+          passportImage: prefilledData.passportImage || prev.passportImage || "",
+          motherName: prefilledData.motherName || prev.motherName || "",
+          dob: dob || prev.dob || "",
+          dobWords: dobWords || prev.dobWords || "",
+          admissionDate: admissionDate || prev.admissionDate || "",
+          yearAdmission: yearAdmission || prev.yearAdmission || "",
+        };
+      });
     }
   }, [prefilledData]);
 

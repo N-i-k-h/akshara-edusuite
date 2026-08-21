@@ -134,6 +134,8 @@ const studentSchema = new mongoose.Schema(
     joiningDate: { type: String, trim: true, default: "" },
     fatherName: { type: String, trim: true, default: "" },
     motherName: { type: String, trim: true, default: "" },
+    gender: { type: String, trim: true, default: "" },
+    religionCaste: { type: String, trim: true, default: "" },
     passingYear: { type: String, trim: true, default: "" },
     academicYear: { type: String, trim: true, default: "" },
     customFields: {

@@ -110,6 +110,8 @@ const Students = () => {
     joiningDate: "",
     fatherName: "",
     motherName: "",
+    gender: "",
+    religionCaste: "",
     passingYear: "",
     academicYear: "",
   });
@@ -176,6 +178,8 @@ const Students = () => {
       joiningDate: student.joiningDate || "",
       fatherName: student.fatherName || "",
       motherName: student.motherName || "",
+      gender: student.gender || "",
+      religionCaste: student.religionCaste || "",
       passingYear: student.passingYear || "",
       academicYear: student.academicYear || "",
     });
@@ -199,6 +203,8 @@ const Students = () => {
       joiningDate: "",
       fatherName: "",
       motherName: "",
+      gender: "",
+      religionCaste: "",
       passingYear: "",
       academicYear: "",
     });
@@ -237,6 +243,8 @@ const Students = () => {
           joiningDate: "",
           fatherName: "",
           motherName: "",
+          gender: "",
+          religionCaste: "",
           passingYear: "",
           academicYear: "",
         });
@@ -447,6 +455,8 @@ const Students = () => {
           joiningDate: selectedStudent.joiningDate,
           fatherName: selectedStudent.fatherName,
           motherName: selectedStudent.motherName,
+          gender: selectedStudent.gender || "",
+          religionCaste: selectedStudent.religionCaste || "",
           passingYear: selectedStudent.passingYear,
           academicYear: selectedStudent.academicYear || "",
           customFields: selectedStudent.customFields || [],
@@ -1218,7 +1228,7 @@ const Students = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="dob">Date of Birth (DOB)</Label>
                   <Input
@@ -1237,6 +1247,22 @@ const Students = () => {
                     onChange={handleInputChange}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(val) => setFormData({ ...formData, gender: val })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MALE">MALE</SelectItem>
+                      <SelectItem value="FEMALE">FEMALE</SelectItem>
+                      <SelectItem value="OTHER">OTHER</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1249,14 +1275,23 @@ const Students = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
+                  <Label htmlFor="religionCaste">Religion/Category & Caste</Label>
                   <Input
-                    id="address"
-                    placeholder="Enter home address"
-                    value={formData.address}
+                    id="religionCaste"
+                    placeholder="e.g. HINDU - GOWDA (3A)"
+                    value={formData.religionCaste}
                     onChange={handleInputChange}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="Enter home address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -2292,6 +2327,31 @@ const Students = () => {
                                 />
                              </div>
                              <div className="space-y-1">
+                                  <Label className="text-xs text-slate-500 font-medium">Gender</Label>
+                                  <Select
+                                    value={selectedStudent.gender || ""}
+                                    onValueChange={(val) => handleStudentFieldChange("gender", val)}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs font-semibold bg-slate-50 border-slate-200 w-full">
+                                      <SelectValue placeholder="Select Gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="MALE">MALE</SelectItem>
+                                      <SelectItem value="FEMALE">FEMALE</SelectItem>
+                                      <SelectItem value="OTHER">OTHER</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                               </div>
+                               <div className="space-y-1">
+                                  <Label className="text-xs text-slate-500 font-medium">Religion/Category & Caste</Label>
+                                  <Input
+                                    value={selectedStudent.religionCaste || ""}
+                                    onChange={(e) => handleStudentFieldChange("religionCaste", e.target.value)}
+                                    className="h-8 text-xs font-semibold bg-slate-50 border-slate-200"
+                                    placeholder="e.g. HINDU - GOWDA (3A)"
+                                  />
+                               </div>
+                             <div className="space-y-1">
                                 <Label className="text-xs text-slate-500 font-medium">Parent Phone</Label>
                                 <Input
                                   value={selectedStudent.parentPhone || ""}
@@ -2446,6 +2506,10 @@ const Students = () => {
                     course: selectedStudent?.class?.startsWith("D.Pharm") ? "D.PHARMA" : selectedStudent?.class || "D.PHARMA",
                     regNo: selectedStudent?.rollNo,
                     passportImage: selectedStudent?.passportImage,
+                    motherName: selectedStudent?.motherName,
+                    dob: selectedStudent?.dob,
+                    joiningDate: selectedStudent?.joiningDate,
+                    academicYear: selectedStudent?.academicYear,
                   }}
                   onStudentUpdate={(updatedStudent) => {
                     setSelectedStudent(updatedStudent);
@@ -2465,6 +2529,11 @@ const Students = () => {
                     fatherName: selectedStudent?.parentName,
                     classLeft: selectedStudent?.class || "",
                     regNo: selectedStudent?.rollNo || "",
+                    motherName: selectedStudent?.motherName,
+                    dob: selectedStudent?.dob,
+                    dateOfAdmission: selectedStudent?.joiningDate,
+                    gender: selectedStudent?.gender,
+                    religionCaste: selectedStudent?.religionCaste,
                   }}
                 />
               </TabsContent>
