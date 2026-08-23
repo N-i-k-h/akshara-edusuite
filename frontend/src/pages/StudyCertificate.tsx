@@ -75,13 +75,13 @@ const StudyCertificate = ({ prefilledData, isEmbedded = false, onStudentUpdate }
     admissionNo: prefilledData?.admissionNo || "",
     year: "1st", // 1st, 2nd, etc.
     course: "D.PHARMA",
-    academicYear: "2024-25",
+    academicYear: prefilledData?.academicYear || "2024-25",
     date: new Date().toISOString().split("T")[0],
     place: "Shivamogga",
     passportImage: prefilledData?.passportImage || "",
 
     // Council Specific
-    refNo: "SSSCP/SC/2024-25",
+    refNo: prefilledData?.academicYear ? `SSSCP/SC/${prefilledData.academicYear}` : "SSSCP/SC/2024-25",
     motherName: prefilledData?.motherName || "",
     dob: "24/09/2000",
     dobWords: "TWENTY FOURTH – SEPTEMBER – TWO THOUSAND",
@@ -89,8 +89,8 @@ const StudyCertificate = ({ prefilledData, isEmbedded = false, onStudentUpdate }
     board: "B E A",
     admissionDate: "01/11/2022",
     regNo: "B558202",
-    yearAdmission: "2021",
-    yearPassing: "JAN-2024",
+    yearAdmission: (prefilledData?.joiningDate && prefilledData.joiningDate.trim()) ? prefilledData.joiningDate.split("-")[0] : ((prefilledData?.academicYear && prefilledData.academicYear.trim()) ? prefilledData.academicYear.split("-")[0] : "2021"),
+    yearPassing: "",
     pciLetter:
       "Item No-137, Diploma IR No.6th (Dec-2013) up to 2016-2017. 102 CC Item No.86 Diploma, IR No. 7th Surprise (March-2017) Up to 2019-20. PCI-2336, 2020-23. PCI-2336. Up to 2023-24. 412th EC. 10.8.2024 under Item No.1 up to 2024-25.",
 
@@ -120,16 +120,20 @@ const StudyCertificate = ({ prefilledData, isEmbedded = false, onStudentUpdate }
     if (prefilledData) {
       setFormData((prev) => {
         let yearAdmission = prev.yearAdmission;
-        if (prefilledData.academicYear) {
+        if (prefilledData.joiningDate && prefilledData.joiningDate.trim()) {
+          const match = prefilledData.joiningDate.match(/^(\d{4})/);
+          if (match) {
+            yearAdmission = match[1];
+          } else {
+            yearAdmission = prefilledData.joiningDate;
+          }
+        } else if (prefilledData.academicYear && prefilledData.academicYear.trim()) {
           const match = prefilledData.academicYear.match(/^(\d{4})/);
           if (match) {
             yearAdmission = match[1];
           } else {
             yearAdmission = prefilledData.academicYear;
           }
-        } else if (prefilledData.joiningDate) {
-          const match = prefilledData.joiningDate.match(/^(\d{4})/);
-          if (match) yearAdmission = match[1];
         }
 
         let admissionDate = prev.admissionDate;
@@ -181,6 +185,8 @@ const StudyCertificate = ({ prefilledData, isEmbedded = false, onStudentUpdate }
           dobWords: dobWords || prev.dobWords || "",
           admissionDate: admissionDate || prev.admissionDate || "",
           yearAdmission: yearAdmission || prev.yearAdmission || "",
+          academicYear: prefilledData.academicYear || prev.academicYear || "2024-25",
+          refNo: prefilledData.academicYear ? `SSSCP/SC/${prefilledData.academicYear}` : prev.refNo,
         };
       });
     }

@@ -2534,6 +2534,7 @@ const Students = () => {
                     dateOfAdmission: selectedStudent?.joiningDate,
                     gender: selectedStudent?.gender,
                     religionCaste: selectedStudent?.religionCaste,
+                    academicYear: selectedStudent?.academicYear,
                   }}
                 />
               </TabsContent>

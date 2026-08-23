@@ -21,6 +21,7 @@ interface TransferCertificateProps {
     dob?: string;
     dateOfAdmission?: string;
     religionCaste?: string;
+    academicYear?: string;
   };
   isEmbedded?: boolean;
 }
@@ -31,7 +32,7 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
 
   const [formData, setFormData] = useState({
     admissionNo: prefilledData?.admissionNo || "",
-    refNo: "SSSCP/TC/2024-25",
+    refNo: prefilledData?.academicYear ? `SSSCP/TC/${prefilledData.academicYear}` : "SSSCP/TC/2024-25",
     tcNo: "",
     studentName: prefilledData?.studentName || "",
     gender: prefilledData?.gender || "",
@@ -53,6 +54,7 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
     duesPaid: "YES",
     character: "Satisfactory",
     date: new Date().toISOString().split("T")[0],
+    academicYear: prefilledData?.academicYear || "2024-25",
   });
 
   useEffect(() => {
@@ -69,6 +71,8 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
         dob: prefilledData.dob || prev.dob || "",
         dateOfAdmission: prefilledData.dateOfAdmission || prev.dateOfAdmission || "",
         religionCaste: prefilledData.religionCaste || prev.religionCaste || "",
+        academicYear: prefilledData.academicYear || prev.academicYear || "2024-25",
+        refNo: prefilledData.academicYear ? `SSSCP/TC/${prefilledData.academicYear}` : prev.refNo,
       }));
     }
   }, [prefilledData]);
@@ -214,6 +218,14 @@ const TransferCertificate = ({ prefilledData, isEmbedded = false }: TransferCert
               <Input
                 value={formData.refNo}
                 onChange={(e) => handleInputChange("refNo", e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Academic Year</Label>
+              <Input
+                value={formData.academicYear}
+                onChange={(e) => handleInputChange("academicYear", e.target.value)}
               />
             </div>
 
